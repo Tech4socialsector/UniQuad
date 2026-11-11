@@ -328,7 +328,7 @@ class Applicant(Document):
         )
         if submitting and self.get("karnataka_category") == "Yes" and not ticked:
             frappe.throw(
-                _("Please select one option under 'Which of the following applies to you'."),
+                _("Please select one option under 'Which of the following applies to you (Karnataka Category)'."),
                 title=_("Karnataka Reservation"),
             )
         if not self.is_new() and not any(self.has_value_changed(f) for f in fields):
@@ -336,7 +336,7 @@ class Applicant(Document):
         if len(ticked) > 1:
             labels = ", ".join(_(self.meta.get_label(f)) for f in ticked)
             frappe.throw(
-                _("Please select only one option under 'Which of the following applies to you'. Selected: {0}").format(labels),
+                _("Please select only one option under 'Which of the following applies to you (Karnataka Category)'. Selected: {0}").format(labels),
                 title=_("Karnataka Reservation"),
             )
 

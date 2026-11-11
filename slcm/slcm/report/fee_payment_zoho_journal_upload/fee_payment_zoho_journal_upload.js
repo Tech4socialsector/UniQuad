@@ -45,6 +45,13 @@ frappe.query_reports["Fee Payment Zoho Journal Upload"] = {
 		// 	}
 		// },
 		{
+			fieldname: "fee_source",
+			label: __("Fee Source"),
+			fieldtype: "Select",
+			options: ["", "Student Fee", "Application Fee", "Regular Application Fee", "PACE Application Fee"],
+			default: ""
+		},
+		{
 			fieldname: "transaction_type",
 			label: __("Transaction Type"),
 			fieldtype: "Select",

@@ -773,7 +773,7 @@
    "depends_on": "eval:doc.karnataka_category === \"Yes\"",
    "fieldname": "which_of_the_following_applies_to_you_section",
    "fieldtype": "Section Break",
-   "label": "Which of the following applies to you"
+   "label": "Which of the following applies to you (Karnataka Category)"
   },
   {
    "fieldname": "column_break_qnun",
