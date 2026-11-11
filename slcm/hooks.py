@@ -472,6 +472,15 @@ doc_events = {
         "after_insert": "slcm.erpnext_bridge.sync.enqueue_sync",
         "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
     },
+    # Hostel / mess office money (not submittable: posted on save, reversed when deleted)
+    "Mess Payment": {
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
+    "Hostel Refund Request": {
+        "on_update": "slcm.erpnext_bridge.sync.enqueue_sync",
+        "on_trash": "slcm.erpnext_bridge.sync.enqueue_sync",
+    },
     # ERPNext Company (exists only with ERPNext): validates its "SLCM Fee Accounting" section.
     "Company": {
         "validate": "slcm.erpnext_bridge.company.validate_company",

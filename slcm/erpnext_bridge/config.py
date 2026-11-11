@@ -30,12 +30,14 @@ COMPANY_FIELDS = (
 )
 ACCOUNT_FIELDS = tuple(f for f in COMPANY_FIELDS if f.endswith("_account"))
 ONLINE_MODES = ("Online Payment",)
-# Fees paid on no Fee Payment (re-exam / improvement exam online or at the counter, transcripts online): the
-# name each one's income ledger is looked up by - an Account of that name, or one listing it under SLCM Fee Components.
+# Fees paid on no Fee Payment (re-exam / improvement exam online or at the counter, transcripts online, mess
+# payments): the name each one's income ledger is looked up by - an Account of that name, or one listing it under
+# SLCM Fee Components.
 EXAM_FEE_NAMES = {
 	"Re Exam Payment Log": "Re Exam Fee",
 	"Improvement Exam Payment Log": "Improvement Exam Fee",
 	"Transcript Request": "Transcript Fee",
+	"Mess Payment": "Mess Fee",
 }
 MOVED_FROM_DUE = re.compile(r"^Moved from due (\S+)")
 

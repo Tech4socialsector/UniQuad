@@ -28,7 +28,10 @@ OTHER_SOURCES = (
 	("Stipend Payment", "remarks"),
 	("Re Exam Payment Log", "failure_reason"),
 	("Re Exam Registration", "remarks"),
+	("Mess Payment", "remarks"),
+	("Hostel Refund Request", "reason"),
 )
+TEST_MESS = "ERP Bridge Test Mess"
 SAVED_FIELDS = (*conf.COMPANY_FIELDS, "default_cash_account", "default_bank_account")
 
 
@@ -146,6 +149,8 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		for component in (TEST_COMPONENT, TEST_GST_COMPONENT):
 			if frappe.db.exists("Fee Component", component):
 				frappe.delete_doc("Fee Component", component, force=True, ignore_permissions=True)
+		if frappe.db.exists("Mess", TEST_MESS):
+			frappe.delete_doc("Mess", TEST_MESS, force=True, ignore_permissions=True)
 		for name in names:
 			for dt in sync.SOURCES:
 				frappe.db.delete("Error Log", {"method": sync.ERROR_TITLE.format(dt, name)})
@@ -778,6 +783,44 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		rows = self.je_rows(sync.live_journal_entry("Refund Transaction", rt.name))
 		self.assertEqual(rows[self.saved.slcm_fee_refund_account].debit, 2500)
 		self.assertEqual(rows[conf.gateway_clearing_account(self.cfg)].credit, 2500)
+
+	def test_mess_payment_posts_rebooks_an_edit_and_delete_reverses(self):
+		if not frappe.db.exists("Mess", TEST_MESS):
+			frappe.get_doc({"doctype": "Mess", "mess_name": TEST_MESS}).insert(ignore_permissions=True)
+		mp = frappe.get_doc(
+			{"doctype": "Mess Payment", "student": self.student, "mess": TEST_MESS, "payment_date": self.date,
+			 "mode_of_payment": "Online", "amount": 1800, "remarks": TAG}
+		).insert(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Mess Payment", mp.name), "Posted")
+		rows = self.je_rows(sync.live_journal_entry("Mess Payment", mp.name))
+		# no gateway for mess: 'Online' is a transfer into the bank, never the clearing account
+		self.assertEqual(rows[self.saved.default_bank_account].debit, 1800)
+		first = sync.live_journal_entry("Mess Payment", mp.name)
+		mp.amount = 2000
+		mp.save(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Mess Payment", mp.name), "Posted")
+		self.assertNotEqual(sync.live_journal_entry("Mess Payment", mp.name), first)
+		self.assertEqual(self.je_rows(sync.live_journal_entry("Mess Payment", mp.name))[self.saved.default_bank_account].debit, 2000)
+		self.deleted_sources.append(mp.name)
+		mp.delete(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Mess Payment", mp.name), "Cancelled")
+
+	def test_hostel_refund_posts_only_when_processed(self):
+		hr = frappe.get_doc(
+			{"doctype": "Hostel Refund Request", "student": self.student, "amount": 1200, "reason": TAG}
+		).insert(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertIsNone(sync.sync_document("Hostel Refund Request", hr.name))
+		hr.update({"status": "Processed", "refund_mode": "Cash", "processed_on": self.date})
+		hr.save(ignore_permissions=True)
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Hostel Refund Request", hr.name), "Posted")
+		rows = self.je_rows(sync.live_journal_entry("Hostel Refund Request", hr.name))
+		self.assertEqual(rows[self.saved.slcm_fee_refund_account].debit, 1200)
+		self.assertEqual(rows[conf.payment_out_account(self.cfg, "Cash")].credit, 1200)
 
 	def test_reconciliation_report_lists_every_source(self):
 		from slcm.erpnext_bridge.report.slcm_erpnext_reconciliation import slcm_erpnext_reconciliation as rec

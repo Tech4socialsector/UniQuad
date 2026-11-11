@@ -49,7 +49,8 @@
    "fieldtype": "Select",
    "in_list_view": 1,
    "label": "Status",
-   "options": "Unpaid\nPaid\nWaived"
+   "options": "Unpaid\nPaid\nWaived",
+   "description": "Collected through the fine's Fee Demand: Paid is set when that demand is paid. Waived waives the demand."
   },
   {
    "fieldname": "issued_by",
@@ -60,7 +61,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2026-08-28 10:27:14.849205",
+ "modified": "2026-11-09 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Hostel Fine",

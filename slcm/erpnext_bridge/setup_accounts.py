@@ -121,6 +121,8 @@ def _slcm_modes():
 		("Fee Refund", "refund_mode"),
 		("Applicant Payment Receipt", "payment_mode"),
 		("Stipend Payment", "payment_mode"),
+		("Mess Payment", "mode_of_payment"),
+		("Hostel Refund Request", "refund_mode"),
 		("Student Credit Note", "received_via"),
 	):
 		for option in _options(doctype, fieldname):

@@ -155,6 +155,11 @@ class FeeDemand(Document):
 			if reg_status or flt(paid_delta) < 0:
 				frappe.db.set_value(self.trigger_ref_doctype, self.trigger_ref_name, "payment_status",
 				                    reg_status or "Pending", update_modified=False)
+		# a hostel fine is paid only through its demand (HostelFine.validate refuses a hand-set Paid)
+		if self.trigger_ref_doctype == "Hostel Fine" and self.trigger_ref_name:
+			if self.status == "Paid" or flt(paid_delta) < 0:
+				frappe.db.set_value("Hostel Fine", self.trigger_ref_name, "status",
+				                    "Paid" if self.status == "Paid" else "Unpaid", update_modified=False)
 
 		self._log_payment_event(paid_delta)
 

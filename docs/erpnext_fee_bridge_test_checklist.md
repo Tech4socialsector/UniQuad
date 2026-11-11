@@ -82,6 +82,9 @@ SLCM's own files change only in `hooks.py` (hook registrations) and `modules.txt
 | FLE Payment Log settlement (*processed*) | Same as a Payment Request settlement, posted under the reference type *FLE Settlement* |
 | Stipend Payment submitted / cancelled | **Debit:** Stipend Expense. **Credit:** the payment-mode ledger (an *Online* payment out is a bank transfer) |
 | Refund Transaction *Processed* (admission refund via Razorpay) | **Debit:** Fee Refunds. **Credit:** Gateway Clearing |
+| Mess Payment saved / edited / deleted | **Debit:** the payment-mode ledger (*Online* → the bank: mess has no gateway). **Credit:** the Account named *Mess Fee* (or mapped to it). An edited amount is rebooked; deleting reverses it |
+| Hostel Refund Request *Processed* | **Debit:** Fee Refunds. **Credit:** the refund-mode ledger, on *Processed On*. *Refund Mode* is required to mark it Processed |
+| Hostel Fine | Nothing of its own: the fine raises a Fee Demand and is collected by Fee Payment. *Paid* cannot be set by hand; it follows the demand. *Waived* waives the demand |
 | Student Credit Note: paid fees moved to excess | **Debit:** the income ledger of the due the money came from. **Credit:** Unallocated Fee Receipts |
 | Student Credit Note entered by hand with *Received Via* (e.g. a duplicate NEFT) | **Debit:** the bank / cash ledger. **Credit:** Unallocated Fee Receipts. *Received Via* is required for Overpayment and Advance Deposit, and can be filled in after submit |
 | Excess adjusted to a due (Credit Adjustment Row) | **Debit:** Unallocated Fee Receipts. **Credit:** the due's income ledger. Only for credit notes whose money was posted |
@@ -177,7 +180,7 @@ Automated: `bench --site slcm.local run-tests --module slcm.erpnext_bridge.tests
 - **Renaming accounts.** If a Fee Component ledger's Account is renamed, that component falls back to the default fee income ledger until the names match again. Reconciliation flags this.
 - **Razorpay refunds and settlements.** Settlements are posted per payment from Razorpay's per-payment figures. Razorpay takes refunds out of later settlement batches, and the settlement sync skips refund lines. So after an online refund, Gateway Clearing keeps a balance equal to the refund until an accountant clears it against the bank statement.
 - **Admission refunds** are booked as Fee Refunds expense, including any deposit portion. They are not split between income and the deposit liability.
-- **Not created by any SLCM code:** Mess Payment, Hostel Refund Request, Re Exam Payment Log and Improvement Exam Payment Log. They are not posted (re-exam fees go through Fee Demand → Fee Payment).
+- **Hostel Fine needs a Fee Component of type *Fine - Hostel*.** A new fine is refused without one, because no demand could be raised to collect it.
 - **Tests post real data.** Some tests run the hourly sweeper, which posts every pending document on the site. Run them only on a development or test site.
 
 ## 7. Environment notes

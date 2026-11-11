@@ -52,6 +52,14 @@ SOURCES = {
 	"Improvement Exam Payment Log": {
 		"date_field": "transaction_date", "date": "date(src.transaction_date)", "active": COUNTER_PAID, "stage": 1,
 	},
+	# hostel and mess office: not submittable, so an edited amount is rebooked ("amount")
+	"Mess Payment": {
+		"date_field": "payment_date", "date": "src.payment_date", "active": "src.amount > 0", "amount": "src.amount", "stage": 1,
+	},
+	"Hostel Refund Request": {
+		"date_field": "processed_on", "date": "src.processed_on",
+		"active": "src.status = 'Processed' and src.amount > 0", "amount": "src.amount", "stage": 1,
+	},
 	# Razorpay settlements: posted once the receipt they clear is posted
 	"SLCM Payment Request": {
 		"date_field": "settlement_date", "date": "date(src.settlement_date)",
@@ -325,6 +333,10 @@ def _should_post(cfg, key, src, already_posted=False):
 		return src.status == "Processed" and flt(src.refund_amount) > 0
 	if key in ("Re Exam Payment Log", "Improvement Exam Payment Log"):
 		return is_counter_payment(src)
+	if key == "Mess Payment":
+		return flt(src.amount) > 0
+	if key == "Hostel Refund Request":
+		return src.status == "Processed" and flt(src.amount) > 0
 	if key == "Gateway Receipt":
 		return (
 			src.docstatus == 1 and src.status == "Paid" and bool(src.transaction_id)

@@ -5,6 +5,8 @@ Receipt  (Fee Payment)            Dr Cash / Bank / Gateway Clearing      Cr Fee 
 Refund   (Fee Refund)             Dr Fee Refunds (or the deposit ledger) Cr Cash / Bank
          from excess              Dr Unallocated Fee Receipts            Cr Cash / Bank
 Counter exam fee  (exam pay. log)  Dr Cash / Bank (by payment mode)      Cr Re-exam / improvement exam fee ledger
+Mess Payment                      Dr Cash / Bank (by payment mode)      Cr Mess Fee ledger
+Hostel Refund Request (Processed) Dr Fee Refunds                        Cr Cash / Bank (by refund mode)
 Online receipt    (Payment Req.)  Dr Gateway Clearing                    Cr Re-exam / transcript fee ledger
   (no Fee Payment: "Gateway Receipt")                                    Cr Unallocated Fee Receipts (not applied)
 Gateway settlement (Payment Req.) Dr Bank (net) + Gateway Charges + GST  Cr Gateway Clearing (gross)
@@ -42,6 +44,8 @@ def build_entry(cfg, src, key=None):
 		"Refund Transaction": _gateway_refund,
 		"Re Exam Payment Log": _counter_exam_receipt,
 		"Improvement Exam Payment Log": _counter_exam_receipt,
+		"Mess Payment": _mess_receipt,
+		"Hostel Refund Request": _hostel_refund,
 	}[key or src.doctype]
 	entry = builder(cfg, src)
 	_check_balanced(entry["lines"])
@@ -339,6 +343,29 @@ def _counter_exam_receipt(cfg, log):
 	}
 
 
+def _mess_receipt(cfg, mp):
+	"""Mess charges paid at the mess office. Mess has no gateway checkout, so 'Online' is a transfer into the bank."""
+	name = conf.EXAM_FEE_NAMES[mp.doctype]
+	income = conf.account_named(cfg, name) or conf.require(cfg, "slcm_default_fee_income_account", name)
+	cash_account = (
+		conf.require(cfg, "default_bank_account")
+		if mp.mode_of_payment == "Online"
+		else conf.receipt_cash_account(cfg, mp.mode_of_payment)
+	)
+	amount = flt(mp.amount, PRECISION)
+	return {
+		"posting_date": getdate(mp.payment_date),
+		"cash_account": cash_account,
+		"reference": mp.transaction_reference or mp.name,
+		"remark": _("SLCM Mess Payment {0} | {1} | {2} | {3}").format(
+			mp.name, mp.student, mp.mess or "-", mp.mode_of_payment
+		),
+		"student": mp.student,
+		"programme": _programme_of(None, mp.student),
+		"lines": [(cash_account, amount, 0.0), (income, 0.0, amount)],
+	}
+
+
 # ── admission, PACE and FLE receipts ────────────────────────────────────────────
 
 
@@ -458,6 +485,20 @@ def _gateway_refund(cfg, rt):
 		"student": applicant,
 		"programme": None,
 		"lines": [(conf.require(cfg, "slcm_fee_refund_account"), amount, 0.0), (clearing, 0.0, amount)],
+	}
+
+
+def _hostel_refund(cfg, hr):
+	amount = flt(hr.amount, PRECISION)
+	cash_account = conf.payment_out_account(cfg, hr.refund_mode)
+	return {
+		"posting_date": getdate(hr.processed_on),
+		"cash_account": cash_account,
+		"reference": hr.transaction_reference or hr.name,
+		"remark": _("SLCM Hostel Refund Request {0} | {1} | {2}").format(hr.name, hr.student, hr.refund_mode),
+		"student": hr.student,
+		"programme": _programme_of(None, hr.student),
+		"lines": [(conf.require(cfg, "slcm_fee_refund_account"), amount, 0.0), (cash_account, 0.0, amount)],
 	}
 
 

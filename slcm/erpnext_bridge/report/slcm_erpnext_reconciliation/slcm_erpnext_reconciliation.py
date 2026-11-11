@@ -23,6 +23,8 @@ DIRECT = {
 	"Refund Transaction": ("src.refund_request", "src.refund_amount", "'Razorpay refund'"),
 	"Re Exam Payment Log": ("src.student", "src.amount", "src.payment_method"),
 	"Improvement Exam Payment Log": ("src.student", "src.amount", "src.payment_method"),
+	"Mess Payment": ("src.student", "src.amount", "src.mode_of_payment"),
+	"Hostel Refund Request": ("src.student", "src.amount", "src.refund_mode"),
 }
 
 

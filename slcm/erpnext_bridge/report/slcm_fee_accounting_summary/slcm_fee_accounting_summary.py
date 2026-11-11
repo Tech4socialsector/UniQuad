@@ -26,6 +26,8 @@ SOURCE_LABELS = {
 	"Refund Transaction": _("Admission Refunds"),
 	"Re Exam Payment Log": _("Counter Exam Fees"),
 	"Improvement Exam Payment Log": _("Counter Exam Fees"),
+	"Mess Payment": _("Mess Receipts"),
+	"Hostel Refund Request": _("Hostel Refunds"),
 }
 
 MEASURES = (
