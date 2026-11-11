@@ -4706,6 +4706,8 @@ function makeInputUppercase() {
 		"correspondence_address",
 		"father_name",
 		"mother_name",
+		"guardian_name",
+		"guardian_occupation",
 		"class_x_school",
 		"class_x_board",
 		"class_xii_name_of_examination",
