@@ -2,6 +2,7 @@
 # For license information, please see license.txt
 
 import frappe
+from frappe import _
 from frappe.model.document import Document
 
 
@@ -79,3 +80,70 @@ def create_default_fee_components():
 		created.append(name)
 
 	return {"created": created, "updated": updated, "skipped": skipped}
+
+
+@frappe.whitelist()
+def get_gateway_status():
+	"""For the bulk-change dialog: which gateways are configured (to warn before switching)
+	and every Fee Component with its current gateway (not just the rows loaded in the list)."""
+	from slcm.slcm.fee.payment_gateway import DEFAULT_GATEWAY, GATEWAYS, is_ready
+
+	frappe.has_permission("Fee Component", "read", throw=True)
+	components = frappe.get_list(
+		"Fee Component", fields=["name", "payment_gateway"], order_by="name asc", limit_page_length=0
+	)
+	return {
+		"ready": {gateway: is_ready(gateway) for gateway in GATEWAYS},
+		"components": [
+			{"name": c.name, "payment_gateway": c.payment_gateway or DEFAULT_GATEWAY} for c in components
+		],
+	}
+
+
+@frappe.whitelist(methods=["POST"])
+def bulk_update_payment_gateway(payment_gateway, names=None, apply_to_all=0):
+	"""Set ``payment_gateway`` on the given Fee Components, or on all of them when ``apply_to_all``.
+
+	Each component is saved as a document (permissions, validation and version history apply).
+	Returns the components that were updated, already on that gateway, or failed."""
+	from frappe.utils import strip_html
+
+	from slcm.slcm.fee.payment_gateway import GATEWAYS
+
+	frappe.has_permission("Fee Component", "write", throw=True)
+	if payment_gateway not in GATEWAYS:
+		frappe.throw(_("Invalid Payment Gateway: {0}").format(payment_gateway))
+
+	if frappe.utils.cint(apply_to_all):
+		names = frappe.get_all("Fee Component", order_by="name asc", pluck="name")
+	else:
+		names = frappe.parse_json(names) if isinstance(names, str) else names
+	if not isinstance(names, (list, tuple)) or not names:
+		frappe.throw(_("Select at least one Fee Component."))
+	names = list(dict.fromkeys(str(n) for n in names))  # de-duplicate, keep order
+
+	updated, unchanged, failed = [], [], []
+	for name in names:
+		current = frappe.db.get_value("Fee Component", name, "payment_gateway")
+		if current is None and not frappe.db.exists("Fee Component", name):
+			failed.append({"name": name, "error": _("Not found")})
+			continue
+		if current == payment_gateway:
+			unchanged.append(name)
+			continue
+
+		frappe.db.savepoint("fee_component_gateway")
+		messages_before = len(frappe.local.message_log)
+		try:
+			doc = frappe.get_doc("Fee Component", name)
+			doc.check_permission("write")
+			doc.payment_gateway = payment_gateway
+			doc.save()
+			updated.append(name)
+		except Exception as e:
+			# Undo only this component; keep the ones already updated.
+			frappe.db.rollback(save_point="fee_component_gateway")
+			del frappe.local.message_log[messages_before:]
+			failed.append({"name": name, "error": strip_html(str(e)) or e.__class__.__name__})
+
+	return {"updated": updated, "unchanged": unchanged, "failed": failed}

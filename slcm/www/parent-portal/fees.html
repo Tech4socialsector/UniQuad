@@ -647,7 +647,7 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
   </dl>
   {% if _summary_ok %}
   <div class="ppf-student-status">
-    {% if has_dues %}
+    {% if has_any_dues %}
     <span class="ppf-status-badge ppf-status-badge-due"><span class="ms" aria-hidden="true">error</span>Pending</span>
     {% if payment_enabled and payable_invoices %}
       {% if payable_invoices | length == 1 %}

@@ -18,6 +18,7 @@ frappe.ui.form.on("Fee Demand", {
 		frm.trigger("set_status_indicator");
 		frm.trigger("render_action_buttons");
 		frm.trigger("render_create_buttons");
+		frm.trigger("render_outstanding_note");
 	},
 
 	set_status_indicator(frm) {
@@ -99,20 +100,28 @@ frappe.ui.form.on("Fee Demand", {
 				"font-weight":      "600",
 			});
 		}
+	},
 
-		// Show outstanding amount prominently
-		if (frm.doc.outstanding_amount > 0) {
-			frm.dashboard.add_comment(
-				__("Outstanding: <strong>₹{0}</strong> | Due Date: <strong>{1}</strong>",
-					[
-						format_currency(frm.doc.outstanding_amount, "INR"),
-						frappe.datetime.str_to_user(frm.doc.due_date)
-					]
-				),
-				frm.doc.status === "Overdue" ? "red" : "blue",
-				true
-			);
+	render_outstanding_note(frm) {
+		// Frappe appends a new banner on every add_comment call, so drop ours before re-adding
+		// (otherwise each save/refresh stacks another copy). Other banners are left alone.
+		frm.layout.message.find(".fd-outstanding-note").closest(".form-message").remove();
+		if (!frm.layout.message.children().length) frm.layout.message.addClass("hidden");
+
+		if (frm.is_new() || ["Cancelled", "Waived"].includes(frm.doc.status) || flt(frm.doc.outstanding_amount) <= 0) {
+			return;
 		}
+
+		// format_currency already includes the ₹ symbol.
+		let text = __("Outstanding: <strong>{0}</strong>", [format_currency(frm.doc.outstanding_amount, "INR")]);
+		if (frm.doc.due_date) {
+			text += " | " + __("Due Date: <strong>{0}</strong>", [frappe.datetime.str_to_user(frm.doc.due_date)]);
+		}
+		frm.dashboard.add_comment(
+			`<span class="fd-outstanding-note">${text}</span>`,
+			frm.doc.status === "Overdue" ? "red" : "blue",
+			true
+		);
 	},
 
 	student(frm) {

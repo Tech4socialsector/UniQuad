@@ -741,7 +741,8 @@ def get_context(context):
 
         # Student card context
         context.student_status        = student.get("student_status") or ""
-        context.student_term          = get_current_term() or ""
+        # The student's own programme term (e.g. Trimester II), same as the Parent Portal
+        context.student_term          = student.get("current_term") or get_current_term() or ""
         context.student_academic_year = (
             student.get("academic_year")
             or (context.current_enrollment.academic_year if context.current_enrollment else "")
@@ -887,7 +888,7 @@ def _build_view_model(context, errors, student_name):
         frappe.utils.getdate(r.due_date) if r.due_date else today,
     ))
     context.summary_rows = rows
-    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards
+    from slcm.slcm.fee.portal_charges import charge_cards, charge_rows, demand_type_cards, has_outstanding_dues
 
     context.demand_type_cards = demand_type_cards(context.fee_demands)
     # One list of every charge (paid ones too) and the Overall / Academic / Non Academic cards
@@ -898,6 +899,7 @@ def _build_view_model(context, errors, student_name):
         context.charge_rows = []
         errors["demands"] = True
     context.charge_cards = charge_cards(context.charge_rows)
+    context.has_any_dues = has_outstanding_dues(context, errors)
     context.outstanding_rows = [r for r in rows if not r.get("is_paid")]
     context.outstanding_overdue_count = sum(1 for r in context.outstanding_rows if r.is_overdue)
     context.outstanding_pending_count = len(context.outstanding_rows) - context.outstanding_overdue_count
@@ -983,7 +985,7 @@ def _set_defaults(context):
     """Safe empty values so the template renders when loading failed early."""
     defaults = {
         "total_payable": 0.0, "total_paid": 0.0, "total_outstanding": 0.0,
-        "total_scholarship": 0.0, "has_dues": False, "sm_fee_status": "",
+        "total_scholarship": 0.0, "has_dues": False, "has_any_dues": False, "sm_fee_status": "",
         "sm_total_fee": 0.0, "use_sm_fallback": False, "has_overpayment_flag": False,
         "has_sm_inv_mismatch": False, "mismatch_diff": 0.0, "inv_outstanding_raw": 0.0,
         "fee_structure_name": "", "fee_structure_valid_from": "", "fee_structure_valid_until": "",
