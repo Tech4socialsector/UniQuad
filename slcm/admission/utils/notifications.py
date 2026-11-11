@@ -110,7 +110,7 @@ def _send_email_notification(applicant, notification_type, message):
         body = tmpl.body or message
         replacements = {
             "{{candidate_name}}": applicant_doc.get("candidate_name", ""),
-            "{{applicant_id}}": applicant_doc.applicant_id,
+            "{{applicant_id}}": applicant_doc.name,
             "{{program}}": applicant_doc.get("program", ""),
             "{{status}}": applicant_doc.get("status", ""),
             "{{message}}": message

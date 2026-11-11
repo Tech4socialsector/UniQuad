@@ -137,37 +137,186 @@ def _preload_course_resolution(fp_list):
     student_names = {fp.student for fp in fp_list if fp.student}
     
     prog_map = {}
+    # Programme's own "Zoho Books Course" wins over the Programme Master lookup by name
+    prog_course_map = {}
     if prog_names:
-        progs = frappe.db.get_all("Programme", filters={"name": ("in", list(prog_names))}, fields=["name", "program_name"])
+        progs = frappe.db.get_all("Programme", filters={"name": ("in", list(prog_names))}, fields=["name", "program_name", "zoho_course"])
         prog_map = {p.name: p.program_name for p in progs if p.program_name}
-        
+        prog_course_map = {p.program_name: p.zoho_course for p in progs if p.program_name and p.zoho_course}
+
     student_map = {}
     if student_names:
         students = frappe.db.get_all("Student Master", filters={"name": ("in", list(student_names))}, fields=["name", "programme_of_study"])
         for s in students:
             pos_prog_name = None
             if s.programme_of_study:
-                pos_prog_name = frappe.db.get_value("Programme", s.programme_of_study, "program_name")
+                pos = frappe.db.get_value("Programme", s.programme_of_study, ["program_name", "zoho_course"], as_dict=True)
+                if pos:
+                    pos_prog_name = pos.program_name
+                    if pos.program_name and pos.zoho_course:
+                        prog_course_map[pos.program_name] = pos.zoho_course
             student_map[s.name] = {
                 "master_programme": pos_prog_name,  # master_programme (removed) was programme_of_study's program_name
                 "pos_prog_name": pos_prog_name
             }
-            
+
+    zoho_course_map = {**zoho_course_map, **prog_course_map}
     return zoho_course_map, prog_map, student_map
 
 def resolve_course(fp, zoho_course_map, prog_map, student_map):
     prog_master = prog_map.get(fp.program) if fp.program else None
-    
+
     s_info = student_map.get(fp.student, {})
     if not prog_master:
         prog_master = s_info.get("master_programme")
-        
+
     if not prog_master:
         prog_master = s_info.get("pos_prog_name")
-        
+
     zoho_course = zoho_course_map.get(prog_master) if prog_master else None
-    
+
     return prog_master, zoho_course
+
+
+# ── Application fees (regular / NLSAT and PACE) ──────────────────────────────
+
+APP_FEE_SOURCES = {
+    # kind: (SLCM Payment Request.reference_doctype, label)
+    "regular": ("Applicant", "Regular Application Fee"),
+    "pace": ("PACE Applicant Fee Assignment", "PACE Application Fee"),
+}
+
+
+def _wanted_sources(filters):
+    """Which row sources the Fee Source filter asks for."""
+    src = filters.get("fee_source")
+    want_students = src in (None, "", "Student Fee")
+    # Applicants are not Student Master records: a Student filter means student fees only
+    want_apps = src in (None, "", "Application Fee", "Regular Application Fee", "PACE Application Fee") and not filters.get("student")
+    kinds = []
+    if want_apps:
+        if src in (None, "", "Application Fee", "Regular Application Fee"):
+            kinds.append("regular")
+        if src in (None, "", "Application Fee", "PACE Application Fee"):
+            kinds.append("pace")
+    return want_students, kinds
+
+
+def _application_fee_requests(kinds, pay_ids=None, offline=False, filters=None):
+    """Paid application-fee SLCM Payment Requests, enriched with applicant + programme details."""
+    if not kinds:
+        return []
+    filters = filters or {}
+    out = []
+    for kind in kinds:
+        ref_doctype = APP_FEE_SOURCES[kind][0]
+        conds = ["pr.reference_doctype = %(ref)s", "pr.status = 'Paid'", "pr.docstatus = 1"]
+        values = {"ref": ref_doctype}
+        if pay_ids is not None:
+            if not pay_ids:
+                continue
+            conds.append("(pr.razorpay_payment_id IN %(ids)s OR pr.transaction_id IN %(ids)s)")
+            values["ids"] = tuple(pay_ids)
+        if offline:
+            conds.append("pr.payment_gateway = 'Manual Payment'")
+            for key, op in (("from_date", ">="), ("from_settlement_date", ">="), ("to_date", "<="), ("to_settlement_date", "<=")):
+                if filters.get(key):
+                    conds.append(f"DATE(pr.paid_on) {op} %({key})s")
+                    values[key] = filters.get(key)
+
+        if kind == "regular":
+            sql = f"""
+                SELECT pr.name, pr.amount, pr.paid_on, pr.razorpay_payment_id, pr.transaction_id,
+                    app.name AS applicant, app.candidate_name AS applicant_name,
+                    prog.program_name AS programme, prog.zoho_course AS programme_course,
+                    rcpt.payment_mode, rcpt.remarks
+                FROM `tabSLCM Payment Request` pr
+                INNER JOIN `tabApplicant` app ON app.name = pr.reference_name
+                LEFT JOIN `tabProgramme` prog ON prog.name = app.program
+                LEFT JOIN `tabApplicant Payment Receipt` rcpt ON rcpt.name = (
+                    SELECT r.name FROM `tabApplicant Payment Receipt` r
+                    WHERE r.payment_reference = pr.name AND r.docstatus < 2
+                    ORDER BY r.creation DESC LIMIT 1)
+                WHERE {" AND ".join(conds)}
+            """
+        else:
+            sql = f"""
+                SELECT pr.name, pr.amount, pr.paid_on, pr.razorpay_payment_id, pr.transaction_id,
+                    afa.applicant, afa.applicant_name,
+                    pp.programme_name AS programme, pp.zoho_course AS programme_course,
+                    NULL AS payment_mode, afa.remarks
+                FROM `tabSLCM Payment Request` pr
+                INNER JOIN `tabPACE Applicant Fee Assignment` afa ON afa.name = pr.reference_name
+                LEFT JOIN `tabPACE Programme` pp ON pp.name = afa.program
+                WHERE {" AND ".join(conds)} AND afa.fee_type = 'Application Fee'
+            """
+        for r in frappe.db.sql(sql, values, as_dict=True):
+            r.kind = kind
+            out.append(r)
+    return out
+
+
+def _append_application_fee_rows(rows, warnings, app_rows, filters, is_online, s_date_override=None, ref_override=None):
+    """Two journal lines per application-fee payment: credit the application fee ledger, debit the bank."""
+    if not app_rows:
+        return
+    from slcm.slcm.doctype.zoho_journal_settings.zoho_journal_settings import get_application_fee_config
+
+    # Programme Master zoho_course by name — fallback when the Programme has no course of its own
+    pm_course = {pm.name: pm.zoho_course for pm in frappe.db.get_all("Programme Master", fields=["name", "zoho_course"]) if pm.zoho_course}
+    configs = {}
+
+    for ar in app_rows:
+        if filters.get("program") and ar.programme != filters.get("program"):
+            continue
+        cfg = configs.get(ar.kind) or configs.setdefault(ar.kind, get_application_fee_config(ar.kind))
+
+        s_date = s_date_override or (getdate(ar.paid_on) if ar.paid_on else None)
+        date_str = formatdate(s_date, "dd-MM-yyyy") if s_date else ""
+        ref = ref_override if ref_override else (ar.razorpay_payment_id or ar.transaction_id or "")
+        if ref == "N/A":
+            ref = ""
+        bank = cfg.bank_account
+        course = ar.programme_course or (pm_course.get(ar.programme) if ar.kind == "regular" else None)
+        if not course:
+            warnings.append({
+                "reference_number": ref,
+                "student": ar.applicant,
+                "reason": f"{APP_FEE_SOURCES[ar.kind][1]}: Programme '{ar.programme or '-'}' has no Zoho Books Course",
+            })
+            course = ""
+
+        amount = round(flt(ar.amount), 2)
+        if is_online:
+            notes = f"online payment settlement on {date_str} for bank account {bank}"
+            description = "online"
+        else:
+            notes = ar.remarks or f"Application fee received on {date_str}"
+            description = ar.payment_mode or "offline"
+
+        base = {
+            "journal_date": date_str,
+            "settlement_date": date_str,
+            "reference_number": ref,
+            "journal_number_prefix": "JN-Frappe-",
+            "journal_number_suffix": "",
+            "notes": notes,
+            "journal_type": "Both",
+            "currency": "INR",
+            "description": description,
+            "contact_name": "Frappe",
+            "department": cfg.department,
+            "course": course,
+            "student_name": ar.applicant_name,
+            "student_id": ar.applicant,
+            # kept apart from student-fee journals: different bank / department
+            "batch_id": (f"online_{ref}_{date_str}_{ar.kind}_app" if is_online else f"offline_{ref}_{ar.name}"),
+            "is_online": is_online,
+            "raw_date": s_date,
+            "ref_sort": ref,
+        }
+        rows.append({**base, "account": cfg.ledger, "debit": 0.0, "credit": amount, "is_credit": True})
+        rows.append({**base, "account": bank, "debit": amount, "credit": 0.0, "is_credit": False})
 
 def get_data(filters):
     rows = []
@@ -282,12 +431,40 @@ def get_data(filters):
                 "ref_sort": utr
             })
 
+    want_students, app_kinds = _wanted_sources(filters)
+
     # 1. ONLINE RECEIPTS
     if not transaction_type or transaction_type == "Online":
         settlements, recon_items = get_razorpay_settlements(filters)
-        
+
         pay_ids = {r.get("entity_id") for r in recon_items if r.get("entity_id") and r.get("type", "").lower() in ("payment", "")}
-        if pay_ids:
+
+        # 1a. Application fees (regular + PACE) settled in these Razorpay settlements
+        app_map = {}
+        for ar in _application_fee_requests(app_kinds, pay_ids=pay_ids):
+            for pid in (ar.razorpay_payment_id, ar.transaction_id):
+                if pid:
+                    app_map[pid] = ar
+        if app_map:
+            import datetime as _dt
+            settlements_by_id = {s["id"]: s for s in settlements}
+            for item in recon_items:
+                if item.get("type", "").lower() not in ("payment", ""): continue
+                ar = app_map.get((item.get("entity_id") or "").strip())
+                s = settlements_by_id.get(item.get("settlement_id"))
+                if not ar or not s: continue
+                s_ts = s.get("settlement_time") or s.get("created_at")
+                s_date = _dt.datetime.fromtimestamp(s_ts, tz=_dt.timezone.utc).date()
+                if filters.get("from_date") and s_date < getdate(filters.get("from_date")): continue
+                if filters.get("to_date") and s_date > getdate(filters.get("to_date")): continue
+                amount = round(flt(item.get("amount") or 0) / 100, 2)
+                if amount <= 0: continue
+                ar = frappe._dict(ar, amount=amount)
+                _append_application_fee_rows(rows, warnings, [ar], filters, is_online=True,
+                    s_date_override=s_date, ref_override=(s.get("utr") or "").strip())
+
+        # 1b. Student fee payments
+        if pay_ids and want_students:
             conds = ["reference_number IN %s", "status != 'Cancelled'"]
             params = [tuple(pay_ids)]
             if filters.get("student"):
@@ -344,7 +521,13 @@ def get_data(filters):
                     process_fp_list(valid_fp_list, is_online=True, s_date_override=s_date, ref_override=utr)
 
     # 2. OFFLINE RECEIPTS
-    if not transaction_type or transaction_type == "Offline":
+    if (not transaction_type or transaction_type == "Offline") and app_kinds:
+        # manually recorded application fees (desk "Manual Payment"); dated by when they were recorded
+        _append_application_fee_rows(
+            rows, warnings, _application_fee_requests(app_kinds, offline=True, filters=filters), filters, is_online=False
+        )
+
+    if (not transaction_type or transaction_type == "Offline") and want_students:
         conds = ["status != 'Cancelled'", "payment_mode != 'Online Payment'"]
         params = []
         
@@ -411,14 +594,14 @@ def group_data(data):
         
         for r in group_rows:
             if r.get("is_credit"):
-                key = (r["account"], r["course"])
+                key = (r["account"], r["course"], r.get("department") or "ACADEMICS - TEACHING")
                 credit_sums[key] = credit_sums.get(key, 0.0) + flt(r["credit"])
             else:
                 total_debit += flt(r["debit"])
                 if not debit_account:
                     debit_account = r["account"]
                     
-        for (account, course), amt in credit_sums.items():
+        for (account, course, department), amt in credit_sums.items():
             if abs(amt) < 0.01: continue
             new_r = base_row.copy()
             new_r["account"] = account
@@ -427,7 +610,7 @@ def group_data(data):
             new_r["credit"] = amt
             new_r["student_id"] = ""
             new_r["student_name"] = ""
-            new_r["department"] = "ACADEMICS - TEACHING"
+            new_r["department"] = department
             new_r["contact_name"] = "CollPoll"
                 
             grouped_rows.append(new_r)

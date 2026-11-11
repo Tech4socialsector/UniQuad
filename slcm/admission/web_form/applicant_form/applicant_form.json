@@ -1635,7 +1635,7 @@
    "fieldname": "which_of_the_following_applies_to_you_section",
    "fieldtype": "Section Break",
    "hidden": 0,
-   "label": "Which of the following applies to you",
+   "label": "Which of the following applies to you (Karnataka Category)",
    "max_length": 0,
    "max_value": 0,
    "precision": "",
