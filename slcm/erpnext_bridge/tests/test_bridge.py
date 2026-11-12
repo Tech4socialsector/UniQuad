@@ -1097,10 +1097,12 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		self.assertEqual(self.je_rows(sync.live_journal_entry("Gateway Refund", pr.name))[held].debit, 1200)
 		self.assertEqual(frappe.db.count("Journal Entry", {"slcm_reference_doctype": "Gateway Refund",
 		                                                   "slcm_reference_name": pr.name, "docstatus": 1}), 1)
-		# a refund beyond the unapplied money (a fee applied to a due) is left to its Fee Refund
+		# a refund larger than the unapplied money left (₹300) is a fee applied to a due: left to its Fee Refund
 		pl.record_gateway_refund(PAY_ID, "rfnd_ERPTEST4", 900, refunded_on=self.date, source="test")
 		frappe.db.commit()
-		self.assertEqual(sync.gateway_refund_amount(frappe.get_doc("SLCM Payment Request", pr.name)), 1500)
+		self.assertEqual(sync.gateway_refund_amount(frappe.get_doc("SLCM Payment Request", pr.name)), 1200)
+		row = next(r for r in pl._refund_log(pr.name) if r["refund_id"] == "rfnd_ERPTEST4")
+		self.assertEqual(row["applies_to"], "applied")
 
 	def test_refunded_payment_keeps_its_receipt(self):
 		pr = self.paid_request(1000)

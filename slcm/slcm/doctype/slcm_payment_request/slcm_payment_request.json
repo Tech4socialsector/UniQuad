@@ -46,6 +46,7 @@
   "gateway_settlement_status",
   "refund_section",
   "refunded_amount",
+  "refunded_unapplied_amount",
   "refunded_on",
   "column_break_refund",
   "refund_reference",
@@ -358,6 +359,14 @@
    "read_only": 1
   },
   {
+   "fieldname": "refunded_unapplied_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded (unapplied money)",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Refunds of money applied to no fee (ERPNext: Gateway Refund). Refunds of fees applied to dues are booked by their Fee Refund."
+  },
+  {
    "fieldname": "refunded_on",
    "fieldtype": "Date",
    "label": "Refunded On",
@@ -406,7 +415,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-13 10:00:00.000000",
+ "modified": "2026-11-13 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "SLCM Payment Request",

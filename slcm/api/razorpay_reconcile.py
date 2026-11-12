@@ -546,8 +546,9 @@ def record_unbooked_captures(days=UNBOOKED_DAYS):
 			ref_doctype, ref_name = _intent_reference(intent)
 			amount = flt(p.get("amount")) / 100
 			note = (
-				f"Razorpay payment {pid} (₹{amount:,.2f}, order {intent.order_id}) was captured but not applied: "
-				"the dues were already paid by another payment. Needs refund."
+				f"Razorpay payment {pid} (₹{amount:,.2f}, order {intent.order_id}) was captured but no SLCM record "
+				"took it (dues already paid by another payment, the charge cancelled, or the payment short of the fee). "
+				"Needs refund or manual allocation."
 			)
 			if ledger.record_unapplied_quietly(
 				"Razorpay", pid, intent.order_id, ref_doctype, ref_name, amount, intent.student, note

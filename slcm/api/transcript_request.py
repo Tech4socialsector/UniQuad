@@ -613,7 +613,20 @@ def mark_request_paid(request_name, student_name, payment_id, order_id, gateway=
     """Record a verified gateway payment on the request, email the student and auto-approve
     (generate the transcript) when configured. Idempotent. Used by confirm_payment (Razorpay)
     and by the Easebuzz settlement (slcm.api.easebuzz_payment)."""
+    # One payer path at a time (browser confirm, reconciler, Easebuzz return / webhook): lock the request in a
+    # fresh transaction, so a second path sees the first one's result (no second email / transcript)
+    frappe.db.commit()
+    frappe.db.sql("SELECT name FROM `tabTranscript Request` WHERE name = %s FOR UPDATE", request_name)
     req = _owned_request(request_name, student_name)
+    if req.status == "Cancelled" and req.payment_status != "Paid":
+        # the student cancelled the request: never revive it - keep the money visible for a refund
+        from slcm.slcm.fee.payment_ledger import record_unapplied_quietly
+        record_unapplied_quietly(
+            gateway, payment_id, order_id, "Transcript Request", request_name, req.fee_amount, student_name,
+            f"{request_name} is Cancelled; payment {payment_id} needs a refund.",
+        )
+        frappe.db.commit()
+        return {"success": True, "already_paid": True, "status": req.status, "duplicate": True}
     if req.payment_status == "Paid":
         paid_with = frappe.db.get_value("Transcript Request", request_name, "payment_reference")
         if payment_id and paid_with and paid_with != payment_id:

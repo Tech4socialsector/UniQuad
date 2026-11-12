@@ -445,8 +445,9 @@ doc_events = {
         "after_insert": "slcm.slcm.fee.payment_ledger.on_payment_log",
     },
     "Fee Refund": {
-        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
-        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+        # a refund made through the gateway is linked to its refund row first (so ERPNext books it once)
+        "on_submit": ["slcm.slcm.fee.payment_ledger.link_fee_refund", "slcm.erpnext_bridge.sync.enqueue_sync"],
+        "on_cancel": ["slcm.slcm.fee.payment_ledger.link_fee_refund", "slcm.erpnext_bridge.sync.enqueue_sync"],
     },
     "Student Credit Note": {
         "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",

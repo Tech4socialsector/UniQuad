@@ -110,7 +110,8 @@ def _effective_invoice_outstanding(invoice_name, student_name, outstanding):
 def _revert_invoice_initiated(invoice_name, student_name):
     _revert_sm_if_in_flight(invoice_name, student_name)
     if frappe.db.get_value("Fee Invoice", invoice_name, "payment_status") == "Payment Initiated":
-        frappe.db.set_value("Fee Invoice", invoice_name, "payment_status", "Pending", update_modified=False)
+        # blank = no payment in flight (Fee Invoice.payment_status has no "Pending" option)
+        frappe.db.set_value("Fee Invoice", invoice_name, "payment_status", "", update_modified=False)
 
 
 def _revert_registration_initiated(doctype, registration_name):
@@ -1804,8 +1805,10 @@ def mark_exam_payment_failed(registration_name, kind="re_exam", payment_id="", e
     )
     if not reg:
         frappe.throw(_("Registration not found."), frappe.PermissionError)
-    if reg.payment_status == "Payment Initiated":
-        frappe.db.set_value(doctype, reg.name, "payment_status", "Payment Failed", update_modified=False)
+    # only a checkout that is actually in flight can fail (no Failed requests from arbitrary ids)
+    if reg.payment_status != "Payment Initiated":
+        return {"status": "ignored"}
+    frappe.db.set_value(doctype, reg.name, "payment_status", "Payment Failed", update_modified=False)
     pid = (payment_id or "").strip()
     if pid.startswith("pay_"):
         from slcm.slcm.fee.payment_ledger import record_failure_quietly
@@ -2276,8 +2279,8 @@ def cancel_fee_payment(invoice_name, integration_request=None):
         inv_resting = {
             "Paid":           "Captured",
             "Partially Paid": "Captured",
-            "Unpaid":         "Pending",
-        }.get(resting_status, "Pending")
+            "Unpaid":         "",  # blank: Fee Invoice.payment_status has no "Pending" option
+        }.get(resting_status, "")
         frappe.db.set_value(
             "Fee Invoice", invoice_name, "payment_status", inv_resting,
             update_modified=False,
@@ -2596,7 +2599,7 @@ def _revert_sm_if_in_flight(invoice_name, student_name, integration_request=None
     inv_current = frappe.db.get_value("Fee Invoice", invoice_name, "payment_status") or ""
     if inv_current in _IN_FLIGHT:
         frappe.db.set_value(
-            "Fee Invoice", invoice_name, "payment_status", "Pending",
+            "Fee Invoice", invoice_name, "payment_status", "",  # blank: no payment in flight
             update_modified=False,
         )
 
@@ -3145,7 +3148,7 @@ def _parent_invoice_attempt_ended(invoice_name, student_name, integration_reques
 @frappe.whitelist()
 def parent_cancel_fee_payment(invoice_name, student_name, integration_request=None):
     """Parent closed the Razorpay window on an invoice without paying."""
-    _parent_invoice_attempt_ended(invoice_name, student_name, integration_request, "Cancelled", "Pending")
+    _parent_invoice_attempt_ended(invoice_name, student_name, integration_request, "Cancelled", "")
     from slcm.slcm.doctype.student_master.student_master import _append_payment_log
     _append_payment_log(
         student_name, "Payment Cancelled", invoice=invoice_name, payment_mode="Online Payment",

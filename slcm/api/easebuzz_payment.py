@@ -691,7 +691,7 @@ def _invoice_failure(data, payment_id, summary, cancelled):
 	# a parent's checkout never sets the Student Master in flight: release the invoice itself too
 	if frappe.db.get_value("Fee Invoice", data.invoice, "payment_status") == "Payment Initiated":
 		frappe.db.set_value(
-			"Fee Invoice", data.invoice, "payment_status", "Pending" if cancelled else "Payment Failed",
+			"Fee Invoice", data.invoice, "payment_status", "" if cancelled else "Payment Failed",
 			update_modified=False,
 		)
 
@@ -708,9 +708,12 @@ def _exam_success(doctype, log_doctype, link_field, fee_field):
 		if reg.payment_status in ("Paid", "Captured"):
 			ref = frappe.db.get_value(doctype, reg.name, "payment_reference")
 			if ref and ref != payment_id:
-				# Paid twice (two tabs, or Pay All + the exam page): keep both, flag for refund
+				# Paid twice (two tabs, or Pay All + the exam page): no second Paid log - that would book the
+				# duplicate as exam fee income. With no record holding it, record_easebuzz_capture_quietly records
+				# it as unapplied money (Payments to Refund) and the payer is told it will be refunded.
 				note = f"{reg.name} was already paid ({ref}); Easebuzz payment {payment_id} is a duplicate."
 				frappe.log_error(f"txnid: {txnid}\n{note}", "Easebuzz duplicate payment needs refund")
+				return note
 		if not frappe.db.exists(log_doctype, {"razorpay_payment_id": payment_id}):
 			frappe.get_doc({
 				"doctype": log_doctype,

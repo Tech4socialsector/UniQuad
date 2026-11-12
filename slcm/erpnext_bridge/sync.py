@@ -116,9 +116,10 @@ GATEWAY_HELD_AMOUNT = """coalesce((select sum(l.amount) from `tabRe Exam Payment
 		where t.payment_reference = src.transaction_id and t.payment_status = 'Paid'), 0)"""
 # ...so the money its Gateway Receipt parked in Unallocated Fee Receipts (applied to nothing):
 GATEWAY_UNAPPLIED_AMOUNT = f"greatest(({GATEWAY_RECEIPT_AMOUNT}) - ({GATEWAY_HELD_AMOUNT}), 0)"
-# Gateway Refund: the recorded refunds, up to that unapplied money. A refund of a fee that WAS applied to a due is
-# booked by its Fee Refund (Refund Mode: Payment Gateway) instead, so it is never counted twice.
-GATEWAY_REFUND_AMOUNT = f"least(coalesce(src.refunded_amount, 0), {GATEWAY_UNAPPLIED_AMOUNT})"
+# Gateway Refund: the recorded refunds of unapplied money (refund log rows "unapplied"), up to that unapplied money.
+# A refund of a fee that WAS applied to a due is booked by its Fee Refund (Refund Mode: Payment Gateway) instead, so
+# it is never counted twice.
+GATEWAY_REFUND_AMOUNT = f"least(coalesce(src.refunded_unapplied_amount, 0), {GATEWAY_UNAPPLIED_AMOUNT})"
 SOURCES["Gateway Refund"] = {
 	"table": "SLCM Payment Request", "date_field": "refunded_on", "date": "src.refunded_on",
 	"active": f"""src.docstatus = 1 and src.status = 'Paid' and ifnull(src.transaction_id, '') != ''
@@ -396,6 +397,14 @@ def _should_post(cfg, key, src, already_posted=False):
 		if src.docstatus == 2 or src.settlement_status != "Settled":
 			return False
 		if not cfg.slcm_gateway_charges_account:
+			# every settlement waits for this account: say so (once a day) instead of waiting silently
+			if not frappe.cache().get_value("slcm_erp_no_gateway_charges_account"):
+				frappe.cache().set_value("slcm_erp_no_gateway_charges_account", 1, expires_in_sec=86400)
+				frappe.log_error(
+					f"Company {cfg.company}: set the Payment Gateway Charges account on its SLCM Fees tab. Until then "
+					"no gateway settlement is posted to ERPNext (the money stays in Payment Gateway Clearing).",
+					"SLCM ERPNext settlements waiting: no gateway charges account",
+				)
 			return False
 		if already_posted:
 			return True

@@ -368,9 +368,10 @@ def _gateway_refund_student(cfg, pr):
 		frappe.throw(_("{0}: no unapplied money refunded").format(pr.name))
 	clearing = conf.gateway_clearing_account(cfg)
 	refunds = ", ".join(
-		f"{r.get('refund_id')} ₹{flt(r.get('amount')):,.2f} ({r.get('source') or '-'})" for r in _refund_rows(pr)
+		f"{r.get('refund_id')} ₹{flt(r.get('amount')):,.2f} ({r.get('source') or '-'})"
+		for r in _refund_rows(pr) if r.get("applies_to", "unapplied") == "unapplied"
 	) or pr.get("refund_reference") or "-"
-	capped = flt(pr.refunded_amount, PRECISION) - amount
+	capped = flt(pr.get("refunded_unapplied_amount"), PRECISION) - amount
 	student = gateway_student(pr)
 	return {
 		"posting_date": getdate(pr.refunded_on or pr.modified),
@@ -381,7 +382,7 @@ def _gateway_refund_student(cfg, pr):
 			"paid back to the payer by the gateway: released from Unallocated Fee Receipts, out of Gateway Clearing{5}"
 		).format(
 			pr.payment_gateway or "-", pr.transaction_id, pr.name, _who(pr), refunds,
-			_(" | ₹{0} more was refunded of fees applied to dues: book it with a Fee Refund").format(f"{capped:,.2f}")
+			_(" | ₹{0} recorded beyond the unapplied money: check whether it was a fee applied to a due (Fee Refund)").format(f"{capped:,.2f}")
 			if capped > 0.005 else "",
 		),
 		"student": student,
@@ -400,7 +401,8 @@ def _gateway_refund_payout(cfg, pr):
 		frappe.throw(_("{0}: no refund deducted from a payout").format(pr.name))
 	bank = conf.require(cfg, "default_bank_account", _("Razorpay and Easebuzz settle into the Company's default bank account"))
 	clearing = conf.gateway_clearing_account(cfg)
-	settled = [r for r in _refund_rows(pr) if r.get("payout")]
+	settled = [r for r in _refund_rows(pr) if r.get("payout")
+	           and (r.get("applies_to", "unapplied") == "unapplied" or r.get("fee_refund"))]
 	detail = ", ".join(f"{r.get('gateway_refund_id') or r.get('refund_id')} ₹{flt(r.get('amount')):,.2f} in {r.get('payout')}"
 	                   for r in settled) or pr.get("refund_settlement_reference") or "-"
 	student = gateway_student(pr)

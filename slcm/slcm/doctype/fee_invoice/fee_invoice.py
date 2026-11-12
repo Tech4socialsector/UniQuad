@@ -107,6 +107,11 @@ class FeeInvoice(Document):
 		# Razorpay payment ID is passed via frappe.flags.data by authorize_payment()
 		flags_data = frappe.flags.get("data") or {}
 		razorpay_payment_id = (flags_data.get("razorpay_payment_id") or "") if isinstance(flags_data, dict) else ""
+		intent = flags_data.get("slcm_intent") if isinstance(flags_data, dict) else None
+		if intent and intent.get("paid_by_role") != "Desk":
+			# a Student / Parent Portal order: its confirm (or the reconciler) books it right after this, with the
+			# payer, the captured amount and its payment log (razorpay_reconcile.record_invoice_payment)
+			return
 		if razorpay_payment_id and frappe.db.exists(
 			"Fee Payment", {"reference_number": razorpay_payment_id, "docstatus": 1}
 		):

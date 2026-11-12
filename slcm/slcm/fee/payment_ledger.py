@@ -403,36 +403,65 @@ def _detach(request_name, payment_id):
 	frappe.db.set_value(DOCTYPE, request_name, update)
 	frappe.get_doc(DOCTYPE, request_name).add_comment("Comment", note)
 	if refunded and not _refund_log(request_name):
-		# the record was marked Refunded (refund made in the gateway dashboard): one refund row for the whole
-		# payment, so ERPNext books it (Gateway Refund) like any other recorded refund
+		# the record was marked Refunded (refund made in the gateway dashboard): one refund row for what the
+		# refunded record(s) held - not the whole payment - so ERPNext books it (Gateway Refund)
+		refunded_amount = flt(sum(
+			flt(frappe.db.sql(
+				f"select sum(amount) from `tab{dt}` where razorpay_payment_id = %s and payment_status = 'Refunded'",
+				payment_id)[0][0])
+			for dt in ("Re Exam Payment Log", "Improvement Exam Payment Log")
+		) + flt(frappe.db.sql(
+			"select sum(fee_amount) from `tabTranscript Request` where payment_reference = %s and payment_status = 'Refunded'",
+			payment_id)[0][0]), 2) or flt(pr.amount, 2)
 		_save_refund_log(request_name, [{
-			"refund_id": f"{pr.reference_doctype} {pr.reference_name} marked Refunded", "amount": flt(pr.amount, 2),
-			"refunded_on": str(getdate()), "source": f"{pr.reference_doctype} marked Refunded",
+			"refund_id": f"{pr.reference_doctype} {pr.reference_name} marked Refunded", "amount": refunded_amount,
+			"applies_to": "unapplied", "refunded_on": str(getdate()), "source": f"{pr.reference_doctype} marked Refunded",
 		}])
 
 
 # ── refunds (recorded, not paid out, by SLCM) ─────────────────────────────────
 
 
-def refundable_amount(request_name):
+def _unapplied_held(pr):
 	"""Money on a paid request that no SLCM record holds - captured but not applied (duplicate payment, dues
-	settled meanwhile, cancelled request, Fee Payment cancelled) - less what was already recorded as refunded."""
-	pr = frappe.db.get_value(
-		DOCTYPE, request_name,
-		["status", "docstatus", "amount", "gateway_response", "transaction_id", "refunded_amount", "reference_doctype"],
-		as_dict=True,
-	)
-	if not pr or pr.status != "Paid" or pr.docstatus != 1 or pr.reference_doctype not in LEDGER_DOCTYPES:
-		return 0
+	settled meanwhile, cancelled request, Fee Payment cancelled)."""
 	try:
 		response = json.loads(pr.gateway_response or "{}")
 	except ValueError:
 		response = {}
 	if response.get("records"):
-		held = flt(response.get("unallocated"))  # booked in part: only the excess is refundable
-	else:
-		held = flt(pr.amount)  # no record holds any of it
-	return max(flt(held - flt(pr.refunded_amount), 2), 0)
+		return flt(response.get("unallocated"))  # booked in part: only the excess is unapplied
+	return flt(pr.amount)  # no record holds any of it
+
+
+def refundable_amount(request_name):
+	"""Unapplied money on a paid request still to be refunded: what no record holds, less the refunds of
+	unapplied money already recorded. (Refunds of fees applied to dues are booked by a Fee Refund instead.)"""
+	pr = frappe.db.get_value(
+		DOCTYPE, request_name,
+		["status", "docstatus", "amount", "gateway_response", "reference_doctype"],
+		as_dict=True,
+	)
+	if not pr or pr.status != "Paid" or pr.docstatus != 1 or pr.reference_doctype not in LEDGER_DOCTYPES:
+		return 0
+	refunded = sum(flt(r.get("amount")) for r in _refund_log(request_name) if r.get("applies_to", "unapplied") == "unapplied")
+	return max(flt(_unapplied_held(pr) - refunded, 2), 0)
+
+
+def _lock_request(request_name):
+	"""Serialise refund-log updates on a request. Commit first: under REPEATABLE READ a read made before the lock
+	would pin an old snapshot and the last writer would drop the other's refund row."""
+	frappe.db.commit()
+	frappe.db.sql(f"SELECT name FROM `tab{DOCTYPE}` WHERE name = %s FOR UPDATE", request_name)
+
+
+def _fee_refund_for(refund_id):
+	"""A submitted Fee Refund made through the gateway for this refund id (its UTR / refund id field)."""
+	if not refund_id:
+		return None
+	return frappe.db.get_value(
+		"Fee Refund", {"utr_number": refund_id, "refund_mode": "Payment Gateway", "docstatus": 1}, "name"
+	)
 
 
 def _refund_log(request_name):
@@ -447,10 +476,15 @@ def _save_refund_log(request_name, log, comment=None):
 	"""Store the refund log and the summary fields read by reports and the ERPNext bridge:
 	refunded_* = every refund recorded (bridge: Gateway Refund), refund_settled_* = the part a payout deducted
 	(bridge: Gateway Refund Payout)."""
-	settled = [r for r in log if r.get("payout")]
+	# a payout deduction is booked (Dr Clearing / Cr Bank) only for refunds something credited Clearing with:
+	# unapplied money (Gateway Refund) or an applied fee with its Fee Refund (mode Payment Gateway)
+	settled = [r for r in log if r.get("payout")
+	           and (r.get("applies_to", "unapplied") == "unapplied" or r.get("fee_refund"))]
 	frappe.db.set_value(DOCTYPE, request_name, {
 		"refund_log": json.dumps(log, indent=1, default=str),
 		"refunded_amount": flt(sum(flt(r.get("amount")) for r in log), 2),
+		"refunded_unapplied_amount": flt(sum(
+			flt(r.get("amount")) for r in log if r.get("applies_to", "unapplied") == "unapplied"), 2),
 		"refunded_on": max((getdate(r["refunded_on"]) for r in log if r.get("refunded_on")), default=None),
 		"refund_reference": ", ".join(str(r.get("refund_id")) for r in log if r.get("refund_id"))[:140],
 		"refund_settled_amount": flt(sum(flt(r.get("amount")) for r in settled), 2),
@@ -477,7 +511,7 @@ def record_gateway_refund(payment_id, refund_id, amount, refunded_on=None, sourc
 	)
 	if not name:
 		return None
-	frappe.db.sql(f"SELECT name FROM `tab{DOCTYPE}` WHERE name = %s FOR UPDATE", name)
+	_lock_request(name)
 	log = _refund_log(name)
 	row = next((r for r in log if r.get("refund_id") == refund_id or r.get("gateway_refund_id") == refund_id), None)
 	if not row:
@@ -497,8 +531,14 @@ def record_gateway_refund(payment_id, refund_id, amount, refunded_on=None, sourc
 		_save_refund_log(name, log, _("Refund {0} of ₹{1} was deducted from payout {2}.").format(
 			refund_id, f"{amount:,.2f}", payout))
 		return name
+	# What it refunds: a Fee Refund made through the gateway with this refund id is an applied fee; otherwise it is
+	# the payment's unapplied money when it fits in what is still refundable, else an applied fee whose Fee Refund
+	# is still to be entered (linked when it is: link_fee_refund)
+	fee_refund = _fee_refund_for(refund_id)
+	applies_to = "applied" if fee_refund or amount - refundable_amount(name) > 0.01 else "unapplied"
 	log.append({
-		"refund_id": refund_id, "amount": amount,
+		"refund_id": refund_id, "amount": amount, "applies_to": applies_to,
+		**({"fee_refund": fee_refund} if fee_refund else {}),
 		"refunded_on": str(getdate(refunded_on)) if refunded_on else str(getdate()), "source": source,
 		**({"payout": payout, "payout_date": str(getdate(payout_date)) if payout_date else str(getdate())} if payout else {}),
 	})
@@ -512,12 +552,36 @@ def remove_gateway_refund(payment_id, refund_id):
 	name = frappe.db.get_value(DOCTYPE, {"transaction_id": payment_id, "docstatus": 1, "status": "Paid"}, "name")
 	if not name or not refund_id:
 		return None
+	_lock_request(name)
 	log = _refund_log(name)
 	kept = [r for r in log if refund_id not in (r.get("refund_id"), r.get("gateway_refund_id"))]
 	if len(kept) == len(log):
 		return None
 	_save_refund_log(name, kept, _("Refund {0} failed at the gateway: removed.").format(refund_id))
 	return name
+
+
+def link_fee_refund(doc, method=None):
+	"""Fee Refund (mode Payment Gateway) submitted / cancelled: mark the refund row with the same refund id as an
+	applied-fee refund booked by that Fee Refund, so ERPNext books it once (by the Fee Refund) and its payout
+	deduction posts. The refund id is the Fee Refund's UTR / refund id field."""
+	refund_id = (doc.get("utr_number") or "").strip()
+	if doc.get("refund_mode") != "Payment Gateway" or not refund_id:
+		return
+	for name in frappe.get_all(DOCTYPE, filters={"refund_log": ("like", f"%{refund_id}%")}, pluck="name"):
+		_lock_request(name)
+		log = _refund_log(name)
+		changed = False
+		for r in log:
+			if refund_id in (r.get("refund_id"), r.get("gateway_refund_id")):
+				if method == "on_cancel":
+					r.pop("fee_refund", None)
+				else:
+					r.update(applies_to="applied", fee_refund=doc.name)
+				changed = True
+		if changed:
+			_save_refund_log(name, log, _("Refund {0} {1} Fee Refund {2}.").format(
+				refund_id, _("is no longer booked by") if method == "on_cancel" else _("is booked by"), doc.name))
 
 
 @frappe.whitelist()
@@ -536,7 +600,7 @@ def record_refund(request_name, refund_reference, refunded_on, amount):
 		frappe.throw(_("Enter the refund id / UTR shown in the gateway dashboard."))
 	if amount <= 0:
 		frappe.throw(_("Enter the refunded amount."))
-	frappe.db.sql(f"SELECT name FROM `tab{DOCTYPE}` WHERE name = %s FOR UPDATE", request_name)
+	_lock_request(request_name)
 	refundable = refundable_amount(request_name)
 	if amount - refundable > 0.01:
 		frappe.throw(
@@ -547,7 +611,7 @@ def record_refund(request_name, refund_reference, refunded_on, amount):
 	if any(refund_reference in (r.get("refund_id"), r.get("gateway_refund_id")) for r in log):
 		frappe.throw(_("Refund {0} is already recorded on this payment.").format(refund_reference))
 	log.append({
-		"refund_id": refund_reference, "amount": amount,
+		"refund_id": refund_reference, "amount": amount, "applies_to": "unapplied",
 		"refunded_on": str(getdate(refunded_on)) if refunded_on else str(getdate()), "source": "recorded by hand",
 		"by": frappe.session.user,
 	})
