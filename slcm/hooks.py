@@ -45,12 +45,12 @@ web_include_js = ["/assets/slcm/js/fle_theme.js"]
 app_include_js = [
     "/assets/slcm/js/student_workspace_redirect.js",
     "/assets/slcm/js/bulk_email_dialog.js",
-    "/assets/slcm/js/sidebar_toggle.js?v=5",
+    "/assets/slcm/js/sidebar_toggle.js?v=6",
     "/assets/slcm/js/sidebar_fallback.js?v=1",
     # Company > View > Cost Centers / Chart of Accounts: open the tree of that company, not the cached one
     "/assets/slcm/js/tree_route_filters.js?v=1"
 ]
-app_include_css = ["/assets/slcm/css/sidebar_toggle.css?v=5"]
+app_include_css = ["/assets/slcm/css/sidebar_toggle.css?v=6"]
 
 doctype_js = {
     "Notification": "public/js/notification_override.js",
@@ -634,6 +634,8 @@ before_request = [
     "slcm.utils.domain_routing.redirect_domain_home",
     "slcm.security.api_guard.guard",
     "slcm.utils.auth_routing.intercept_login",
+    # Roles allowed into the student/faculty/parent portals (Roles & Permissions > Portals)
+    "slcm.utils.portal_access.guard",
     "slcm.admission.portal_application_web_form.slcm_before_request"
 ]
 on_logout = "slcm.utils.auth_routing.handle_logout"

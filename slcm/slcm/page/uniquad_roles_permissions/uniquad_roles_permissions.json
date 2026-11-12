@@ -1,0 +1,24 @@
+{
+ "content": null,
+ "creation": "2026-11-06 12:00:00.000000",
+ "docstatus": 0,
+ "doctype": "Page",
+ "icon": "shield",
+ "idx": 0,
+ "modified": "2026-11-06 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "uniquad-roles-permissions",
+ "owner": "Administrator",
+ "page_name": "uniquad-roles-permissions",
+ "roles": [
+  {
+   "role": "System Manager"
+  }
+ ],
+ "script": null,
+ "standard": "Yes",
+ "style": null,
+ "system_page": 1,
+ "title": "Roles & Permissions"
+}

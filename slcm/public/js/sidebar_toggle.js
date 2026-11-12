@@ -1,9 +1,12 @@
-// Desk sidebar on dashboard pages (routes like "exam-dashboard"): hidden whenever one
+// Desk sidebar on dashboard pages (routes like "exam-dashboard", plus FULL_WIDTH_PAGES): hidden whenever one
 // opens, with a button before the breadcrumbs to show or hide it. Every other page keeps
 // the normal sidebar and has no button. Phones keep Frappe's own menu (see sidebar_toggle.css).
 (function () {
 	const ICON = `<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
 		stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>`;
+
+	// Wide pages that open like a dashboard: sidebar hidden, toggle button shown
+	const FULL_WIDTH_PAGES = ["uniquad-roles-permissions"];
 
 	let shown = true;
 	let last_route = null;
@@ -11,7 +14,7 @@
 	const is_dashboard = () => {
 		// /desk/<first>/...; read from the URL because frappe.get_route() is null during startup
 		const first = (window.location.pathname.split("/")[2] || "").toLowerCase();
-		return /(^|-)dashboard$/.test(first);
+		return /(^|-)dashboard$/.test(first) || FULL_WIDTH_PAGES.includes(first);
 	};
 
 	function apply(show) {
