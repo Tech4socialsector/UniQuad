@@ -79,13 +79,15 @@ def get_student_attendance_records(
 	if student_ids:
 		photo_rows = frappe.get_all(
 			"Student Master",
-			fields=["name", "passport_size_photo"],
+			fields=["name", "passport_size_photo", "registration_id"],
 			filters={"name": ["in", student_ids]},
 		)
 		photo_map = {row["name"]: row["passport_size_photo"] for row in photo_rows}
+		reg_map = {row["name"]: row["registration_id"] for row in photo_rows}
 
 	for student in student_list:
 		student["student_image"] = photo_map.get(student["student"])
+		student["registration_id"] = reg_map.get(student["student"]) if student_ids else None
 
 	# -------------------- FETCH EXISTING ATTENDANCE --------------------
 
@@ -96,6 +98,8 @@ def get_student_attendance_records(
 		.select(
 			StudentAttendance.student,
 			StudentAttendance.status,
+			StudentAttendance.modified,
+			StudentAttendance.modified_by,
 		)
 		.where(StudentAttendance.docstatus < 2)
 	)
@@ -113,9 +117,14 @@ def get_student_attendance_records(
 
 	# -------------------- MERGE STATUS --------------------
 
-	attendance_map = {row["student"]: row["status"] for row in attendance_rows}
+	attendance_map = {row["student"]: row for row in attendance_rows}
 
 	for student in student_list:
-		student["status"] = attendance_map.get(student["student"], "Present")
+		existing = attendance_map.get(student["student"])
+		student["status"] = existing["status"] if existing else "Present"
+		student["marked"] = 1 if existing else 0
+		if existing:
+			student["marked_on"] = existing["modified"]
+			student["marked_by"] = existing["modified_by"]
 
 	return student_list
