@@ -106,3 +106,5 @@ slcm.patches.v2_0.backfill_fee_demand_programme
 slcm.patches.v2_0.remove_old_analytics_pages
 slcm.patches.v2_0.create_student_rfid_card_history
 slcm.patches.v2_0.set_class_xii_status_completed_for_pg
+slcm.patches.v2_0.set_rfid_student_map_defaults
+slcm.patches.v2_0.group_rfid_uid_change_logs

@@ -1,84 +1,104 @@
 {
-    "actions": [],
-    "creation": "2026-04-30 00:00:00.000000",
-    "doctype": "DocType",
-    "engine": "InnoDB",
-    "field_order": [
-        "student",
-        "student_name",
-        "col_break_1",
-        "parent_relation",
-        "parent_name",
-        "col_break_2",
-        "parent_email",
-        "invite_status"
-    ],
-    "fields": [
-        {
-            "fieldname": "student",
-            "fieldtype": "Link",
-            "in_list_view": 1,
-            "label": "Student ID",
-            "options": "Student Master",
-            "read_only": 1
-        },
-        {
-            "fieldname": "student_name",
-            "fieldtype": "Data",
-            "in_list_view": 1,
-            "label": "Student Name",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_1",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "parent_relation",
-            "fieldtype": "Data",
-            "in_list_view": 1,
-            "label": "Relation",
-            "read_only": 1
-        },
-        {
-            "fieldname": "parent_name",
-            "fieldtype": "Data",
-            "in_list_view": 1,
-            "label": "Parent Name",
-            "read_only": 1
-        },
-        {
-            "fieldname": "col_break_2",
-            "fieldtype": "Column Break"
-        },
-        {
-            "fieldname": "parent_email",
-            "fieldtype": "Data",
-            "in_list_view": 1,
-            "label": "Parent Email",
-            "options": "Email",
-            "read_only": 1
-        },
-        {
-            "fieldname": "invite_status",
-            "fieldtype": "Select",
-            "in_list_view": 1,
-            "label": "Status",
-            "options": "Pending\nInvited\nAlready Exists\nNo Email\nFailed",
-            "read_only": 1
-        }
-    ],
-    "istable": 1,
-    "links": [],
-    "modified": "2026-04-30 00:00:00.000000",
-    "modified_by": "Administrator",
-    "module": "SLCM",
-    "name": "Parent Invite Student Item",
-    "owner": "Administrator",
-    "permissions": [],
-    "row_format": "Dynamic",
-    "sort_field": "modified",
-    "sort_order": "DESC",
-    "states": [],
-    "custom": 0
+ "actions": [],
+ "creation": "2026-04-30 00:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "student",
+  "student_name",
+  "col_break_1",
+  "parent_relation",
+  "parent_name",
+  "col_break_2",
+  "parent_email",
+  "invite_status",
+  "remarks",
+  "email_queue"
+ ],
+ "fields": [
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Student ID",
+   "options": "Student Master",
+   "read_only": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student Name",
+   "read_only": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "parent_relation",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Relation",
+   "read_only": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "parent_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parent Name",
+   "read_only": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "parent_email",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Parent Email",
+   "read_only": 1,
+   "columns": 2
+  },
+  {
+   "fieldname": "invite_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nInvited\nAlready Exists\nNo Email\nInvalid Email\nFailed",
+   "read_only": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "remarks",
+   "fieldtype": "Small Text",
+   "label": "Remarks",
+   "read_only": 1
+  },
+  {
+   "fieldname": "email_queue",
+   "fieldtype": "Link",
+   "label": "Email Queue",
+   "options": "Email Queue",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-11 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "Parent Invite Student Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "row_format": "Dynamic",
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "custom": 0
 }

@@ -211,6 +211,14 @@ def mark_dues_cleared(demand_names, payment_mode="Cash", remarks=None):
 	and payment logs all flow through the existing, already-validated
 	payment pipeline instead of hand-editing amounts/status here.
 	"""
+	# Recording money received is a finance action: roles that may create Fee Payments, or the
+	# roles that record payments on Student Fee Management (no role holds Fee Payment submit;
+	# the payment pipeline submits it on their behalf).
+	from slcm.slcm.page.student_fee_management.student_fee_management import ALLOWED_ROLES
+
+	if not (frappe.has_permission("Fee Payment", "create") or set(frappe.get_roles()) & set(ALLOWED_ROLES)):
+		frappe.throw(_("Only finance staff can mark dues as cleared."), frappe.PermissionError)
+
 	if isinstance(demand_names, str):
 		demand_names = frappe.parse_json(demand_names)
 	if not demand_names:

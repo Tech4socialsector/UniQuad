@@ -1992,3 +1992,142 @@ function _download_logs_csv(logs, student_label) {
 	document.body.removeChild(a);
 	URL.revokeObjectURL(url);
 }
+
+// ─── RFID card panel (under RFID UID): status, card history and Assign / Remove ───
+// Data: slcm.slcm.utils.rfid_cards.get_card_status. Changes go through the same server checks as
+// RFID Card Management (link_rfid_to_student / unmap_cards), so every change is validated and logged.
+const SMR_PAGE_API = "slcm.slcm.page.rfid_mapping.rfid_mapping.";
+
+frappe.ui.form.on("Student Master", {
+	refresh(frm) {
+		smr_render(frm); // also runs after save and reload
+	},
+});
+
+function smr_box(frm) {
+	const field = frm.fields_dict.rfid_uid;
+	if (!field) return null;
+	let $box = field.$wrapper.next(".smr-box");
+	if (!$box.length) $box = $('<div class="smr-box"></div>').insertAfter(field.$wrapper);
+	return $box;
+}
+
+function smr_render(frm) {
+	const $box = smr_box(frm);
+	if (!$box) return;
+	if (frm.is_new()) {
+		$box.empty().hide();
+		return;
+	}
+	const student = frm.doc.name;
+	frappe.call({
+		method: "slcm.slcm.utils.rfid_cards.get_card_status",
+		args: { student },
+		callback(r) {
+			if (!r.message || frm.doc.name !== student) return;
+			$box.html(smr_html(r.message, student)).show();
+			$box.find("[data-smr=assign]").on("click", () => smr_assign(frm, r.message));
+			$box.find("[data-smr=remove]").on("click", () => smr_remove(frm, r.message));
+		},
+		error() {
+			$box.empty().hide();
+		},
+	});
+}
+
+function smr_html(st, student) {
+	const esc = (v) => frappe.utils.escape_html(String(v ?? ""));
+	const date = (v) => (v ? frappe.datetime.str_to_user(v) : "");
+	const pill = {
+		active: ["green", __("Active")],
+		none: ["gray", __("No card")],
+		unrecorded: ["orange", __("Active · not in card records")],
+	}[st.state];
+	const tone = { Active: "green", Lost: "red", Damaged: "orange", Blocked: "red", Replaced: "gray" };
+	const old_cards = (st.cards || []).filter((c) => c.rfid_uid !== st.rfid_uid);
+	const log = st.change_log;
+	const row = (label, value) => value ? `<div style="display:flex;gap:10px;font-size:12.5px;padding:2px 0">
+		<span class="text-muted" style="min-width:110px">${label}</span><span style="min-width:0;overflow-wrap:anywhere">${value}</span></div>` : "";
+
+	return `<div style="border:1px solid var(--border-color);border-radius:10px;padding:12px 14px;margin:2px 0 12px;background:var(--subtle-fg)">
+		<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px">
+			<b style="font-size:13px">${__("RFID card")}</b>
+			<span class="indicator-pill ${pill[0]}">${pill[1]}</span>
+			${st.rfid_uid ? `<code style="font-size:12px">${esc(st.rfid_uid)}</code>` : ""}
+			<span style="margin-left:auto;display:flex;gap:6px;flex-wrap:wrap">
+				${st.can_manage ? `<button class="btn btn-xs btn-default" data-smr="assign">${st.rfid_uid ? __("Change card") : __("Assign card")}</button>` : ""}
+				${st.can_manage && st.rfid_uid ? `<button class="btn btn-xs btn-default" data-smr="remove">${__("Remove card")}</button>` : ""}
+			</span>
+		</div>
+		${row(__("Issued on"), st.card && st.card.issued_date ? esc(date(st.card.issued_date)) : "")}
+		${st.state === "unrecorded" ? row(__("Note"), esc(__("The card is set on the student but has no Active card record. Use Change card to record it, or Remove card."))) : ""}
+		${row(__("Swipes"), st.swipes ? esc(__("{0} · last {1}", [st.swipes.toLocaleString("en-IN"), date(st.last_swipe)])) : esc(__("None yet")))}
+		${log ? row(__("Last change"), `${esc(__(log.last_change))} · ${esc(date(log.last_changed_on))} · ${esc(log.changed_by_name || log.last_changed_by)}
+			${log.source ? `<span class="text-muted"> · ${esc(log.source)}</span>` : ""}`) : ""}
+		${old_cards.length ? row(__("Earlier cards"), old_cards.map((c) =>
+			`<span class="indicator-pill ${tone[c.card_status] || "gray"}" style="margin:0 4px 4px 0">${esc(c.rfid_uid)} · ${esc(__(c.card_status))}</span>`).join("")) : ""}
+		${log ? `<div style="margin-top:6px;font-size:12.5px"><a href="/app/rfid-uid-change-log/${encodeURIComponent(student)}">${__("Card history ({0} change(s))", [log.change_count || 0])} →</a></div>` : ""}
+	</div>`;
+}
+
+function smr_assign(frm, st) {
+	if (frm.is_dirty()) {
+		frappe.msgprint({ message: __("Save the student first, then assign the card."), indicator: "orange" });
+		return;
+	}
+	const d = new frappe.ui.Dialog({
+		title: st.rfid_uid ? __("Change RFID card") : __("Assign RFID card"),
+		fields: [
+			{ fieldname: "rfid_uid", fieldtype: "Data", label: __("Card code (RFID UID)"), reqd: 1, length: 32,
+			  default: st.state === "unrecorded" ? st.rfid_uid : "",
+			  description: st.state === "unrecorded" ? __("Keep {0} to record it as the Active card, or enter a new code.", [st.rfid_uid])
+				: st.rfid_uid ? __("Card {0} will be marked Replaced and kept in the card history.", [st.rfid_uid]) : "" },
+		],
+		primary_action_label: st.rfid_uid ? __("Change card") : __("Assign card"),
+		primary_action(values) {
+			const uid = (values.rfid_uid || "").trim();
+			if (!uid) return;
+			if (uid.length > 32) {
+				frappe.msgprint(__("A card code can be at most 32 characters."));
+				return;
+			}
+			if (uid === st.rfid_uid && st.state === "active") {
+				frappe.msgprint(__("{0} is already this student's card.", [uid]));
+				return;
+			}
+			frappe.call({
+				method: SMR_PAGE_API + "link_rfid_to_student",
+				args: { rfid_uid: uid, student: frm.doc.name },
+				freeze: true, freeze_message: __("Saving card…"),
+				callback(r) {
+					if (!r.message) return;
+					d.hide();
+					frappe.show_alert({ message: r.message.message, indicator: "green" }, 6);
+					frm.reload_doc();
+				},
+			});
+		},
+	});
+	d.show();
+}
+
+function smr_remove(frm, st) {
+	if (frm.is_dirty()) {
+		frappe.msgprint({ message: __("Save the student first, then remove the card."), indicator: "orange" });
+		return;
+	}
+	frappe.require("/assets/slcm/js/rfid_unmap.js", () => slcm.rfid_unmap.ask({
+		what: `${frm.doc.first_name || frm.doc.name} · ${st.rfid_uid}`,
+		on_confirm(reason) {
+			frappe.call({
+				method: SMR_PAGE_API + "unmap_cards",
+				args: { students: [frm.doc.name], reason },
+				freeze: true, freeze_message: __("Removing card…"),
+				callback(r) {
+					slcm.rfid_unmap.show_results(r.message);
+					frm.reload_doc();
+				},
+			});
+		},
+	}));
+}

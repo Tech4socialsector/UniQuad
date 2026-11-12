@@ -1,0 +1,122 @@
+{
+ "actions": [],
+ "creation": "2026-11-11 12:00:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "field_order": [
+  "rfid_uid",
+  "device_name",
+  "student",
+  "student_id",
+  "student_name",
+  "student_email",
+  "column_break_r",
+  "status",
+  "name_check",
+  "message",
+  "mapped_by",
+  "mapped_on"
+ ],
+ "fields": [
+  {
+   "columns": 2,
+   "fieldname": "rfid_uid",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "RFID UID (Device Code)",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "device_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Name in Device DB",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student",
+   "fieldtype": "Link",
+   "label": "Student",
+   "options": "Student Master",
+   "read_only": 1
+  },
+  {
+   "columns": 1,
+   "fieldname": "student_id",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student ID",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "student_name",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "label": "Student Name",
+   "read_only": 1
+  },
+  {
+   "fieldname": "student_email",
+   "fieldtype": "Data",
+   "label": "Student Email",
+   "options": "Email",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_r",
+   "fieldtype": "Column Break"
+  },
+  {
+   "columns": 1,
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "label": "Status",
+   "options": "Pending\nMapped\nManually Mapped\nAlready Mapped\nNot Matched\nConflict\nSkipped\nFailed\nUnmapped",
+   "read_only": 1
+  },
+  {
+   "fieldname": "name_check",
+   "fieldtype": "Select",
+   "label": "Name Check",
+   "options": "\nSame\nDifferent",
+   "read_only": 1
+  },
+  {
+   "columns": 2,
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "in_list_view": 1,
+   "label": "Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mapped_by",
+   "fieldtype": "Link",
+   "label": "Mapped By",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "mapped_on",
+   "fieldtype": "Datetime",
+   "label": "Mapped On",
+   "read_only": 1
+  }
+ ],
+ "istable": 1,
+ "links": [],
+ "modified": "2026-11-11 12:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "RFID Student Map Log Item",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": []
+}

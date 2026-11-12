@@ -167,6 +167,7 @@ def _compute_cumulative_stats(student_id):
 	marks_rows = frappe.db.sql(
 		"""
 		SELECT
+			scm.name,
 			scm.course,
 			COALESCE(NULLIF(scm.updated_grade, ''), NULLIF(scm.grade, '')) AS final_grade,
 			CASE WHEN scm.updated_grade IS NOT NULL AND scm.updated_grade != '' THEN scm.updated_final_marks ELSE scm.total_marks END AS final_marks,
@@ -189,6 +190,11 @@ def _compute_cumulative_stats(student_id):
 		""",
 		(student_id,), as_dict=True
 	)
+
+	# A re-attempted course counts once: only its latest attempt (earlier failed records are superseded)
+	from slcm.slcm.utils.reexam_attempts import superseded_records
+	superseded = superseded_records(student_id)
+	marks_rows = [m for m in marks_rows if m["name"] not in superseded]
 
 	weighted_gp = 0.0
 	total_credits = 0.0

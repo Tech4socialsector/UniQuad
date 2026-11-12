@@ -1,6 +1,7 @@
 {
  "actions": [],
  "creation": "2026-07-06 00:00:00.000000",
+ "custom": 0,
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
@@ -52,7 +53,17 @@
   "remote_site_url",
   "column_break_remote",
   "remote_api_key",
-  "remote_api_secret"
+  "remote_api_secret",
+  "tab_student_map",
+  "student_map_note",
+  "map_source_table",
+  "map_code_column",
+  "map_name_columns",
+  "column_break_map",
+  "map_student_field",
+  "map_ignore_case",
+  "map_include_name_mismatch",
+  "map_last_run"
  ],
  "fields": [
   {
@@ -322,7 +333,7 @@
    "fieldname": "remote_sync_note",
    "fieldtype": "HTML",
    "label": "Remote Sync Note",
-   "options": "<div style=\"background:#e8e9f0; border-left:4px solid #2b2e4a; border-radius:6px; padding:14px 16px; font-size:.84rem; line-height:1.8; color:#333\"><strong>Push to a live/cloud site</strong><br><br>If the campus SQL Server is only reachable from this machine (e.g. over a VPN a cloud-hosted site can't run), enable this to also forward every newly pulled punch to a remote SLCM site over its REST API, immediately after it's pulled here. Create an API Key/Secret on the remote site (User → API Access) and paste them below.</div>"
+   "options": "<div style=\"background:#e8e9f0; border-left:4px solid #2b2e4a; border-radius:6px; padding:14px 16px; font-size:.84rem; line-height:1.8; color:#333\"><strong>Push to a live/cloud site</strong><br><br>If the campus SQL Server is only reachable from this machine (e.g. over a VPN a cloud-hosted site can&#39;t run), enable this to also forward every newly pulled punch to a remote SLCM site over its REST API, immediately after it&#39;s pulled here. Create an API Key/Secret on the remote site (User → API Access) and paste them below.</div>"
   },
   {
    "default": "0",
@@ -353,11 +364,74 @@
    "fieldname": "remote_api_secret",
    "fieldtype": "Password",
    "label": "Remote API Secret"
+  },
+  {
+   "fieldname": "tab_student_map",
+   "fieldtype": "Tab Break",
+   "label": "Student Map"
+  },
+  {
+   "fieldname": "student_map_note",
+   "fieldtype": "HTML",
+   "label": "Student Map Note",
+   "options": "<div style=\"background:#f9f0f0;border-left:4px solid #920C24;border-radius:6px;padding:12px 16px;line-height:1.6\"><b>Student Map</b> links each card code in the device database (etpdb) to the Student Master record whose field below has the same value (by default the Student ID). Names are only a cross-check — leave Name Column(s) empty to match by Student ID alone (e.g. Table <code>iclock_trans_ajim</code>, Code <code>emp_code</code>).<br>Use <b>Student Map Tools → Find Name Columns</b> to see what the SQL login can read, then <b>Student Map</b> to preview before anything is saved.<details style=\"margin-top:8px\"><summary><b>Names need read access — SQL for the SQL Server admin</b></summary><pre style=\"margin:8px 0 0;white-space:pre-wrap\">USE etpdb;\nGO\nCREATE VIEW dbo.personnel_names_ajim AS\n    SELECT emp_code, first_name, last_name\n    FROM dbo.personnel_employee;\nGO\nGRANT SELECT ON dbo.personnel_names_ajim TO ajim;\nGO</pre>Then set Names Table / View to <code>personnel_names_ajim</code> (or click Find Name Columns). Only these three columns are shared — same pattern as the existing <code>iclock_trans_ajim</code> view.</details></div>"
+  },
+  {
+   "default": "personnel_employee",
+   "description": "Table or view in the device database the SQL login can read (e.g. personnel_names_ajim, or iclock_trans_ajim for codes only).",
+   "fieldname": "map_source_table",
+   "fieldtype": "Data",
+   "label": "Names Table / View"
+  },
+  {
+   "default": "emp_code",
+   "description": "Column with the code the card sends to the reader (same value as emp_code in swipes).",
+   "fieldname": "map_code_column",
+   "fieldtype": "Data",
+   "label": "Card Code Column"
+  },
+  {
+   "default": "first_name,last_name",
+   "description": "One or more columns, comma separated; joined with a space to make the name. Leave empty to match by Student ID only (no name check).",
+   "fieldname": "map_name_columns",
+   "fieldtype": "Data",
+   "label": "Name Column(s)"
+  },
+  {
+   "fieldname": "column_break_map",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "registration_id",
+   "description": "Field name in Student Master that equals the card code. registration_id = Student ID.",
+   "fieldname": "map_student_field",
+   "fieldtype": "Data",
+   "label": "Match To Student Master Field"
+  },
+  {
+   "default": "1",
+   "fieldname": "map_ignore_case",
+   "fieldtype": "Check",
+   "label": "Ignore Case And Spaces When Matching"
+  },
+  {
+   "default": "0",
+   "description": "Off: rows whose device name does not look like the Student Master name are held back for review.",
+   "fieldname": "map_include_name_mismatch",
+   "fieldtype": "Check",
+   "label": "Map Even When Names Differ"
+  },
+  {
+   "fieldname": "map_last_run",
+   "fieldtype": "Link",
+   "label": "Last Student Map Run",
+   "options": "RFID Student Map Log",
+   "read_only": 1
   }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-07-06 00:00:00.000000",
+ "modified": "2026-11-12 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID SQL Agent Settings",
@@ -379,6 +453,5 @@
  ],
  "sort_field": "modified",
  "sort_order": "DESC",
- "states": [],
- "custom": 0
+ "states": []
 }

@@ -140,6 +140,7 @@ def get_transcript_context(student_id):
             scm.course,
             c.course_name,
             c.course_code,
+            scm.name                                                            AS marks_name,
             COALESCE(c.credit_value, 0)                                         AS credit_value,
             COALESCE(NULLIF(scm.updated_grade, ''), NULLIF(scm.grade, ''))      AS final_grade,
             CASE
@@ -177,6 +178,13 @@ def get_transcript_context(student_id):
         {"student": student_id},
         as_dict=True,
     )
+
+    # A course failed and re-attempted in a later Exam Plan has one row per attempt. Earlier
+    # attempts stay on the transcript as history but don't count towards credits or SGPA.
+    from slcm.slcm.utils.reexam_attempts import superseded_records
+    superseded = superseded_records(student_id)
+    for row in rows:
+        row["superseded"] = row["marks_name"] in superseded
 
     # ── 4. Fetch published SGPA values per exam plan ──────────────────────────
     sgpa_rows = frappe.db.sql(
@@ -223,7 +231,7 @@ def get_transcript_context(student_id):
             wgp   = 0.0
             tc    = 0.0
             for c in courses:
-                if c["consider_for_sgpa"] and c["final_grade"] and c["credit_value"]:
+                if c["consider_for_sgpa"] and c["final_grade"] and c["credit_value"] and not c["superseded"]:
                     wgp += float(c["grade_point"]) * float(c["credit_value"])
                     tc  += float(c["credit_value"])
             sgpa = round(wgp / tc, 2) if tc > 0 else None
@@ -253,8 +261,10 @@ def get_transcript_context(student_id):
                 "is_failed":     bool(c["is_failed"]),
                 "mfa":           "Yes" if has_mfa else "No",
                 "final_marks":   float(c.get("final_marks") or 0),
+                "superseded":    c["superseded"],
             })
-            sem_credits += float(c["credit_value"])
+            if not c["superseded"]:
+                sem_credits += float(c["credit_value"])
 
         total_earned_credits += sem_credits
 
@@ -507,6 +517,7 @@ def get_year_based_transcript_context(student_id):
             scm.course,
             c.course_name,
             c.course_code,
+            scm.name AS marks_name,
             COALESCE(c.credit_value, 0) AS credit_value,
             COALESCE(NULLIF(scm.updated_grade, ''), NULLIF(scm.grade, '')) AS final_grade,
             COALESCE(gsc.grade_point, 0) AS grade_point,
@@ -548,7 +559,13 @@ def get_year_based_transcript_context(student_id):
     # Group courses by year
     years_data = defaultdict(lambda: {"courses": [], "year_label": "", "year_number": 99})
 
+    # One line per course: an attempt replaced by a later re-exam attempt is left out
+    from slcm.slcm.utils.reexam_attempts import superseded_records
+    superseded = superseded_records(student_id)
+
     for row in rows:
+        if row["marks_name"] in superseded:
+            continue
         term = row.get("term") or row.get("exam_plan") or ""
         year_info = year_map.get(term, {"year_label": "Other", "year_number": 99})
 

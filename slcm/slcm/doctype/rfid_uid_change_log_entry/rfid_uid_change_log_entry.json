@@ -1,0 +1,88 @@
+{
+ "actions": [],
+ "creation": "2026-11-11 18:00:00.000000",
+ "custom": 0,
+ "doctype": "DocType",
+ "editable_grid": 0,
+ "engine": "InnoDB",
+ "istable": 1,
+ "field_order": [
+  "changed_on",
+  "change_type",
+  "old_rfid_uid",
+  "new_rfid_uid",
+  "changed_by",
+  "source",
+  "message"
+ ],
+ "fields": [
+  {
+   "fieldname": "changed_on",
+   "fieldtype": "Datetime",
+   "label": "Changed On",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "change_type",
+   "fieldtype": "Select",
+   "label": "Change",
+   "options": "Assigned\nChanged\nRemoved",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "old_rfid_uid",
+   "fieldtype": "Data",
+   "label": "From RFID UID",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "new_rfid_uid",
+   "fieldtype": "Data",
+   "label": "To RFID UID",
+   "in_list_view": 1,
+   "columns": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "changed_by",
+   "fieldtype": "Link",
+   "label": "Changed By",
+   "options": "User",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "label": "Changed From",
+   "description": "Screen or process that made the change",
+   "in_list_view": 1,
+   "columns": 2,
+   "read_only": 1
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "read_only": 1
+  }
+ ],
+ "index_web_pages_for_search": 0,
+ "links": [],
+ "modified": "2026-11-11 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "SLCM",
+ "name": "RFID UID Change Log Entry",
+ "owner": "Administrator",
+ "permissions": [],
+ "sort_field": "creation",
+ "sort_order": "ASC",
+ "states": []
+}

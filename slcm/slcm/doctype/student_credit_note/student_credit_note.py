@@ -43,7 +43,15 @@ class StudentCreditNote(Document):
 
 	@frappe.whitelist()
 	def apply_credit_to_demand(self, fee_demand, amount):
-		"""Apply credit from this note to a fee demand."""
+		"""Apply credit from this note to a fee demand (desk button)."""
+		# run_doc_method only checks read; applying credit changes both documents
+		self.check_permission("write")
+		frappe.has_permission("Fee Demand", "write", doc=fee_demand, throw=True)
+		return self.apply_credit(fee_demand, amount)
+
+	def apply_credit(self, fee_demand, amount):
+		"""Apply credit from this note to a fee demand. Callers check access
+		(the desk button above, or Student Fee Management's role check)."""
 		amount = flt(amount)
 		available = flt(self.available_credit)
 

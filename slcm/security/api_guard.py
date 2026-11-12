@@ -32,6 +32,9 @@ STAFF_PREFIXES = (
 	"slcm.payment.",
 	"slcm.www.",
 	"slcm.slcm.api.",
+	# Desk pages (term results, transcripts, re-exam, publish, ...). Only desk JS calls these;
+	# students/parents must never reach them (they return every student's marks).
+	"slcm.slcm.page.",
 )
 
 # Methods under STAFF_PREFIXES that the website pages (www/, web forms, templates) call.
