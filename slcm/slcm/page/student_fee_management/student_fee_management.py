@@ -566,7 +566,7 @@ def apply_excess_credit(student, fee_demand, amount, remarks=None):
 		if remaining <= 0:
 			break
 		take = min(remaining, flt(n.available_credit))
-		frappe.get_doc("Student Credit Note", n.name).apply_credit_to_demand(fee_demand, take)
+		frappe.get_doc("Student Credit Note", n.name).apply_credit(fee_demand, take)
 		used.append(n.name)
 		remaining -= take
 

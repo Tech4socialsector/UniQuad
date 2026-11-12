@@ -220,16 +220,17 @@ IMPROVEMENT_GRADES = ("C", "C+", "C⁺")
 
 def _course_result_rows(student_names, academic_year, failed=True):
 	"""Distinct (student, term, course) rows in the academic year that are
-	failed (failed=True) or improvable C/C+ grades (failed=False)."""
+	failed (failed=True) or improvable C/C+ grades (failed=False), counting only
+	each course's latest attempt."""
 	if not student_names:
 		return []
 	if failed:
 		cond = f"(gsc.failed = 1 OR (gsc.name IS NULL AND {FINAL_GRADE_SQL} = 'F'))"
 	else:
 		cond = f"{FINAL_GRADE_SQL} IN %(imp)s AND IFNULL(gsc.failed, 0) = 0"
-	return frappe.db.sql(
+	rows = frappe.db.sql(
 		f"""
-		SELECT DISTINCT scm.student, ep.term AS term, scm.course,
+		SELECT DISTINCT scm.name, scm.student, ep.term AS term, scm.course,
 		       COALESCE(NULLIF(c.course_name, ''), scm.course) AS course_name,
 		       {FINAL_GRADE_SQL} AS final_grade, at2.term_start_date
 		FROM `tabStudent Course Marks` scm
@@ -250,6 +251,27 @@ def _course_result_rows(student_names, academic_year, failed=True):
 		{"students": student_names, "ay": academic_year, "imp": IMPROVEMENT_GRADES},
 		as_dict=True,
 	)
+	# A course re-attempted in a later Exam Plan has one record per attempt. A fail stays a
+	# backlog until a later attempt passes (that attempt may sit in another academic year);
+	# an improvable grade counts only on the latest attempt.
+	from slcm.slcm.utils.reexam_attempts import has_passed, latest, superseded_records
+	superseded = set()
+	for student in {r.student for r in rows}:
+		superseded |= superseded_records(student)
+	if not failed:
+		return [r for r in rows if r.name not in superseded]
+	names = {r.name for r in rows}
+
+	def still_backlog(r):
+		if r.name not in superseded:
+			return True
+		if has_passed(r.student, r.course):
+			return False
+		# still failing: list it once, on the latest attempt when that is in this year too
+		last = latest(r.student, r.course)
+		return not last or last.name not in names
+
+	return [r for r in rows if still_backlog(r)]
 
 
 def _ordinal(n):

@@ -347,7 +347,7 @@ SOURCES = {
 		[("name", _("Application"), "id"), ("applicant_name", _("Applicant"), "text"), ("programme", _("PACE programme"), "text"),
 			("academic_year", _("Academic year"), "text"), ("email_address", _("Email"), "text"),
 			("submission_date", _("Submitted"), "date"), ("status", _("Status"), "text")],
-		["name", "applicant_name", "email_address"], "modified", year="academic_year", date="submission_date"),
+		["name", "applicant_name", "email_address"], "modified", year="academic_year", date="creation"),
 	"penq": _src("PACE Enquiry", _("PACE enquiries"),
 		[("name", _("Enquiry"), "id"), ("full_name", _("Name"), "text"), ("email", _("Email"), "text"), ("phone", _("Phone"), "text"),
 			("programme_of_interest", _("Programme"), "text"), ("submitted_on", _("Submitted"), "datetime"), ("status", _("Status"), "text")],
@@ -514,8 +514,9 @@ def _f(*conds):
 
 def _pace_statuses(kind):
 	rows = frappe.get_all("PACE Application Status", fields=["name", "status_type", "stage_type"])
-	enrolled = {r.name for r in rows if (r.stage_type or "").startswith("Enrol")}
-	closed = {r.name for r in rows if r.status_type == "Closed"} - enrolled
+	# Closed wins: live files Withdrawn / Rejected under an enrolment stage.
+	closed = {r.name for r in rows if r.status_type == "Closed"}
+	enrolled = {r.name for r in rows if (r.stage_type or "").startswith("Enrol")} - closed
 	if kind == "enrolled":
 		return sorted(enrolled)
 	if kind == "closed":
@@ -557,7 +558,7 @@ def _build_registry():
 			guide=_("Regular admission applications (Applicant) created in the selected dates."))]),
 		tile(_("PACE"), "award", [
 			_card("ov_pace_apps", _("Applications"), "info", kind="pace", pct=False, filters=_f(["status", "!=", "Draft"]),
-				guide=_("PACE applications submitted (not Draft) in the selected dates.")),
+				guide=_("PACE applications created in the selected dates and submitted (not Draft).")),
 			_card("ov_pace_enr", _("Enrolled"), "good", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("enrolled"))],
 				guide=_("PACE applications at an enrolment stage."))]),
 		tile(_("FLE"), "users", [
@@ -777,7 +778,7 @@ def _build_registry():
 			_card("pace_enrolled", _("Enrolled"), "good", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("enrolled"))],
 				guide=_("PACE applications at an enrolment stage."))]),
 		tile(_("Drafts & withdrawals"), "pen", [
-			card("pace_draft", _("Draft"), "action", "pace", [["status", "=", "Draft"]], _("PACE applications started but not submitted.")),
+			card("pace_draft", _("Draft"), "action", "pace", [["status", "=", "Draft"]], _("PACE applications started (created in the selected dates) but not submitted.")),
 			_card("pace_closed", _("Withdrawn / rejected"), "bad", kind="pace", pct=False, filters=lambda c: [_in("status", _pace_statuses("closed"))],
 				guide=_("PACE applications Withdrawn or Rejected."))]),
 		tile(_("Document checks"), "filesign", [

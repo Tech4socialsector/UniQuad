@@ -135,3 +135,34 @@ def students_to_carry(target_plan):
 		if last and last.failed and last.start < start and last.exam_plan != target_plan:
 			out.append((student, course, last.exam_plan))
 	return out
+
+
+def superseded_records(student, upto_plan=None):
+	"""Names of the student's Student Course Marks replaced by a later attempt of the same course.
+
+	A failed course carried forward to a later Exam Plan has one record per attempt; only the
+	latest attempt counts for CGPA, transcripts and backlogs. With ``upto_plan`` only attempts
+	up to that plan's term are considered (results as they stood at that point).
+	Ordering matches course_attempts(): term start date, then exam plan name.
+	"""
+	rows = frappe.db.sql(
+		"""SELECT scm.name, scm.course, scm.exam_plan, at.term_start_date AS start
+		   FROM `tabStudent Course Marks` scm
+		   LEFT JOIN `tabExam Plan` ep ON ep.name = scm.exam_plan
+		   LEFT JOIN `tabAcademic Term` at ON at.name = ep.term
+		   WHERE scm.student = %s""",
+		student, as_dict=True,
+	)
+	floor = getdate("1900-01-01")
+	limit = _term_start(upto_plan) if upto_plan else None
+	by_course = {}
+	for r in rows:
+		r.start = getdate(r.start) if r.start else floor
+		if limit is not None and r.start > limit:
+			continue
+		by_course.setdefault(r.course, []).append(r)
+	out = set()
+	for attempts in by_course.values():
+		attempts.sort(key=lambda r: (r.start, r.exam_plan or ""))
+		out.update(r.name for r in attempts[:-1])
+	return out

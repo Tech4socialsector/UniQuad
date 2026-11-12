@@ -109,14 +109,24 @@ def _text(v):
 	return str(v).strip()
 
 
+QUERY_TIMEOUT = 60  # seconds; a person is waiting on these screens
+
+
 def _query(sql, params=None):
 	from slcm.slcm.rfid_sql_agent.connection import get_connection
 
-	conn = get_connection()
+	conn = get_connection(query_timeout=QUERY_TIMEOUT)
 	try:
 		cur = conn.cursor()
-		cur.execute(sql, params or [])
-		return cur.fetchall()
+		try:
+			cur.execute(sql, params or [])
+			return cur.fetchall()
+		except Exception as e:
+			if "timeout" in str(e).lower() or "HYT00" in str(e):
+				frappe.throw(_("The device database took longer than {0} seconds to answer. Try again when it is less "
+				               "busy, or point Student Map at a smaller table (e.g. the people table instead of the "
+				               "swipes view).").format(QUERY_TIMEOUT), title=_("Device database too slow"))
+			raise
 	finally:
 		conn.close()
 
@@ -155,10 +165,14 @@ def _fetch_device_records(conf, limit=None):
 def discover_name_sources():
 	"""Tables in the device database that have a code column and a name column — to pick in the UI."""
 	frappe.only_for("System Manager")
+	# permission checked once per table, not once per column
 	rows = _query("""
 		SELECT c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE
 		FROM INFORMATION_SCHEMA.COLUMNS c
-		WHERE HAS_PERMS_BY_NAME(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME), 'OBJECT', 'SELECT') = 1
+		JOIN (
+			SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+			WHERE HAS_PERMS_BY_NAME(QUOTENAME(TABLE_SCHEMA) + '.' + QUOTENAME(TABLE_NAME), 'OBJECT', 'SELECT') = 1
+		) t ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
 		ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION
 	""")
 	tables = {}
@@ -277,7 +291,7 @@ def _removed_pairs():
 	return {pair for pair, linked in state.items() if not linked}
 
 
-def _classify(records, conf, include_name_mismatch, scope=None):
+def _classify(records, conf, include_name_mismatch, scope=None, include_removed=0):
 	"""Decide what happens to every device record. Status: Ready | Already Mapped | Not Matched | Conflict | Skipped.
 	With a scope (Programme / Batch / Academic Year / Section), only records whose matched student is in it are
 	kept: a record that matches no student, or a student outside the scope, is left out and counted."""
@@ -291,6 +305,9 @@ def _classify(records, conf, include_name_mismatch, scope=None):
 			by_key.setdefault(k, []).append(s)
 	owners = _card_owners()
 	removed = _removed_pairs()
+	# cards retired on purpose (Lost / Damaged / Blocked): never mapped again automatically, even with include_removed
+	retired = dict(frappe.db.sql("""SELECT rfid_uid, card_status FROM `tabStudent RFID Card`
+		WHERE card_status IN ('Lost', 'Damaged', 'Blocked') AND IFNULL(rfid_uid, '') != ''"""))
 
 	rows, seen, invalid, device_keys = [], {}, 0, set()
 	for code, device_name in records:
@@ -343,12 +360,21 @@ def _classify(records, conf, include_name_mismatch, scope=None):
 				other.get("first_name") or owner, other.get("registration_id") or owner))
 		elif current:
 			row.update(status="Conflict", message=_("Student already has card {0}").format(current))
-		elif (sm.name, code) in removed:
-			row.update(status="Skipped", message=_("Card was taken off this student by hand — map by hand to link it again"))
+		elif retired.get(code):
+			row.update(status="Skipped", hold="retired",
+			           message=_("Card was marked {0} — map by hand if it is back in use").format(_(retired[code])))
+		elif (sm.name, code) in removed and not cint(include_removed):
+			row.update(status="Skipped", hold="removed",
+			           message=_("Card was taken off this student by hand — tick \"Map cards removed by hand\" or map by hand"))
 		elif row["name_check"] == "Different" and not include_name_mismatch:
-			row.update(status="Skipped", message=_("Names differ — check and map by hand if correct"))
+			row.update(status="Skipped", hold="names", message=_("Names differ — check and map by hand if correct"))
 		else:
-			row.update(status="Ready", message=_("Names differ — mapped by Student ID") if row["name_check"] == "Different" else "")
+			notes = []
+			if (sm.name, code) in removed:
+				notes.append(_("Taken off by hand earlier — mapped again"))
+			if row["name_check"] == "Different":
+				notes.append(_("Names differ — mapped by Student ID"))
+			row.update(status="Ready", message=" · ".join(notes))
 
 	out_of_scope = sum(1 for r in rows if not r["_in_scope"])
 	rows = [r for r in rows if r.pop("_in_scope")]
@@ -368,6 +394,8 @@ def _classify(records, conf, include_name_mismatch, scope=None):
 		"not_matched": sum(r["status"] == "Not Matched" for r in rows),
 		"conflicts": sum(r["status"] == "Conflict" for r in rows),
 		"skipped": sum(r["status"] == "Skipped" for r in rows),
+		"removed_by_hand": sum(1 for r in rows if r.get("hold") == "removed"
+		                       or (r["status"] == "Ready" and (r.get("student"), r["rfid_uid"]) in removed)),
 		"names_differ": sum(r["name_check"] == "Different" for r in rows),
 		"blank_codes": invalid,
 		"students_not_on_device": not_on_device,
@@ -378,7 +406,7 @@ def _classify(records, conf, include_name_mismatch, scope=None):
 # ── Preview / apply ───────────────────────────────────────────────
 
 @frappe.whitelist()
-def preview(include_name_mismatch=None, scope=None, token=None):
+def preview(include_name_mismatch=None, scope=None, token=None, include_removed=0):
 	"""Classify the device records. Pass the previous token to re-filter the records already read (changing the
 	Programme / Batch / Academic Year / Section filters) without reading the device database again."""
 	_check_access()
@@ -391,11 +419,11 @@ def preview(include_name_mismatch=None, scope=None, token=None):
 	else:
 		records = _fetch_device_records(conf)
 		token = uuid.uuid4().hex
-	rows, kpi = _classify(records, conf, include, scope)
+	rows, kpi = _classify(records, conf, include, scope, cint(include_removed))
 	frappe.cache.set_value(CACHE_PREFIX + token, {"user": frappe.session.user, "records": records}, expires_in_sec=CACHE_SECS)
 	return {"token": token, "kpi": kpi, "rows": rows, "source": conf.source, "match_rule": conf.match_rule,
 	        "include_name_mismatch": include, "has_names": bool(conf.name_cols),
-	        "scope": scope, "scope_label": _scope_label(scope)}
+	        "scope": scope, "scope_label": _scope_label(scope), "include_removed": cint(include_removed)}
 
 
 def _running_log():
@@ -403,7 +431,7 @@ def _running_log():
 
 
 @frappe.whitelist()
-def apply(token, include_name_mismatch=0, scope=None):
+def apply(token, include_name_mismatch=0, scope=None, include_removed=0):
 	"""Start the mapping for the records shown in the preview. Returns the log name; work runs in the background."""
 	_check_access()
 	cached = frappe.cache.get_value(CACHE_PREFIX + (token or ""))
@@ -425,6 +453,7 @@ def apply(token, include_name_mismatch=0, scope=None):
 		"source": conf.source,
 		"match_rule": conf.match_rule,
 		"include_name_mismatch": cint(include_name_mismatch),
+		"include_removed": cint(include_removed),
 	}).insert(ignore_permissions=True)
 	frappe.cache.delete_value(CACHE_PREFIX + token)
 
@@ -432,6 +461,7 @@ def apply(token, include_name_mismatch=0, scope=None):
 		"slcm.slcm.rfid_sql_agent.student_map.run_student_map",
 		queue="long", timeout=3600, enqueue_after_commit=True,
 		log_name=log.name, records=cached["records"], include_name_mismatch=cint(include_name_mismatch), scope=scope,
+		include_removed=cint(include_removed),
 	)
 	return {"log": log.name}
 
@@ -442,13 +472,13 @@ def _publish(log_name, done, total, finished=False):
 	                        user=frappe.session.user, after_commit=False)
 
 
-def run_student_map(log_name, records, include_name_mismatch=0, scope=None):
+def run_student_map(log_name, records, include_name_mismatch=0, scope=None, include_removed=0):
 	"""Background job: write every record (within the scope, if one was chosen) to the log, then link the Ready
 	ones one by one."""
 	log = frappe.get_doc(LOG, log_name)
 	try:
 		conf = _config()
-		rows, _kpi = _classify(records, conf, cint(include_name_mismatch), scope)
+		rows, _kpi = _classify(records, conf, cint(include_name_mismatch), scope, cint(include_removed))
 		item_fields = {df.fieldname for df in frappe.get_meta(LOG_ITEM).fields}
 		for r in rows:
 			item = {k: v for k, v in r.items() if k in item_fields}

@@ -19,6 +19,7 @@ import hmac as _hmac
 import json as _json
 
 import frappe
+from slcm.api.razorpay_reconcile import attach_intent, cap_fee_payment, lock_intent, verify_order
 from frappe import _
 from frappe.utils import flt, today
 
@@ -134,6 +135,9 @@ def _build_order_payload(controller, inv, student_name, parent_user):
             frappe.ValidationError,
         )
 
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "invoice", student_name, outstanding, paid_by_role="Parent", invoice_name=inv.name)
+
     return {
         "order_id":            order.get("id"),
         "integration_request": order.get("integration_request"),
@@ -226,6 +230,9 @@ def confirm_fee_payment(invoice_name, student_name, integration_request,
         frappe.log_error(frappe.get_traceback(), "parent_payment.confirm_fee_payment: sig check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly this invoice (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "invoice", invoice_name=invoice_name)
+
     # ── Update Integration Request (best-effort) ───────────────────────
     try:
         from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import (
@@ -245,6 +252,8 @@ def confirm_fee_payment(invoice_name, student_name, integration_request,
             "parent_payment.confirm_fee_payment: IR update (non-fatal)",
         )
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     # ── Idempotently create Fee Payment ───────────────────────────────
     existing_fp = frappe.db.get_value(
         "Fee Payment",
@@ -268,8 +277,10 @@ def confirm_fee_payment(invoice_name, student_name, integration_request,
                 "payment_gateway":  "Razorpay",
                 "remarks":          "Paid by parent via Parent Portal",
             })
-            fp.insert(ignore_permissions=True)
-            fp.submit()
+            # never record more than this order actually charged
+            if cap_fee_payment(fp, intent.amount):
+                fp.insert(ignore_permissions=True)
+                fp.submit()
             frappe.db.commit()
 
     frappe.db.set_value(

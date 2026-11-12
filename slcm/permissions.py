@@ -135,9 +135,9 @@ def student_master_query_conditions(user):
             return f"`tabStudent Master`.registration_status IN ({status_list})"
 
     # --- Student: own record only (matched by email) ---
-    if "slcm_Student" in roles:
-        safe_user = user.replace("'", "\\'")
-        return f"`tabStudent Master`.email = '{safe_user}'"
+    if roles & {"slcm_Student", "Student"}:
+        from slcm.security.student_scope import student_condition
+        return student_condition("Student Master", user)
 
     # Deny by default – unknown roles should not see Student Master
     return "1=0"

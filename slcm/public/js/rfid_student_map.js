@@ -42,7 +42,7 @@ frappe.provide("slcm.rfid_student_map");
 .rsm-scope {
 	--rsm-brand:#920C24; --rsm-brand-dk:#6E091B; --rsm-brand-50:#FBF1F3; --rsm-brand-100:#F5DDE2;
 	--rsm-ink:#1F1A1C; --rsm-ink-2:#5C5457; --rsm-ink-3:#8E8588; --rsm-surface:#fff; --rsm-canvas:#F7F5F5;
-	--rsm-line:#ECE6E7; --rsm-line-2:#F4F0F1;
+	--rsm-line:#ECE6E7; --rsm-line-2:#F4F0F1; --rsm-dev:#F4F7FA; --rsm-dev-head:#E9EFF5;
 	--rsm-ok:#1E7B4C; --rsm-ok-bg:#E7F5EE; --rsm-warn:#8A5A00; --rsm-warn-bg:#FFF4DB;
 	--rsm-info:#4B5563; --rsm-info-bg:#F1F2F4; --rsm-err:#B42318; --rsm-err-bg:#FDECEA;
 	--rsm-serif:"Merriweather", Georgia, "Times New Roman", serif;
@@ -52,7 +52,7 @@ frappe.provide("slcm.rfid_student_map");
 [data-theme="dark"] .rsm-scope {
 	--rsm-brand:#E0566F; --rsm-brand-dk:#F07A8F; --rsm-brand-50:#2A1A1E; --rsm-brand-100:#3A2228;
 	--rsm-ink:#F2EDEE; --rsm-ink-2:#C2B8BB; --rsm-ink-3:#8E8588; --rsm-surface:#1E1B1C; --rsm-canvas:#161314;
-	--rsm-line:#332C2E; --rsm-line-2:#282223;
+	--rsm-line:#332C2E; --rsm-line-2:#282223; --rsm-dev:#1C2127; --rsm-dev-head:#232A32;
 	--rsm-ok:#5CC995; --rsm-ok-bg:#16291F; --rsm-warn:#F2C063; --rsm-warn-bg:#2E2614;
 	--rsm-info:#B6BCC6; --rsm-info-bg:#24272B; --rsm-err:#F28B82; --rsm-err-bg:#2E1A18;
 }
@@ -115,6 +115,21 @@ frappe.provide("slcm.rfid_student_map");
 .rsm-btn.primary { background:var(--rsm-brand); color:#fff; border-color:var(--rsm-brand); }
 .rsm-btn.primary:hover { background:var(--rsm-brand-dk); color:#fff; }
 .rsm-spin { animation:rsm-spin 1s linear infinite; }
+.rsm-table td.rsm-dev { background:var(--rsm-dev); }
+.rsm-table th.rsm-dev { background:var(--rsm-dev-head); }
+.rsm-busy { opacity:.55; pointer-events:none; transition:opacity .15s; }
+.rsm-callout { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin:0 0 14px; padding:10px 14px; border-radius:10px;
+	background:var(--rsm-warn-bg); border:1px solid var(--rsm-warn); border-left-width:4px; color:var(--rsm-ink); }
+.rsm-callout.on { background:var(--rsm-ok-bg); border-color:var(--rsm-ok); }
+.rsm-callout > .fa { font-size:18px; color:var(--rsm-warn); }
+.rsm-callout.on > .fa { color:var(--rsm-ok); }
+.rsm-callout .rsm-callout-text { flex:1 1 260px; min-width:0; font-size:12.5px; line-height:1.45; }
+.rsm-callout .rsm-callout-text b { font-size:13.5px; }
+.rsm-callout label { display:inline-flex; align-items:center; gap:8px; margin:0; font-weight:800; cursor:pointer; white-space:nowrap;
+	padding:6px 12px; border-radius:8px; background:var(--rsm-surface); border:1px solid var(--rsm-line); }
+.rsm-callout label input { width:18px; height:18px; margin:0; accent-color:var(--rsm-ok); cursor:pointer; }
+.rsm-callout label:focus-within { outline:2px solid var(--rsm-brand); outline-offset:2px; }
+@media (prefers-reduced-motion: reduce) { .rsm-busy { transition:none; } .rsm-spin { animation:none; } }
 @keyframes rsm-spin { to { transform:rotate(360deg); } }
 @media (max-width:720px) { .rsm-toggle { margin-left:0; } .rsm-kpis { grid-template-columns:repeat(2, 1fr); } }
 </style>`);
@@ -122,7 +137,7 @@ frappe.provide("slcm.rfid_student_map");
 
 	slcm.rfid_student_map.open = function (opts = {}) {
 		slcm.rfid_student_map.inject_css();
-		let data = null, filter = "all", q = "", page = 0, include = null;
+		let data = null, filter = "all", q = "", page = 0, include = null, include_removed = false;
 		let log_name = null, poll = null;
 
 		// Programme / Batch / Academic Year / Section: any one or several limit the map to those students
@@ -192,28 +207,55 @@ frappe.provide("slcm.rfid_student_map");
 			d.get_primary_btn().prop("disabled", true);
 			const scope = current_scope();
 			const reuse = !!(data && data.token);
-			state("fa-circle-o-notch rsm-spin", reuse ? __("Applying filters…") : __("Reading the device database…"),
-				reuse ? __("Matching the card codes already read to the students in these filters.")
-					: __("Fetching every card code and name from etpdb and matching them to Student Master."));
+			// Re-filtering (an option or a filter changed): keep the table on screen, dimmed, so the dialog does not
+			// collapse and jump; the view (tile, search, page) and scroll position are kept.
+			const soft = reuse && $b.find(".rsm-kpis").length > 0;
+			const view = soft ? { filter, q, page, top: d.$wrapper.scrollTop(), table: $b.find(".rsm-tablebox").scrollTop() } : null;
+			if (soft) {
+				$b.addClass("rsm-busy").attr("aria-busy", "true");
+			} else {
+				state("fa-circle-o-notch rsm-spin", reuse ? __("Applying filters…") : __("Reading the device database…"),
+					reuse ? __("Matching the card codes already read to the students in these filters.")
+						: __("Fetching every card code and name from etpdb and matching them to Student Master."));
+			}
 			frappe.call({
 				method: API + "preview",
-				args: { include_name_mismatch: include == null ? "" : include ? 1 : 0, scope: JSON.stringify(scope), token: reuse ? data.token : "" },
+				args: { include_name_mismatch: include == null ? "" : include ? 1 : 0, scope: JSON.stringify(scope), token: reuse ? data.token : "",
+					include_removed: include_removed ? 1 : 0 },
 				callback(r) {
 					if (!r.message) return;
 					data = r.message;
 					loaded_scope = JSON.stringify(scope);
 					data.kpi.all = data.kpi.device_records;
+					data.kpi.held_back = data.kpi.skipped || 0;
 					include = !!data.include_name_mismatch;
-					filter = "all"; q = ""; page = 0;
+					include_removed = !!data.include_removed;
+					if (view) {
+						({ filter, q, page } = view);
+						if (filter !== "all" && !(filter in data.kpi)) filter = "all";
+					} else {
+						filter = "all"; q = ""; page = 0;
+					}
+					$b.removeClass("rsm-busy").removeAttr("aria-busy");
 					render();
+					if (view) {
+						d.$wrapper.scrollTop(view.top);
+						$b.find(".rsm-tablebox").scrollTop(view.table);
+					}
 				},
 				error(r) {
+					if (soft) {
+						// keep what is on screen; the server message is shown by Frappe
+						$b.removeClass("rsm-busy").removeAttr("aria-busy");
+						d.get_primary_btn().prop("disabled", !(data.kpi.ready || 0));
+						return;
+					}
 					const msg = (r && r._server_messages) ? JSON.parse(r._server_messages).map(m => {
 						try { return JSON.parse(m).message; } catch (e) { return m; }
 					}).join("\n") : __("Unknown error");
 					state("fa-plug", __("Could not read the device database"),
 						__("Check the SQL Server details and the Student Map table/columns in RFID SQL Agent Settings."),
-						`<div class="rsm-err-text">${esc(frappe.utils.strip_html(msg))}</div><br>
+						`<div class="rsm-err-text">${esc(new DOMParser().parseFromString(msg, "text/html").body.textContent || "")}</div><br>
 						<button class="rsm-btn" data-act="retry"><i class="fa fa-refresh"></i> ${__("Try again")}</button>
 						<a class="rsm-btn" href="/app/rfid-sql-agent-settings#tab_student_map" target="_blank" rel="noopener"><i class="fa fa-cog"></i> ${__("Open settings")}</a>`);
 					$b.find('[data-act="retry"]').on("click", load);
@@ -241,6 +283,17 @@ frappe.provide("slcm.rfid_student_map");
 							${__("Map even when names differ")}</label>`
 						: `<span class="rsm-toggle rsm-tag warn" style="cursor:default">${__("No names in this source — matching by Student ID only")}</span>`}
 				</div>
+				${(k.removed_by_hand || include_removed) ? `<div class="rsm-callout ${include_removed ? "on" : ""}" role="group">
+					<i class="fa ${include_removed ? "fa-check-circle" : "fa-hand-paper-o"}" aria-hidden="true"></i>
+					<div class="rsm-callout-text">
+						<b>${include_removed
+							? __("{0} card(s) taken off by hand will be mapped again", [fmt(k.removed_by_hand || 0)])
+							: __("{0} card(s) were taken off students by hand and are held back", [fmt(k.removed_by_hand || 0)])}</b><br>
+						${__("Tick to map them again in this run. Cards marked Lost, Damaged or Blocked always stay held back.")}
+					</div>
+					<label><input type="checkbox" ${include_removed ? "checked" : ""} data-act="include_removed">
+						${__("Map cards removed by hand ({0})", [fmt(k.removed_by_hand || 0)])}</label>
+				</div>` : ""}
 				<div class="rsm-kpis">
 					${kpi("all", data.scope_label ? __("In these filters") : __("Device records"), "brand",
 						data.scope_label ? __("cards of students in the filters") : __("people in etpdb"))}
@@ -248,6 +301,7 @@ frappe.provide("slcm.rfid_student_map");
 					${kpi("already_mapped", __("Already mapped"), "", __("no change needed"))}
 					${kpi("not_matched", __("Not matched"), "warn", __("no student with this ID"))}
 					${kpi("conflicts", __("Conflicts"), "err", __("need a decision"))}
+					${kpi("held_back", __("Held back"), "warn", __("check, then map"))}
 					${data.has_names ? kpi("names_differ", __("Names differ"), "warn", include ? __("will still be mapped") : __("held back")) : ""}
 					${kpi("students_not_on_device", __("Students not in etpdb"), "", __("active, no card"), true)}
 					${data.scope_label ? kpi("out_of_scope", __("Outside the filters"), "", __("left out of this map"), true) : ""}
@@ -259,7 +313,7 @@ frappe.provide("slcm.rfid_student_map");
 						<button class="rsm-iconbtn" data-act="next"><i class="fa fa-chevron-right"></i></button></div>
 				</div>
 				<div class="rsm-tablebox"><table class="rsm-table">
-					<thead><tr><th>${__("Card code")}</th><th>${__("Name in etpdb")}</th><th></th><th>${__("Student ID")}</th>
+					<thead><tr><th class="rsm-dev">${__("Card code")}</th><th class="rsm-dev">${__("Name in etpdb")}</th><th></th><th>${__("Student ID")}</th>
 						<th>${__("Student name")}</th><th>${__("Email")}</th><th>${__("Name check")}</th><th>${__("Result")}</th><th>${__("Note")}</th></tr></thead>
 					<tbody></tbody></table></div>`);
 
@@ -271,6 +325,7 @@ frappe.provide("slcm.rfid_student_map");
 				render_rows();
 			});
 			$b.find('[data-act="include"]').on("change", function () { include = this.checked; load(); });
+			$b.find('[data-act="include_removed"]').on("change", function () { include_removed = this.checked; load(); });
 			$b.find(".rsm-search").on("input", frappe.utils.debounce(function () { q = (this.value || "").trim().toLowerCase(); page = 0; render_rows(); }, 150));
 			$b.find('[data-act="prev"]').on("click", () => { if (page > 0) { page--; render_rows(); } });
 			$b.find('[data-act="next"]').on("click", () => { page++; render_rows(); });
@@ -289,6 +344,7 @@ frappe.provide("slcm.rfid_student_map");
 				not_matched: (r) => r.status === "Not Matched",
 				conflicts: (r) => r.status === "Conflict",
 				names_differ: (r) => r.name_check === "Different",
+				held_back: (r) => r.status === "Skipped",
 			}[filter] || (() => true);
 			return data.rows.filter((r) => by_filter(r) && (!q ||
 				["rfid_uid", "device_name", "student_id", "student_name", "student_email", "message"]
@@ -304,8 +360,8 @@ frappe.provide("slcm.rfid_student_map");
 			$b.find('[data-act="prev"]').prop("disabled", page === 0);
 			$b.find('[data-act="next"]').prop("disabled", page >= max);
 			$b.find("tbody").html(slice.length ? slice.map((r) => `<tr>
-				<td><span class="rsm-code">${esc(r.rfid_uid)}</span></td>
-				<td>${esc(r.device_name) || dash}</td>
+				<td class="rsm-dev"><span class="rsm-code">${esc(r.rfid_uid)}</span></td>
+				<td class="rsm-dev">${esc(r.device_name) || dash}</td>
 				<td class="rsm-arrow">→</td>
 				<td>${r.student_id ? `<span class="rsm-sid">${esc(r.student_id)}</span>` : dash}</td>
 				<td><b>${esc(r.student_name) || dash}</b></td>
@@ -346,7 +402,7 @@ frappe.provide("slcm.rfid_student_map");
 					<div class="rsm-pager"><span class="rsm-page-info"></span></div>
 				</div>
 				<div class="rsm-tablebox"><table class="rsm-table">
-					<thead><tr><th>#</th><th>${__("Card code")}</th>${data.has_names ? `<th>${__("Name in etpdb")}</th>` : ""}<th></th>
+					<thead><tr><th>#</th><th class="rsm-dev">${__("Card code")}</th>${data.has_names ? `<th class="rsm-dev">${__("Name in etpdb")}</th>` : ""}<th></th>
 						<th>${__("Student ID")}</th><th>${__("Student name")}</th><th>${__("Email")}</th><th>${__("Programme")}</th><th>${__("Batch")}</th>
 						${data.has_names ? `<th>${__("Name check")}</th>` : ""}</tr></thead>
 					<tbody></tbody></table></div>`);
@@ -360,8 +416,8 @@ frappe.provide("slcm.rfid_student_map");
 					? __("Showing 500 of {0} — search to find one", [fmt(rows.length)]) : __("{0} card(s)", [fmt(rows.length)]));
 				$b.find("tbody").html(shown.map((r, i) => `<tr>
 					<td class="rsm-dim">${i + 1}</td>
-					<td><span class="rsm-code">${esc(r.rfid_uid)}</span></td>
-					${data.has_names ? `<td>${esc(r.device_name) || dash}</td>` : ""}
+					<td class="rsm-dev"><span class="rsm-code">${esc(r.rfid_uid)}</span></td>
+					${data.has_names ? `<td class="rsm-dev">${esc(r.device_name) || dash}</td>` : ""}
 					<td class="rsm-arrow">→</td>
 					<td><span class="rsm-sid">${esc(r.student_id || r.student)}</span></td>
 					<td><b>${esc(r.student_name) || dash}</b></td>
@@ -391,7 +447,8 @@ frappe.provide("slcm.rfid_student_map");
 			d.get_primary_btn().prop("disabled", true);
 			frappe.call({
 				method: API + "apply",
-				args: { token: data.token, include_name_mismatch: include ? 1 : 0, scope: loaded_scope || "{}" }, // the filters the reviewed list was made with
+				// the options and filters the reviewed list was made with
+				args: { token: data.token, include_name_mismatch: include ? 1 : 0, scope: loaded_scope || "{}", include_removed: data.include_removed ? 1 : 0 },
 				freeze: true, freeze_message: __("Starting…"),
 				callback(r) {
 					if (!r.message) return;
