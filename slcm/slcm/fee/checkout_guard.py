@@ -46,7 +46,11 @@ def _charges(intent):
 	if invoice:
 		out.add(("Fee Invoice", invoice))
 	if intent.get("registration"):
-		doctype = "Improvement Exam Registration" if intent.get("flow") == "improvement" else "Re Exam Registration"
+		# Razorpay intents say "improvement", Easebuzz ones "improvement_exam"
+		doctype = (
+			"Improvement Exam Registration" if intent.get("flow") in ("improvement", "improvement_exam")
+			else "Re Exam Registration"
+		)
 		out.add((doctype, intent["registration"]))
 	return out
 

@@ -159,6 +159,18 @@ def on_exam_registration_trash(doc, method=None):
 	_cancel_demand_for_trigger(doc.doctype, doc.name)
 
 
+def on_exam_payment_log(doc, method=None):
+	"""A re-exam / improvement fee paid on its own page (any gateway, browser or reconciler) settles the
+	registration: cancel the unpaid Fee Demand raised for it at enrolment, so it is neither left as a due nor
+	paid a second time."""
+	if doc.get("payment_status") != "Paid":
+		return
+	if doc.doctype == "Re Exam Payment Log" and doc.get("re_exam_registration"):
+		_cancel_demand_for_trigger("Re Exam Registration", doc.re_exam_registration)
+	elif doc.doctype == "Improvement Exam Payment Log" and doc.get("improvement_exam_registration"):
+		_cancel_demand_for_trigger("Improvement Exam Registration", doc.improvement_exam_registration)
+
+
 def on_revaluation_request_submit(doc):
 	"""Create Revaluation Fee demand."""
 	component = _get_component_by_type("Revaluation Fee")

@@ -13,6 +13,15 @@ import frappe
 from frappe.utils import flt, formatdate
 
 
+# Exam fees are paid on the Re-Exam / Results pages only, never from Fees & Payments: their unpaid Fee Demands
+# (raised at enrolment) are left out of the portal fee pages, and paying the registration cancels the demand.
+EXAM_TRIGGERS = ("Re Exam Registration", "Improvement Exam Registration")
+
+
+def is_unpaid_exam_demand(d):
+	return d.get("trigger_ref_doctype") in EXAM_TRIGGERS and d.get("status") not in ("Paid", "Waived")
+
+
 def _fmt_inr(amount):
 	return "₹{:,.0f}".format(flt(amount))
 
@@ -76,8 +85,8 @@ def re_exam_and_fine_rows(student, re_exams, fines):
 		demand = rex_demands.get(r.name)
 		paid_online = r.payment_status in ("Paid", "Captured")
 		paid = paid_online or (demand and demand.status == "Paid")
-		if not paid and demand:
-			continue
+		if not paid:
+			continue  # unpaid exam fees are paid on the Re-Exam / Results page, not here
 		receipt = receipts.get(demand.name) if demand else None
 		rows.append(frappe._dict(
 			component=r.get("course_name") or r.course or "Re-examination fee",

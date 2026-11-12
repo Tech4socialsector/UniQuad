@@ -86,6 +86,8 @@ def _records(payment_id):
 			],
 			order_by="creation asc",
 		):
+			if frappe.db.get_value(reg_doctype, log.get(reg_field), "status") == "Cancelled":
+				continue  # a cancelled registration no longer holds its fee: the money is to be refunded
 			records.append(frappe._dict(
 				doctype=log_doctype, name=log.name,
 				student=log.student or frappe.db.get_value(reg_doctype, log.get(reg_field), "student"),
@@ -124,6 +126,28 @@ def _easebuzz_summary(txnid):
 		if isinstance(data, dict) and data.get("status"):
 			return data
 	return {}
+
+
+def _razorpay_order_amount(order_id):
+	"""What a Razorpay portal order charged: the amount on its checkout intent (razorpay_reconcile.attach_intent),
+	or 0 when the order has none (admission flows, orders older than intents)."""
+	if not order_id or not str(order_id).startswith("order_"):
+		return 0
+	rows = frappe.get_all(
+		"Integration Request",
+		filters={"integration_request_service": "Razorpay", "data": ("like", f"%{order_id}%")},
+		fields=["data"],
+		limit=5,
+		ignore_permissions=True,
+	)
+	for row in rows:
+		try:
+			intent = (json.loads(row.data or "{}") or {}).get("slcm_intent") or {}
+		except (ValueError, AttributeError):
+			continue
+		if intent.get("order_id") == order_id:
+			return flt(intent.get("amount"), 2)
+	return 0
 
 
 def _summary_details(summary):
@@ -274,9 +298,11 @@ def sync(payment_id):
 	paid_on = min((get_datetime(r.paid_on) for r in records if r.paid_on), default=None)
 	allocated = flt(sum(r.amount for r in records), 2)
 	summary = _easebuzz_summary(order_id) if gateway == EASEBUZZ else {}
-	# What the gateway captured: Easebuzz bookings are capped at the outstanding (the excess is flagged
-	# "needs manual allocation"), so the request shows the captured amount, not only what was booked
-	captured = max(flt(summary.get("amount"), 2), allocated)
+	# What the gateway captured: bookings are capped at the outstanding (the excess is flagged "needs manual
+	# allocation"), so the request shows the captured amount, not only what was booked. Easebuzz reports it in
+	# its summary; a Razorpay portal order captures exactly the amount its checkout intent charged.
+	charged = flt(summary.get("amount"), 2) if gateway == EASEBUZZ else _razorpay_order_amount(order_id)
+	captured = max(charged, allocated)
 	values = {
 		"reference_doctype": primary.doctype,
 		"reference_name": primary.name,
@@ -354,7 +380,8 @@ def _detach(request_name, payment_id):
 		frappe.db.exists(dt, {"razorpay_payment_id": payment_id, "payment_status": "Refunded"})
 		for dt in ("Re Exam Payment Log", "Improvement Exam Payment Log")
 	) or bool(frappe.db.exists(
-		"Transcript Request", {"payment_reference": payment_id, "payment_status": ("in", ("Refunded", "Refund Pending"))}
+		# "Refund Pending" (a rejected request) is not refunded yet: the money is still held and owed back
+		"Transcript Request", {"payment_reference": payment_id, "payment_status": "Refunded"}
 	))
 	if refunded:
 		note = _("Refunded: the payment was refunded through the gateway.")
@@ -373,6 +400,91 @@ def _detach(request_name, payment_id):
 		update["gateway_status"] = "refunded"
 	frappe.db.set_value(DOCTYPE, request_name, update)
 	frappe.get_doc(DOCTYPE, request_name).add_comment("Comment", note)
+
+
+# ── refunds (recorded, not paid out, by SLCM) ─────────────────────────────────
+
+
+def refundable_amount(request_name):
+	"""Money on a paid request that no SLCM record holds - captured but not applied (duplicate payment, dues
+	settled meanwhile, cancelled request, Fee Payment cancelled) - less what was already recorded as refunded."""
+	pr = frappe.db.get_value(
+		DOCTYPE, request_name,
+		["status", "docstatus", "amount", "gateway_response", "transaction_id", "refunded_amount", "reference_doctype"],
+		as_dict=True,
+	)
+	if not pr or pr.status != "Paid" or pr.docstatus != 1 or pr.reference_doctype not in LEDGER_DOCTYPES:
+		return 0
+	try:
+		response = json.loads(pr.gateway_response or "{}")
+	except ValueError:
+		response = {}
+	if response.get("records"):
+		held = flt(response.get("unallocated"))  # booked in part: only the excess is refundable
+	else:
+		held = flt(pr.amount)  # no record holds any of it
+	return max(flt(held - flt(pr.refunded_amount), 2), 0)
+
+
+def record_gateway_refund(payment_id, refund_id, amount, refunded_on=None, source="settlement"):
+	"""A refund the gateway itself reports (a refund line in a payout): record it on the payment's request once,
+	keyed on the refund id. Returns the request name when recorded, else None."""
+	payment_id, refund_id, amount = (payment_id or "").strip(), (refund_id or "").strip(), flt(amount, 2)
+	if not payment_id or not refund_id or amount <= 0:
+		return None
+	pr = frappe.db.get_value(
+		DOCTYPE,
+		{"transaction_id": payment_id, "docstatus": 1, "status": "Paid", "reference_doctype": ("in", LEDGER_DOCTYPES)},
+		["name", "refunded_amount", "refund_reference"], as_dict=True,
+	)
+	if not pr or refund_id in (pr.refund_reference or ""):
+		return None
+	refs = ", ".join(r for r in (pr.refund_reference, refund_id) if r)
+	frappe.db.set_value(DOCTYPE, pr.name, {
+		"refunded_amount": flt(flt(pr.refunded_amount) + amount, 2),
+		"refunded_on": getdate(refunded_on) if refunded_on else getdate(),
+		"refund_reference": refs[:140],
+	})
+	frappe.get_doc(DOCTYPE, pr.name).add_comment(
+		"Comment", _("Refund {0} of ₹{1} reported by the gateway ({2}).").format(refund_id, f"{amount:,.2f}", source)
+	)
+	return pr.name
+
+
+@frappe.whitelist()
+def get_refundable(request_name):
+	frappe.has_permission(DOCTYPE, "read", request_name, throw=True)
+	return refundable_amount(request_name)
+
+
+@frappe.whitelist()
+def record_refund(request_name, refund_reference, refunded_on, amount):
+	"""Record a refund made in the gateway dashboard (SLCM does not call the gateway's refund API)."""
+	frappe.only_for(("System Manager", "Accounts Manager"))
+	amount = flt(amount, 2)
+	refund_reference = (refund_reference or "").strip()
+	if not refund_reference:
+		frappe.throw(_("Enter the refund id / UTR shown in the gateway dashboard."))
+	if amount <= 0:
+		frappe.throw(_("Enter the refunded amount."))
+	frappe.db.sql(f"SELECT name FROM `tab{DOCTYPE}` WHERE name = %s FOR UPDATE", request_name)
+	refundable = refundable_amount(request_name)
+	if amount - refundable > 0.01:
+		frappe.throw(
+			_("Only ₹{0} of this payment is unapplied and can be recorded as refunded here. A refund of fees that "
+			  "were applied to dues is recorded with a Fee Refund.").format(f"{refundable:,.2f}")
+		)
+	pr = frappe.db.get_value(DOCTYPE, request_name, ["refunded_amount", "refund_reference"], as_dict=True)
+	refs = ", ".join(r for r in (pr.refund_reference, refund_reference) if r)
+	frappe.db.set_value(DOCTYPE, request_name, {
+		"refunded_amount": flt(flt(pr.refunded_amount) + amount, 2),
+		"refunded_on": getdate(refunded_on) if refunded_on else getdate(),
+		"refund_reference": refs[:140],
+	})
+	frappe.get_doc(DOCTYPE, request_name).add_comment(
+		"Comment", _("Refund of ₹{0} recorded (reference {1}) by {2}.").format(f"{amount:,.2f}", refund_reference, frappe.session.user)
+	)
+	return {"refunded_amount": flt(flt(pr.refunded_amount) + amount, 2), "still_refundable": refundable_amount(request_name)}
 
 
 # ── failed attempts ─────────────────────────────────────────────────────────────
@@ -652,6 +764,13 @@ def on_payment_log(doc, method=None):
 		sync_quietly(payment_id)
 	elif doc.event_type == "Payment Failed" and payment_id.startswith("pay_"):
 		_quietly(sync_failed_fee_attempt, payment_id, payment_id)
+
+
+def on_exam_registration(doc, method=None):
+	"""A paid Re Exam / Improvement Exam Registration cancelled: its fee is no longer held, so its request moves
+	to the charge with the money listed for a refund (Payments to Refund)."""
+	if doc.status == "Cancelled" and doc.get("payment_reference") and doc.has_value_changed("status"):
+		sync_quietly(doc.payment_reference)
 
 
 def on_exam_payment_log(doc, method=None):

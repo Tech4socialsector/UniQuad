@@ -1342,6 +1342,9 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
         ondismiss: function () {
           setBusy(invName, false);
           toast('Cancelled', 'Payment was cancelled. Fee status is unchanged.', 'info');
+          ppfCall('slcm.api.student_payment.parent_cancel_fee_payment',
+            { invoice_name: invName, student_name: STUDENT, integration_request: order.integration_request || '' },
+            noop, noop);
         },
       },
       handler: function (resp) {
@@ -1381,6 +1384,10 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
       setBusy(invName, false);
       toast('Payment Failed', (r.error && r.error.description) || 'Payment was not completed.', 'error');
       var pid = (r.error && r.error.metadata && r.error.metadata.payment_id) || '';
+      ppfCall('slcm.api.student_payment.parent_mark_fee_payment_failed', {
+          invoice_name: invName, student_name: STUDENT, integration_request: order.integration_request || '',
+          payment_id: pid, error_description: (r.error && r.error.description) || '', error_code: (r.error && r.error.code) || '',
+        }, noop, noop);
       ppfCall(
         'slcm.api.student_payment.parent_sync_payment_status',
         {

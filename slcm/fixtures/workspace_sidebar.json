@@ -534,6 +534,22 @@
     "url": null
    },
    {
+    "child": 1,
+    "collapsible": 1,
+    "filters": null,
+    "icon": "undo-2",
+    "indent": 0,
+    "keep_closed": 0,
+    "label": "Payments to Refund",
+    "link_to": "Payments to Refund",
+    "link_type": "Report",
+    "navigate_to_tab": null,
+    "route_options": null,
+    "show_arrow": 0,
+    "type": "Link",
+    "url": null
+   },
+   {
     "child": 0,
     "collapsible": 1,
     "filters": null,
@@ -982,7 +998,7 @@
     "url": null
    }
   ],
-  "modified": "2026-11-12 12:58:12.136155",
+  "modified": "2026-11-12 16:22:17.092455",
   "module": "SLCM",
   "module_onboarding": null,
   "name": "Fees Management",

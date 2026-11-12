@@ -36,6 +36,21 @@ class FeePayment(Document):
 			self._reverse_demand_payments()
 		# Cancel linked receipt
 		self._cancel_fee_receipt()
+		self._warn_online_money_unapplied()
+
+	def _warn_online_money_unapplied(self):
+		"""Cancelling a gateway payment does not return the money: the dues it paid are open again (the student
+		could pay them twice), and the captured amount stays on its SLCM Payment Request, listed in the
+		Payments to Refund report until it is re-recorded or refunded."""
+		if self.payment_mode != "Online Payment" or not self.reference_number:
+			return
+		note = _(
+			"Online payment {0} (₹{1}) was captured by {2}: cancelling it re-opens the dues it paid but does not "
+			"refund the money. Re-record it against the dues, or refund it in the gateway dashboard and record "
+			"the refund (Payments to Refund report)."
+		).format(self.reference_number, f"{flt(self.amount):,.2f}", self.payment_gateway or _("the gateway"))
+		self.add_comment("Comment", note)
+		frappe.msgprint(note, title=_("Money still with the gateway"), indicator="orange")
 
 	def _apply_voucher(self):
 		"""Single-due payment (Voucher Number, as in the bulk-upload sheet): the student and dues columns

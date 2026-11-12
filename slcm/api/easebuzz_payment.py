@@ -688,6 +688,12 @@ def _invoice_failure(data, payment_id, summary, cancelled):
 	from slcm.api.student_payment import _revert_sm_if_in_flight
 
 	_revert_sm_if_in_flight(data.invoice, data.student)
+	# a parent's checkout never sets the Student Master in flight: release the invoice itself too
+	if frappe.db.get_value("Fee Invoice", data.invoice, "payment_status") == "Payment Initiated":
+		frappe.db.set_value(
+			"Fee Invoice", data.invoice, "payment_status", "Pending" if cancelled else "Payment Failed",
+			update_modified=False,
+		)
 
 
 def _exam_success(doctype, log_doctype, link_field, fee_field):

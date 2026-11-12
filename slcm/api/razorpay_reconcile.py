@@ -287,7 +287,7 @@ def record_invoice_payment(intent, payment_id, captured_amount, source):
 		"payment_mode": "Online Payment",
 		"reference_number": payment_id,
 		"payment_gateway": "Razorpay",
-		"remarks": f"Razorpay order {intent.order_id} ({source})",
+		"remarks": f"{intent.get('paid_by_role') or 'Student'} portal payment — Razorpay order {intent.order_id} ({source})",
 	})
 	fp.insert(ignore_permissions=True)
 	fp.submit()
@@ -302,13 +302,92 @@ def record_invoice_payment(intent, payment_id, captured_amount, source):
 		paid_by_role=intent.get("paid_by_role") or "Student",
 		razorpay_payment_id=payment_id,
 		razorpay_order_id=intent.order_id,
-		webhook_status="Processed",
+		webhook_status="Not Applicable" if source == "browser" else "Processed",
+		to_status=frappe.db.get_value("Fee Invoice", invoice, "status"),
 		remarks=f"Payment captured via Razorpay ({source}) — order {intent.order_id}",
 	)
 	return "recorded"
 
 
-RECORDERS = {"demands": record_demands_payment, "invoice": record_invoice_payment}
+def _exam_recorder(doctype, log_doctype, link_field, fee_field):
+	"""Recorder for a captured re-exam / improvement exam order: the payment log and the registration's Paid
+	mark, exactly what the browser confirm writes. Idempotent on the payment id."""
+
+	def record(intent, payment_id, captured_amount, source):
+		reg = frappe.db.get_value(
+			doctype, {"name": intent.get("registration"), "student": intent.student},
+			["name", "status", "payment_status", fee_field], as_dict=True,
+		)
+		if not reg:
+			return "no_registration"
+		if frappe.db.exists(log_doctype, {"razorpay_payment_id": payment_id}):
+			return "already_recorded"
+		if reg.payment_status in ("Paid", "Captured") or reg.status == "Cancelled":
+			# paid by another payment, or cancelled meanwhile: record_unbooked_captures flags this one for a refund
+			return "nothing_to_allocate"
+		fee = flt(reg.get(fee_field))
+		if flt(captured_amount, 2) + 0.01 < fee:
+			frappe.log_error(
+				f"order: {intent.order_id}\npayment: {payment_id}\n{doctype}: {reg.name}\n"
+				f"captured ₹{flt(captured_amount):,.2f} does not cover the fee ₹{fee:,.2f}. Needs manual review.",
+				"Razorpay exam payment short",
+			)
+			return "short"
+		frappe.get_doc({
+			"doctype": log_doctype,
+			link_field: reg.name,
+			"razorpay_payment_id": payment_id,
+			"razorpay_order_id": intent.order_id,
+			"payment_gateway": "Razorpay",
+			"payment_status": "Paid",
+			"amount": fee,
+			"settlement_amount": fee,
+			"transaction_date": now_datetime(),
+			"gateway_response": json.dumps({
+				"razorpay_payment_id": payment_id, "razorpay_order_id": intent.order_id, "source": source,
+			}, indent=2),
+		}).insert(ignore_permissions=True)
+		frappe.db.set_value(doctype, reg.name, {"payment_status": "Paid", "payment_reference": payment_id})
+		return "recorded"
+
+	return record
+
+
+def record_transcript_payment(intent, payment_id, captured_amount, source):
+	"""Recorder for a captured transcript order: marks the request paid the way the browser confirm does
+	(mark_request_paid also records a second payment of an already-paid request for a refund)."""
+	from slcm.api.transcript_request import mark_request_paid
+
+	name = intent.get("request_name")
+	req = frappe.db.get_value(
+		"Transcript Request", name, ["student", "status", "payment_reference", "fee_amount"], as_dict=True
+	) if name else None
+	if not req or req.student != intent.student:
+		return "no_request"
+	if req.payment_reference == payment_id:
+		return "already_recorded"
+	if req.status == "Cancelled":
+		return "nothing_to_allocate"  # record_unbooked_captures flags it for a refund
+	if flt(captured_amount, 2) + 0.01 < flt(req.fee_amount):
+		frappe.log_error(
+			f"order: {intent.order_id}\npayment: {payment_id}\nrequest: {name}\n"
+			f"captured ₹{flt(captured_amount):,.2f} does not cover the fee ₹{flt(req.fee_amount):,.2f}.",
+			"Razorpay transcript payment short",
+		)
+		return "short"
+	mark_request_paid(name, intent.student, payment_id, intent.order_id)
+	return "recorded"
+
+
+RECORDERS = {
+	"demands": record_demands_payment,
+	"invoice": record_invoice_payment,
+	"re_exam": _exam_recorder("Re Exam Registration", "Re Exam Payment Log", "re_exam_registration", "re_exam_fee"),
+	"improvement": _exam_recorder(
+		"Improvement Exam Registration", "Improvement Exam Payment Log", "improvement_exam_registration", "improvement_fee"
+	),
+	"transcript": record_transcript_payment,
+}
 
 
 # ── 3. Scheduler ──────────────────────────────────────────────────────────
@@ -407,6 +486,8 @@ UNBOOKED_AFTER_MINUTES = 30  # leave the browser confirm and reconcile_pending t
 
 def _intent_reference(intent):
 	"""(doctype, name) of the charge an intent was for, for the unapplied SLCM Payment Request."""
+	if intent.get("request_name"):
+		return "Transcript Request", intent.request_name
 	if intent.get("invoice_name"):
 		return "Fee Invoice", intent.invoice_name
 	if intent.get("registration"):

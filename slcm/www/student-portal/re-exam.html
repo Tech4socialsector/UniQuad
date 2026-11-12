@@ -927,6 +927,11 @@ body.sp-dark .rx-toast {
         (resp.error && resp.error.description) || 'Payment was not completed.',
         'error');
       setButtonBusy(btn, false);
+      var e = resp.error || {};
+      spCall('slcm.api.student_payment.mark_exam_payment_failed', {
+        registration_name: order.registration_name, kind: 're_exam',
+        payment_id: (e.metadata && e.metadata.payment_id) || '', error_description: e.description || '', error_code: e.code || '',
+      }, function () {}, function () {});
     });
     rzp.open();
   }

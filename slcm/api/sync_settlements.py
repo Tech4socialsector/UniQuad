@@ -571,6 +571,18 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
 
             for item in items:
                 entity_type = (item.get("type") or item.get("entity_type") or "").lower()
+                if entity_type == "refund":
+                    # a refund deducted in this settlement: record it on the student payment's request
+                    try:
+                        from slcm.slcm.fee.payment_ledger import record_gateway_refund
+                        record_gateway_refund(
+                            item.get("payment_id"), item.get("entity_id") or item.get("id"),
+                            abs(frappe.utils.flt(item.get("amount") or item.get("debit") or 0)) / 100,
+                            source=f"Razorpay settlement {item.get('settlement_id') or ''}".strip(),
+                        )
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(), "sync_settlements: refund line (non-fatal)")
+                    continue
                 if entity_type and entity_type not in ("payment", ""):
                     continue
 

@@ -1626,8 +1626,9 @@ class TestStaleDemandLinks(GatewayTestCase):
 	"""A payment is booked even when its demand's Source Document is gone; deleting a re-exam cancels its demand."""
 
 	def test_payment_books_on_demand_whose_source_was_deleted(self):
+		# (exam demands are not paid from the Fees page any more: a stale hostel-fine link stands in)
 		frappe.db.set_value("Fee Demand", self.d_ez, {
-			"trigger_ref_doctype": "Re Exam Registration", "trigger_ref_name": "REX-DELETED-0001",
+			"trigger_ref_doctype": "Hostel Fine", "trigger_ref_name": "HF-DELETED-0001",
 		})
 		frappe.set_user(self.student_user)
 		txn = sp.create_bulk_demand_payment_order(json.dumps([self.d_ez]))["txnid"]
@@ -1777,7 +1778,7 @@ class TestConcurrentPayers(GatewayTestCase):
 		})
 		fp.insert(ignore_permissions=True)
 		fp.submit()
-		self.assertFalse(sp._already_paid("pay_FIRST1")["duplicate"])
+		self.assertEqual(sp._already_paid("pay_FIRST1")["status"], "success")  # its own, already recorded
 		self.assertTrue(sp._already_paid("pay_SECOND1")["duplicate"])
 
 	def test_unbooked_razorpay_capture_is_recorded_for_refund(self):
@@ -1828,3 +1829,433 @@ class TestStudentIdentityInResponse(GatewayTestCase):
 		filled = json.loads(frappe.db.get_value("SLCM Payment Request", pr, "gateway_response"))
 		self.assertEqual(filled["registration_id"], "REG-GW-01")
 		self.assertEqual(payment_ledger.fill_student_identity(), 0)
+
+
+class TestCriticalPaymentGaps(GatewayTestCase):
+	"""C2 transcript replay, C3 part-paid invoices, H1/H2 Razorpay recovery, H3 over-capture, C5/M1 refunds, M11."""
+
+	RZP_SECRET = "TESTRZPSECRET"
+
+	def setUp(self):
+		super().setUp()
+		from payments.payment_gateways.doctype.razorpay_settings import razorpay_settings as rs
+
+		secret = self.RZP_SECRET
+
+		def verify_signature(self_, body, signature, key):
+			import hashlib, hmac
+			if not hmac.compare_digest(hmac.new(key.encode(), body.encode(), hashlib.sha256).hexdigest(), signature):
+				raise frappe.ValidationError("bad signature")
+
+		for p in (
+			patch.object(rs.RazorpaySettings, "get_password", lambda self_, fieldname=None, raise_exception=True: secret),
+			patch.object(rs.RazorpaySettings, "verify_signature", verify_signature, create=True),
+			patch.object(rs, "order_payment_success", lambda *a, **k: None),
+		):
+			p.start()
+			self.addCleanup(p.stop)
+		frappe.db.set_single_value("Transcript Fee Settings", {"auto_approve_interim": 0, "auto_approve_final": 0})
+
+	def sign(self, order_id, payment_id):
+		import hashlib, hmac
+		return hmac.new(self.RZP_SECRET.encode(), f"{order_id}|{payment_id}".encode(), hashlib.sha256).hexdigest()
+
+	def intent_ir(self, flow, amount, user=None, role="Student", **refs):
+		order_id = f"order_{frappe.generate_hash(length=10)}"
+		ir = frappe.get_doc({
+			"doctype": "Integration Request", "integration_request_service": "Razorpay", "status": "Queued",
+			"data": json.dumps({"slcm_intent": {
+				"flow": flow, "order_id": order_id, "student": self.student, "amount": amount,
+				"user": user or self.student_user, "paid_by_role": role, **refs,
+			}}),
+		}).insert(ignore_permissions=True)
+		return ir.name, order_id
+
+	def invoice(self, amount):
+		inv = frappe.get_doc({
+			"doctype": "Fee Invoice", "student": self.student, "invoice_date": today(), "due_date": add_days(today(), 10),
+			"fee_components": [{"fee_component": self.comp_rzp, "amount": amount, "total_amount": amount}],
+		})
+		inv.flags.ignore_links = inv.flags.ignore_mandatory = True
+		inv.insert(ignore_permissions=True)
+		return inv.name
+
+	def transcript(self, fee, order_id=None):
+		req = frappe.get_doc({
+			"doctype": "Transcript Request", "student": self.student, "transcript_type": "Interim Transcript",
+			"num_copies": 1, "requested_on": today(), "payment_required": 1, "fee_amount": fee,
+			"payment_status": "Pending", "status": "Payment Pending", "razorpay_order_id": order_id,
+		})
+		req.flags.ignore_links = req.flags.ignore_mandatory = req.flags.ignore_validate = True
+		req.db_insert()
+		return req.name
+
+	def outstanding_inv(self, inv):
+		return flt(frappe.db.get_value("Fee Invoice", inv, "outstanding_amount"))
+
+	# C3
+	def test_part_paid_invoice_books_the_parents_online_payment(self):
+		inv = self.invoice(900)
+		counter = frappe.get_doc({
+			"doctype": "Fee Payment", "student": self.student, "fee_invoice": inv, "payment_date": today(),
+			"payment_mode": "Cash", "amount": 400,
+		})
+		counter.insert(ignore_permissions=True)
+		counter.submit()
+		self.assertEqual(self.outstanding_inv(inv), 500)
+		ir, order = self.intent_ir("invoice", 500, user=self.parent_user, role="Parent", invoice_name=inv)
+		frappe.set_user(self.parent_user)
+		res = sp.parent_confirm_fee_payment(inv, self.student, ir, "pay_PARTPAID1", order, self.sign(order, "pay_PARTPAID1"))
+		frappe.set_user("Administrator")
+		self.assertEqual(res["status"], "success")
+		self.assertEqual(flt(frappe.db.get_value("Fee Payment", {"reference_number": "pay_PARTPAID1", "docstatus": 1}, "amount")), 500)
+		self.assertEqual(self.outstanding_inv(inv), 0)
+		self.assertIn("Parent", frappe.db.get_value("Fee Payment", {"reference_number": "pay_PARTPAID1"}, "remarks"))
+
+	# H3 + C5/M1
+	def test_overcapture_shows_unallocated_and_refund_is_recorded(self):
+		from slcm.slcm.fee import payment_ledger as pl
+		from slcm.slcm.report.payments_to_refund import payments_to_refund as rep
+
+		inv = self.invoice(500)
+		ir, order = self.intent_ir("invoice", 900, invoice_name=inv)  # the order charged more than is now due
+		frappe.set_user(self.student_user)
+		sp.confirm_fee_payment(inv, ir, "pay_OVER1", order, self.sign(order, "pay_OVER1"))
+		frappe.set_user("Administrator")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "pay_OVER1"}, "name")
+		self.assertEqual(flt(frappe.db.get_value("SLCM Payment Request", pr, "amount")), 900)
+		self.assertEqual(json.loads(frappe.db.get_value("SLCM Payment Request", pr, "gateway_response"))["unallocated"], 400)
+		self.assertEqual(pl.refundable_amount(pr), 400)
+		self.assertIn(pr, [r.name for r in rep.execute({})[1]])
+
+		self.assertRaises(frappe.ValidationError, pl.record_refund, pr, "rfnd_1", today(), 500)  # more than unapplied
+		pl.record_refund(pr, "rfnd_1", today(), 400)
+		self.assertEqual(pl.refundable_amount(pr), 0)
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr, "refund_reference"), "rfnd_1")
+		self.assertNotIn(pr, [r.name for r in rep.execute({})[1]])
+		self.assertIn(pr, [r.name for r in rep.execute({"include_refunded": 1})[1]])
+
+	# C2
+	def test_transcript_payment_is_bound_to_its_own_request(self):
+		from slcm.api import transcript_request as tr
+
+		cheap = self.transcript(300)
+		dear = self.transcript(1000, order_id="order_DEAR")
+		ir, cheap_order = self.intent_ir("transcript", 300, request_name=cheap)
+		frappe.db.set_value("Transcript Request", cheap, "razorpay_order_id", cheap_order)
+		frappe.set_user(self.student_user)
+		try:
+			sig = self.sign(cheap_order, "pay_CHEAP1")
+			with patch.object(frappe, "log_error"):
+				self.assertRaises(frappe.PermissionError, tr.confirm_payment, dear, "pay_CHEAP1", cheap_order, sig)
+			self.assertTrue(tr.confirm_payment(cheap, "pay_CHEAP1", cheap_order, sig)["success"])
+			# the same payment on the other request's own order is refused too
+			self.assertRaises(frappe.PermissionError, tr.confirm_payment, dear, "pay_CHEAP1", "order_DEAR",
+			                  self.sign("order_DEAR", "pay_CHEAP1"))
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Transcript Request", dear, "payment_status"), "Pending")
+		self.assertEqual(frappe.db.get_value("Transcript Request", cheap, "payment_status"), "Paid")
+
+	def test_transcript_older_order_paid_late_is_accepted(self):
+		from slcm.api import transcript_request as tr
+
+		req = self.transcript(300)
+		ir, old_order = self.intent_ir("transcript", 300, request_name=req)
+		frappe.db.set_value("Transcript Request", req, "razorpay_order_id", "order_NEWERRETRY")  # student retried
+		frappe.set_user(self.student_user)
+		try:
+			self.assertTrue(tr.confirm_payment(req, "pay_LATE1", old_order, self.sign(old_order, "pay_LATE1"))["success"])
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Transcript Request", req, "payment_reference"), "pay_LATE1")
+
+	# H1 / H2
+	def test_reconciler_recovers_razorpay_exam_and_transcript_payments(self):
+		from slcm.api import razorpay_reconcile as rr
+
+		reg = frappe.get_doc({
+			"doctype": "Re Exam Registration", "student": self.student, "re_exam_fee": 700,
+			"status": "Registered", "payment_status": "Payment Initiated",
+		})
+		reg.flags.ignore_links = reg.flags.ignore_mandatory = reg.flags.ignore_validate = True
+		reg.insert(ignore_permissions=True)
+		rex_ir, _o = self.intent_ir("re_exam", 700, registration=reg.name)
+		req = self.transcript(300)
+		tr_ir, _o2 = self.intent_ir("transcript", 300, request_name=req)
+
+		payments = {"re": [{"id": "pay_RECREX1", "status": "captured", "amount": 70000}],
+		            "tr": [{"id": "pay_RECTRN1", "status": "captured", "amount": 30000}]}
+		with patch.object(rr, "_order_payments", lambda order_id: payments["re"]):
+			self.assertEqual(rr.reconcile_one(rex_ir), "recorded")
+		with patch.object(rr, "_order_payments", lambda order_id: payments["tr"]):
+			self.assertEqual(rr.reconcile_one(tr_ir), "recorded")
+		self.assertEqual(frappe.db.get_value("Re Exam Registration", reg.name, ["payment_status", "payment_reference"]),
+		                 ("Paid", "pay_RECREX1"))
+		self.assertTrue(frappe.db.exists("Re Exam Payment Log", {"razorpay_payment_id": "pay_RECREX1", "payment_status": "Paid"}))
+		self.assertEqual(frappe.db.get_value("Transcript Request", req, "payment_reference"), "pay_RECTRN1")
+		self.assertTrue(frappe.db.exists("SLCM Payment Request", {"transaction_id": "pay_RECREX1", "status": "Paid"}))
+
+	# C5
+	def test_rejected_transcript_is_not_refunded_until_it_is(self):
+		from slcm.api import transcript_request as tr
+		from slcm.slcm.fee import payment_ledger as pl
+
+		req = self.transcript(300)
+		tr.mark_request_paid(req, self.student, "pay_REJ1", "order_REJ1")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "pay_REJ1"}, "name")
+		frappe.db.set_value("Transcript Request", req, {"status": "Rejected", "payment_status": "Refund Pending"})
+		pl.sync("pay_REJ1")
+		self.assertNotEqual(frappe.db.get_value("SLCM Payment Request", pr, "gateway_status"), "refunded")
+		self.assertEqual(pl.refundable_amount(pr), 300)  # owed back, listed for the refund
+		frappe.db.set_value("Transcript Request", req, "payment_status", "Refunded")
+		pl.sync("pay_REJ1")
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr, "gateway_status"), "refunded")
+
+	def test_failed_refund_webhook_puts_invoice_back(self):
+		from slcm.slcm import api as slcm_api
+
+		inv = self.invoice(500)
+		frappe.db.set_value("Fee Invoice", inv, "payment_status", "Refunded")
+		slcm_api._handle_refund_failed({"payload": {
+			"refund": {"entity": {"id": "rfnd_X"}},
+			"payment": {"entity": {"notes": {"reference_doctype": "Fee Invoice", "reference_name": inv}}},
+		}})
+		self.assertEqual(frappe.db.get_value("Fee Invoice", inv, "payment_status"), "Captured")
+
+	# M11
+	def test_status_cannot_be_edited_after_submit(self):
+		meta = frappe.get_meta("SLCM Payment Request")
+		self.assertFalse(meta.get_field("status").allow_on_submit)
+		self.assertFalse(meta.get_field("gateway_status").allow_on_submit)
+
+
+class TestHighPaymentGaps(GatewayTestCase):
+	"""H5 receipt reports, H6 desk Pay Online, H7 exam fees only on the exam pages."""
+
+	def exam_demand(self, registration, amount=750):
+		frappe.db.set_value("Fee Demand", self.d_ez, {
+			"trigger_ref_doctype": "Re Exam Registration", "trigger_ref_name": registration,
+			"original_amount": amount,
+		})
+		return self.d_ez
+
+	def re_exam_reg(self, fee=750, status="Pending"):
+		reg = frappe.get_doc({
+			"doctype": "Re Exam Registration", "student": self.student, "re_exam_fee": fee,
+			"status": "Registered", "payment_status": status,
+		})
+		reg.flags.ignore_links = reg.flags.ignore_mandatory = reg.flags.ignore_validate = True
+		reg.insert(ignore_permissions=True)
+		return reg.name
+
+	# H7
+	def test_exam_fee_is_refused_on_the_fees_page(self):
+		demand = self.exam_demand(self.re_exam_reg())
+		frappe.set_user(self.student_user)
+		try:
+			self.assertRaises(frappe.ValidationError, sp.create_bulk_demand_payment_order, json.dumps([demand]))
+			self.assertRaises(frappe.ValidationError, sp.create_demand_payment_order, demand)
+		finally:
+			frappe.set_user("Administrator")
+		frappe.set_user(self.parent_user)
+		try:
+			self.assertRaises(frappe.ValidationError, sp.parent_create_bulk_demand_payment_order, json.dumps([demand]), self.student)
+		finally:
+			frappe.set_user("Administrator")
+		from slcm.slcm.fee.portal_charges import is_unpaid_exam_demand
+		self.assertTrue(is_unpaid_exam_demand(frappe.db.get_value("Fee Demand", demand, ["trigger_ref_doctype", "status"], as_dict=True)))
+		self.assertFalse(is_unpaid_exam_demand(frappe.db.get_value("Fee Demand", self.d_rzp, ["trigger_ref_doctype", "status"], as_dict=True)))
+
+	def test_paying_on_the_exam_page_cancels_the_enrolment_demand(self):
+		reg = self.re_exam_reg()
+		demand = self.exam_demand(reg)
+		frappe.get_doc({
+			"doctype": "Re Exam Payment Log", "re_exam_registration": reg, "razorpay_payment_id": "pay_EXAMPAGE1",
+			"payment_gateway": "Razorpay", "payment_status": "Paid", "amount": 750,
+		}).insert(ignore_permissions=True)
+		self.assertEqual(frappe.db.get_value("Fee Demand", demand, "status"), "Cancelled")
+		self.assertEqual(frappe.db.get_value("Fee Demand", self.d_rzp, "status"), "Pending")  # other dues untouched
+
+	def test_enrolled_fee_is_charged_without_a_course_setting_fee(self):
+		exam_plan = frappe.db.get_value("Exam Plan", {}, "name")
+		course = frappe.db.get_value("Course", {}, "name")
+		if not (exam_plan and course):
+			self.skipTest("needs an Exam Plan and a Course")
+		frappe.db.delete("Re Exam Course Setting", {"exam_plan": exam_plan, "course": course})
+		setting = frappe.get_doc({"doctype": "Re Exam Course Setting", "exam_plan": exam_plan, "course": course,
+		                          "re_exam_fee": 0, "payment_gateway": "Easebuzz"})
+		setting.flags.ignore_links = setting.flags.ignore_mandatory = True
+		setting.insert(ignore_permissions=True)
+		reg = frappe.get_doc({"doctype": "Re Exam Registration", "student": self.student, "exam_plan": exam_plan,
+		                      "course": course, "re_exam_fee": 900, "status": "Registered", "payment_status": "Pending"})
+		reg.flags.ignore_links = reg.flags.ignore_mandatory = reg.flags.ignore_validate = True
+		reg.insert(ignore_permissions=True)
+		frappe.set_user(self.student_user)
+		try:
+			res = sp.create_re_exam_payment_order(exam_plan, course)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(flt(res["amount"]), 900)
+
+	# H5
+	def test_receipt_reports_skip_cancelled_and_count_each_receipt_once(self):
+		from slcm.slcm.report.collection_summary import collection_summary as cs
+		from slcm.slcm.report.receipt_register import receipt_register as rr
+
+		fp = frappe.get_doc({
+			"doctype": "Fee Payment", "student": self.student, "payment_date": today(), "payment_mode": "Cash",
+			"amount": 3500,
+			"payment_demands": [
+				{"fee_demand": self.d_rzp, "outstanding_amount": 1000, "amount_allocated": 1000},
+				{"fee_demand": self.d_ez, "outstanding_amount": 2500, "amount_allocated": 2500},
+			],
+		})
+		fp.insert(ignore_permissions=True)
+		fp.submit()
+		receipt = frappe.db.get_value("Fee Receipt", {"fee_payment": fp.name}, "name")
+		f = {"from_date": today(), "to_date": today()}
+		mine = lambda rows: sum(flt(r.get("total_collected")) for r in rows if r.get("payment_mode") == "Cash")
+		before_cancel = mine(cs.execute(f)[1])
+		self.assertGreaterEqual(before_cancel, 3500)
+		self.assertIn(receipt, [r.name for r in rr.execute(f)[1]])
+		frappe.db.set_value("Fee Receipt", receipt, "status", "Cancelled")
+		self.assertNotIn(receipt, [r.name for r in rr.execute(f)[1]])
+		self.assertAlmostEqual(before_cancel - mine(cs.execute(f)[1]), 3500)  # once, not once per demand
+
+	# H6
+	def test_desk_pay_online_books_captured_amount_and_flags_excess(self):
+		from slcm.api import razorpay_reconcile as rr
+
+		inv = frappe.get_doc({
+			"doctype": "Fee Invoice", "student": self.student, "invoice_date": today(), "due_date": add_days(today(), 10),
+			"fee_components": [{"fee_component": self.comp_rzp, "amount": 500, "total_amount": 500}],
+		})
+		inv.flags.ignore_links = inv.flags.ignore_mandatory = True
+		inv.insert(ignore_permissions=True)
+		frappe.flags.data = {"razorpay_payment_id": "pay_DESK1"}
+		try:
+			with patch.object(rr, "_payment", lambda pid: {"status": "captured", "amount": 80000, "order_id": "order_DESK1"}):
+				frappe.get_doc("Fee Invoice", inv.name).on_payment_authorized("Completed")
+				frappe.get_doc("Fee Invoice", inv.name).on_payment_authorized("Completed")  # repeat: no second booking
+		finally:
+			frappe.flags.data = None
+		fps = frappe.get_all("Fee Payment", {"reference_number": "pay_DESK1", "docstatus": 1}, ["amount", "payment_gateway"])
+		self.assertEqual([(flt(f.amount), f.payment_gateway) for f in fps], [(500, "Razorpay")])
+
+
+class TestMediumPaymentGaps(GatewayTestCase):
+	"""M2 payout refunds, M4 cancelled online payment / exam registration, M5 exam failures, M8 parent amount,
+	M9 parent invoice cancel / fail."""
+
+	def invoice(self, amount):
+		inv = frappe.get_doc({
+			"doctype": "Fee Invoice", "student": self.student, "invoice_date": today(), "due_date": add_days(today(), 10),
+			"fee_components": [{"fee_component": self.comp_rzp, "amount": amount, "total_amount": amount}],
+		})
+		inv.flags.ignore_links = inv.flags.ignore_mandatory = True
+		inv.insert(ignore_permissions=True)
+		return inv.name
+
+	# M8
+	def test_parent_pays_the_same_amount_as_the_student(self):
+		inv = self.invoice(1000)
+		frappe.db.set_value("Student Master", self.student, "discount_amount", 300)  # scholarship not on the invoice yet
+		self.assertEqual(sp._effective_invoice_outstanding(inv, self.student, 1000), (700, 300))
+		frappe.set_user(self.parent_user)
+		try:
+			order = sp.parent_create_payment_order(inv, self.student)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(flt(order.get("amount")) / (100 if flt(order.get("amount")) > 1000 else 1), 700)
+
+	# M9
+	def test_parent_closing_or_failing_the_checkout_releases_it(self):
+		inv = self.invoice(1000)
+		ir = frappe.get_doc({
+			"doctype": "Integration Request", "integration_request_service": "Razorpay", "status": "Queued",
+			"data": json.dumps({"slcm_intent": {"flow": "invoice", "order_id": "order_PARCAN1", "student": self.student,
+			                                    "amount": 1000, "user": self.parent_user, "paid_by_role": "Parent",
+			                                    "invoice_name": inv}}),
+		}).insert(ignore_permissions=True)
+		frappe.db.set_value("Fee Invoice", inv, "payment_status", "Payment Initiated")
+		frappe.set_user(self.parent_user)
+		try:
+			sp.parent_cancel_fee_payment(inv, self.student, ir.name)
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Integration Request", ir.name, "status"), "Cancelled")
+		self.assertEqual(frappe.db.get_value("Fee Invoice", inv, "payment_status"), "Pending")
+		from slcm.slcm.fee.checkout_guard import active_checkout
+		self.assertIsNone(active_checkout(self.student, {("Fee Invoice", inv)}, exclude_user=self.student_user))
+
+		frappe.db.set_value("Integration Request", ir.name, "status", "Queued")
+		frappe.db.set_value("Fee Invoice", inv, "payment_status", "Payment Initiated")
+		frappe.set_user(self.parent_user)
+		try:
+			sp.parent_mark_fee_payment_failed(inv, self.student, ir.name, "pay_PARFAIL1", "Card declined", "BAD_REQUEST_ERROR")
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Fee Invoice", inv, "payment_status"), "Payment Failed")
+		self.assertTrue(frappe.db.exists("Student Fee Payment Log", {"razorpay_payment_id": "pay_PARFAIL1", "paid_by_role": "Parent"}))
+
+	# M5
+	def test_razorpay_exam_failure_is_recorded(self):
+		reg = frappe.get_doc({"doctype": "Re Exam Registration", "student": self.student, "re_exam_fee": 700,
+		                      "status": "Registered", "payment_status": "Payment Initiated"})
+		reg.flags.ignore_links = reg.flags.ignore_mandatory = reg.flags.ignore_validate = True
+		reg.insert(ignore_permissions=True)
+		frappe.set_user(self.student_user)
+		try:
+			sp.mark_exam_payment_failed(reg.name, "re_exam", "pay_EXFAIL1", "Bank declined", "BAD_REQUEST_ERROR")
+		finally:
+			frappe.set_user("Administrator")
+		self.assertEqual(frappe.db.get_value("Re Exam Registration", reg.name, "payment_status"), "Payment Failed")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "pay_EXFAIL1"},
+		                         ["status", "failure_message", "reference_doctype"], as_dict=True)
+		self.assertEqual((pr.status, pr.reference_doctype), ("Failed", "Re Exam Registration"))
+		self.assertIn("declined", pr.failure_message)
+
+	# M4
+	def test_cancelled_paid_exam_registration_frees_its_fee_for_refund(self):
+		from slcm.slcm.fee import payment_ledger as pl
+
+		reg = frappe.get_doc({"doctype": "Re Exam Registration", "student": self.student, "re_exam_fee": 700,
+		                      "status": "Registered", "payment_status": "Paid", "payment_reference": "pay_EXCAN1"})
+		reg.flags.ignore_links = reg.flags.ignore_mandatory = reg.flags.ignore_validate = True
+		reg.insert(ignore_permissions=True)
+		frappe.get_doc({"doctype": "Re Exam Payment Log", "re_exam_registration": reg.name, "razorpay_payment_id": "pay_EXCAN1",
+		                "payment_gateway": "Razorpay", "payment_status": "Paid", "amount": 700}).insert(ignore_permissions=True)
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "pay_EXCAN1"}, "name")
+		self.assertEqual(pl.refundable_amount(pr), 0)  # held by the registration
+		doc = frappe.get_doc("Re Exam Registration", reg.name)
+		doc.status = "Cancelled"
+		doc.flags.ignore_links = doc.flags.ignore_mandatory = doc.flags.ignore_validate = True
+		doc.save(ignore_permissions=True)
+		self.assertEqual(pl.refundable_amount(pr), 700)
+		self.assertEqual(frappe.db.get_value("SLCM Payment Request", pr, "status"), "Paid")  # never cancelled
+
+	def test_cancelling_an_online_fee_payment_warns(self):
+		fp = frappe.get_doc({
+			"doctype": "Fee Payment", "student": self.student, "payment_date": today(), "payment_mode": "Online Payment",
+			"amount": 1000, "reference_number": "pay_CANWARN1", "payment_gateway": "Razorpay",
+			"payment_demands": [{"fee_demand": self.d_rzp, "outstanding_amount": 1000, "amount_allocated": 1000}],
+		})
+		fp.insert(ignore_permissions=True)
+		fp.submit()
+		with patch.object(frappe, "msgprint") as msg:
+			fp.cancel()
+		self.assertTrue(any("does not refund" in str(c) for c in msg.call_args_list))
+
+	# M2
+	def test_refund_lines_in_payouts_are_recorded_once(self):
+		from slcm.slcm.fee import easebuzz_settlement as es
+		from slcm.slcm.fee import payment_ledger as pl
+
+		pl.record_unapplied("Easebuzz", "EZREF1", "txnREF1", "Fee Demand", self.d_ez, 2500, self.student, "duplicate")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "EZREF1"}, "name")
+		payout = {"paid_out": True, "payout_actual_date": "Nov-10-2026 10:00:00 AM", "payout_id": "PO1",
+		          "peb_transactions": [], "peb_refunds": [{"peb_transaction_id": "EZREF1", "refund_id": "RFEZ1", "refund_amount": 2500}]}
+		self.assertEqual(es.apply_payouts([payout]).get("refunds"), 1)
+		self.assertEqual(es.apply_payouts([payout]).get("refunds"), None)  # same refund id: not twice
+		self.assertEqual((flt(frappe.db.get_value("SLCM Payment Request", pr, "refunded_amount")), pl.refundable_amount(pr)), (2500, 0))

@@ -183,6 +183,12 @@ def create_payment_order(invoice_name, student_name):
     from slcm.slcm.fee.checkout_guard import ensure_no_other_checkout
     ensure_no_other_checkout(student_name, invoice=invoice_name, paid_by_role="Parent")
 
+    from slcm.api.student_payment import _effective_invoice_outstanding
+    effective, _pending = _effective_invoice_outstanding(invoice_name, student_name, inv.outstanding_amount)
+    if effective <= 0:
+        frappe.throw(_("No outstanding amount to pay after applying scholarship."))
+    inv.outstanding_amount = effective  # what the order charges, same as the student pays
+
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated",
         update_modified=False,
@@ -258,40 +264,15 @@ def confirm_fee_payment(invoice_name, student_name, integration_request,
 
     # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
     lock_intent(integration_request)
-    # ── Idempotently create Fee Payment ───────────────────────────────
-    existing_fp = frappe.db.get_value(
-        "Fee Payment",
-        {"fee_invoice": invoice_name, "docstatus": 1},
-        "name",
-        order_by="creation desc",
-    )
-
-    if not existing_fp:
-        inv_doc     = frappe.get_doc("Fee Invoice", invoice_name)
-        outstanding = flt(inv_doc.outstanding_amount)
-        if outstanding > 0:
-            fp = frappe.get_doc({
-                "doctype":          "Fee Payment",
-                "fee_invoice":      invoice_name,
-                "student":          student_name,
-                "amount":           outstanding,
-                "payment_date":     today(),
-                "payment_mode":     "Online Payment",
-                "reference_number": razorpay_payment_id,
-                "payment_gateway":  "Razorpay",
-                "remarks":          "Paid by parent via Parent Portal",
-            })
-            # never record more than this order actually charged
-            if cap_fee_payment(fp, intent.amount):
-                fp.insert(ignore_permissions=True)
-                fp.submit()
-            frappe.db.commit()
-
-    frappe.db.set_value(
-        "Fee Invoice", invoice_name, "payment_status", "Captured",
-        update_modified=False,
-    )
+    # Book this payment through the reconciler's recorder: keyed on the payment id, so an earlier Fee Payment on
+    # the invoice (a counter instalment, a previous part-payment) can never hide it, and capped at what is still
+    # outstanding (any excess shows as unallocated on its SLCM Payment Request, for a refund).
+    from slcm.api.razorpay_reconcile import record_invoice_payment
+    outcome = record_invoice_payment(intent, razorpay_payment_id, intent.amount, "browser")
     frappe.db.commit()
+    if outcome in ("nothing_to_allocate", "no_invoice"):
+        from slcm.api.student_payment import _already_paid
+        return _already_paid(razorpay_payment_id, invoice_status=frappe.db.get_value("Fee Invoice", invoice_name, "status"))
 
     # ── Return refreshed invoice state ────────────────────────────────
     inv_doc = frappe.get_doc("Fee Invoice", invoice_name)

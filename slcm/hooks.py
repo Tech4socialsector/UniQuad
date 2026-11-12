@@ -427,6 +427,8 @@ doc_events = {
     "Re Exam Payment Log": {
         "on_update": [
             "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+            # paid on the exam page: its enrolment Fee Demand is cancelled
+            "slcm.slcm.fee.event_hooks.on_exam_payment_log",
             # counter (cash / cheque) payments → ERPNext
             "slcm.erpnext_bridge.sync.enqueue_sync",
         ],
@@ -434,6 +436,8 @@ doc_events = {
     "Improvement Exam Payment Log": {
         "on_update": [
             "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+            # paid on the exam page: its enrolment Fee Demand is cancelled
+            "slcm.slcm.fee.event_hooks.on_exam_payment_log",
             "slcm.erpnext_bridge.sync.enqueue_sync",
         ],
     },
@@ -558,9 +562,11 @@ doc_events = {
     },
     "Re Exam Registration": {
         "after_insert": "slcm.slcm.fee.event_hooks.on_reexam_registration_insert",
+        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_registration",
         "on_trash": "slcm.slcm.fee.event_hooks.on_exam_registration_trash"
     },
     "Improvement Exam Registration": {
+        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_registration",
         "on_trash": "slcm.slcm.fee.event_hooks.on_exam_registration_trash"
     },
     "Convocation Registration": {

@@ -187,7 +187,9 @@ def get_context(context):
                     "improvement_available":      bool(improv_setting) and improvement_cgpa_ok,
                     "improvement_setting_exists": bool(improv_setting),
                     "improvement_cgpa_ok":        improvement_cgpa_ok,
-                    "improvement_fee":           float(improv_setting.improvement_fee or 0) if improv_setting else 0,
+                    # an enrolled student pays the fee on the registration (what checkout charges)
+                    "improvement_fee":           float((improv_reg and improv_reg.improvement_fee)
+                                                       or (improv_setting.improvement_fee if improv_setting else 0) or 0),
                     "improvement_deadline_to":   str(improv_setting.deadline_to or "") if improv_setting else "",
                     "improvement_payment_status": improv_reg.payment_status if improv_reg else "",
                     "improvement_reg_name":      improv_reg.name if improv_reg else "",
@@ -492,7 +494,7 @@ def _get_improvement_registration(student_name, exam_plan, course):
         row = frappe.db.get_value(
             "Improvement Exam Registration",
             {"student": student_name, "exam_plan": exam_plan, "course": course, "status": ["!=", "Cancelled"]},
-            ["name", "payment_status"],
+            ["name", "payment_status", "improvement_fee"],
             as_dict=True,
         )
         return row or None

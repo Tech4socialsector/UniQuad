@@ -27,7 +27,8 @@ def get_columns():
 
 
 def get_data(filters):
-    conditions = "r.docstatus != 2"
+    # Fee Receipt is not submittable: a cancelled receipt keeps docstatus 0 with status "Cancelled"
+    conditions = "r.docstatus != 2 AND IFNULL(r.status, '') != 'Cancelled'"
 
     if filters.get("from_date"):
         conditions += " AND r.receipt_date >= %(from_date)s"

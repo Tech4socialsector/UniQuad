@@ -45,8 +45,10 @@ def razorpay_webhook():
     dispatch = {
         "payment.captured":   _handle_payment_captured,
         "payment.failed":     _handle_payment_failed,
-        "refund.created":     _handle_refund,
+        # "created" only means a refund was requested: mark Refunded once Razorpay has processed it,
+        # and put a failed refund back to paid
         "refund.processed":   _handle_refund,
+        "refund.failed":      _handle_refund_failed,
         "settlement.processed": _handle_settlement,
     }
     handler = dispatch.get(event)
@@ -213,8 +215,34 @@ def _handle_payment_failed(payload):
         frappe.db.commit()
 
 
+def _handle_refund_failed(payload):
+    """A refund Razorpay could not complete: the money stays with the university, so undo a Refunded mark
+    made for this refund (re-exam payment log + registration, Fee Invoice)."""
+    refund  = payload.get("payload", {}).get("refund", {}).get("entity", {})
+    payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+    notes    = (payment.get("notes") or {}) if payment else {}
+    ref_type = notes.get("reference_doctype")
+    ref_name = notes.get("reference_name")
+
+    if ref_type == "Fee Invoice" and ref_name:
+        if frappe.db.get_value("Fee Invoice", ref_name, "payment_status") == "Refunded":
+            frappe.db.set_value("Fee Invoice", ref_name, "payment_status", "Captured", update_modified=False)
+            frappe.db.commit()
+        return
+
+    refund_id = refund.get("id")
+    log_name = frappe.db.get_value(
+        "Re Exam Payment Log", {"refund_id": refund_id, "payment_status": "Refunded"}, "name"
+    ) if refund_id else None
+    if log_name:
+        frappe.db.set_value("Re Exam Payment Log", log_name, "payment_status", "Paid", update_modified=True)
+        if ref_type == "Re Exam Registration" and ref_name:
+            _update_re_exam_registration(ref_name, "Paid")
+        frappe.db.commit()
+
+
 def _handle_refund(payload):
-    """Handle refund.created and refund.processed events."""
+    """Handle refund.processed events."""
     refund  = payload.get("payload", {}).get("refund", {}).get("entity", {})
     payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
 
