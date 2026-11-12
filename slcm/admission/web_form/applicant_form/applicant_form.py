@@ -1,3 +1,4 @@
+import re
 from html import unescape
 
 import frappe
@@ -500,6 +501,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
     valid_scalar  = {f.fieldname for f in meta.fields if f.fieldtype not in SKIP_TYPES} - PROTECTED_FIELDS
     attach_fields = {f.fieldname for f in meta.fields if f.fieldtype in ["Attach", "Attach Image"]}
     child_tables  = {f.fieldname for f in meta.fields if f.fieldtype == "Table"}
+    phone_fields  = {f.fieldname for f in meta.fields if f.fieldtype == "Phone"}
 
     def _is_valid_file(file_url):
         if not file_url or not isinstance(file_url, str):
@@ -524,6 +526,9 @@ def save_applicant_draft(data, ignore_mandatory=True):
             continue
         if key in valid_scalar:
             if key in attach_fields and value and not _is_valid_file(value):
+                value = None
+            # Phone "+91-", "+91-null", "+91-undefined": an ISD with no number is an empty field.
+            if key in phone_fields and isinstance(value, str) and not re.sub(r"\D", "", value.split("-", 1)[-1] if "-" in value else value):
                 value = None
             try:
                 setattr(doc, key, value)

@@ -1092,6 +1092,9 @@ function collectDraftData() {
 		'name', 'program', 'admission_cycle', 'academic_year', 'admission_year',
 		'campus', 'status', 'application_fee_status',
 		'application_fee_amount', 'program_level',
+		// Hidden on the portal and set from the entry link (domestic / international); the applicant
+		// cannot change it, so an empty payload value must never wipe the stored Yes / No.
+		'foriegn_national',
 	];
 	var ref = frappe.reference_doc || {};
 	PRESERVE.forEach(function (k) {
@@ -1111,6 +1114,10 @@ function collectDraftData() {
 		}
 	});
 
+	// Class XII Status is only asked for Undergraduate; every other level is "Completed".
+	// Set it before the hidden-field cleanup so the Class XII fields that depend on it survive.
+	data.class_xii_status = _slcmClassXiiStatusFor(data.program_level, data.class_xii_status);
+
 	// Values typed into a field that is now hidden by its "depends_on" (e.g. Karnataka options
 	// after "Whether Karnataka" went back to No) stay in the browser while the applicant edits,
 	// but are not stored: blank them in the payload. The form is cleared after a successful save.
@@ -1129,6 +1136,29 @@ function collectDraftData() {
 // ───────────────────────────────────────────────────────────────────
 var _SLCM_LAYOUT_TYPES = ['Section Break', 'Column Break', 'Tab Break', 'Page Break', 'Fold',
 	'HTML', 'Button', 'Heading'];
+
+// Hidden on purpose but still carries a value that other fields depend on: never blank these.
+var _SLCM_KEEP_WHEN_HIDDEN = { class_xii_status: 1 };
+
+/**
+ * Class XII Status is asked only for Undergraduate programmes (Completed / Appearing).
+ * Postgraduate and Research Course applicants have finished Class XII, so it is "Completed".
+ */
+function _slcmClassXiiStatusFor(programLevel, current) {
+	if (programLevel && programLevel !== 'Undergraduate') return 'Completed';
+	return current || 'Completed';
+}
+
+/** Keep the Class XII Status field in the browser in step with the programme level. */
+function _slcmSyncClassXiiStatus() {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf || typeof wf.get_value !== 'function' || !wf.fields_dict || !wf.fields_dict.class_xii_status) return;
+	var current = wf.get_value('class_xii_status');
+	var wanted = _slcmClassXiiStatusFor(wf.get_value('program_level'), current);
+	if (wanted !== current) {
+		try { wf.set_value('class_xii_status', wanted); } catch (e) {}
+	}
+}
 
 function _slcmEvalDependsOn(expr, doc) {
 	if (!expr) return true;
@@ -1188,6 +1218,7 @@ function _slcmFieldsHiddenByDependency(data) {
 			}
 			if (_SLCM_LAYOUT_TYPES.indexOf(ft) !== -1 || !df.fieldname) return;
 			if (cint(df.hidden)) return;   // statically hidden / script-managed fields: leave alone
+			if (_SLCM_KEEP_WHEN_HIDDEN[df.fieldname]) return;
 			if (cleared[df.fieldname]) return;
 			var shown = sectionShown && columnShown && _slcmEvalDependsOn(df.depends_on, evalDoc);
 			if (!shown && _slcmHasValue(evalDoc[df.fieldname])) {
@@ -1208,7 +1239,20 @@ function _slcmClearSavedHiddenFields() {
 	window._slcmHiddenClearedOnSave = [];
 	if (!wf || !fns.length) return Promise.resolve();
 	var jobs = fns.map(function (fn) {
-		var empty = _slcmEmptyValueFor(wf.fields_dict[fn]);
+		var field = wf.fields_dict[fn];
+		var empty = _slcmEmptyValueFor(field);
+		// Phone: Frappe's control rebuilds the value as "<ISD>-" + value, so set_value(null)
+		// shows "+91 null". Reset the widget directly, the same as an untouched phone field.
+		if (field && field.df && field.df.fieldtype === 'Phone') {
+			try {
+				field.value = '';
+				if (wf.doc) wf.doc[fn] = '';
+				if (typeof field.reset_input === 'function') field.reset_input();
+				else if (field.$input) field.$input.val('');
+				if (typeof field.set_default_country === 'function') field.set_default_country();
+			} catch (e) {}
+			return Promise.resolve();
+		}
 		try {
 			if (wf.doc) wf.doc[fn] = empty;
 			return Promise.resolve(wf.set_value(fn, empty)).catch(function () {});
@@ -1787,6 +1831,7 @@ function scheduleProgramPortalDerivatives() {
 					if (d.intake_type) wf.set_value('intake_type', d.intake_type);
 					if (d.campus) wf.set_value('campus', d.campus);
 				} catch (e) {}
+				_slcmSyncClassXiiStatus();
 				scheduleFeeUpdate();
 				syncTopBarApplyingFor();
 			},
@@ -2942,8 +2987,60 @@ function _showSuccessModal(title, message, nextUrl) {
  *  4a. Fee > 0 and not paid → show Razorpay modal → on payment → submit
  *  4b. Fee = 0 or paid/waived → submit directly
  */
+/**
+ * Strict pre-submit check: run the page validation (_validateStage, same rules as Next and the
+ * stepper tabs) on EVERY page, not only the one on screen. Submit can be reached without
+ * pressing Next on each page (Enter key, a reopened draft, values changed on an earlier page),
+ * so the whole form is re-checked here. Stops on the first incomplete page and leaves it on screen.
+ */
+function _slcmValidateAllPagesBeforeSubmit(wf) {
+	if (!wf || typeof wf.get_page !== 'function') return true;
+	var lastIdx = (wf.page_breaks && wf.page_breaks.length) || 0;
+	var startIdx = typeof wf.current_section === 'number' ? wf.current_section : lastIdx;
+	var stepsArr = window._slcm_wf_steps || [];
+
+	function showPage(i) {
+		wf.current_section = i;
+		if (typeof wf.toggle_section === 'function') wf.toggle_section();
+	}
+
+	for (var i = 0; i <= lastIdx; i++) {
+		var step = stepsArr.find(function (s) { return s.index === i; });
+		if (step && step.depends_on && !_slcmEvalDependsOn(step.depends_on, wf.doc || {})) continue;
+		var $page = $(wf.get_page(i));
+		if (!$page.length || !$page.find('.frappe-control:not(.hide-control)').length) continue;
+
+		// _validateStage ignores fields on hidden pages, so show the page before checking it.
+		if (wf.current_section !== i) showPage(i);
+		var check = _validateStage(wf, $page);
+		if (!check.ok) {
+			var stepLabel = step && step.label ? step.label : '';
+			frappe.msgprint({
+				title: __('Mandatory Fields Missing'),
+				indicator: 'red',
+				message:
+					_esc(stepLabel
+						? __('Please complete "{0}" before submitting the application.', [stepLabel])
+						: __('Please fill all mandatory fields before submitting the application.')) +
+					'<br><br><ul><li>' +
+					check.missing.map(function (lab) { return _esc(lab); }).join('</li><li>') +
+					'</li></ul>',
+			});
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+			return false;
+		}
+	}
+	if (wf.current_section !== startIdx) showPage(startIdx);
+	return true;
+}
+
 function runSubmitFlow() {
 	var wf = frappe.web_form;
+
+	// ── Every page: mandatory + conditionally mandatory fields ─────
+	if (!_slcmValidateAllPagesBeforeSubmit(wf)) {
+		return;
+	}
 
 	// ── Phone validation ──────────────────────────────────────────
 	if (typeof window._validate_phone_fields === 'function' && !window._validate_phone_fields()) {
@@ -5513,7 +5610,10 @@ frappe.ready(function () {
 					scheduleProgramPortalDerivatives();
 				});
 				wf.on('admission_cycle', scheduleProgramPortalDerivatives);
+				wf.on('program_level', _slcmSyncClassXiiStatus);
 			} catch (e) {}
+			// Drafts saved before this fix may have an empty Class XII Status for PG / Research.
+			setTimeout(_slcmSyncClassXiiStatus, 1500);
 		} else if (_bindProgN > 120) {
 			clearInterval(_bindProgTimer);
 		}
