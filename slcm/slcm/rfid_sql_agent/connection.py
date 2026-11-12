@@ -9,7 +9,14 @@ returns a live pyodbc connection. Callers are responsible for closing it.
 """
 
 import os
+import socket
+
 import frappe
+
+# Seconds. Kept well under the web worker timeout so a slow or unreachable SQL Server gives a clear
+# message instead of a 502: reach the port, log in, then each query (when the caller sets one).
+TCP_TIMEOUT = 5
+LOGIN_TIMEOUT = 10
 
 _APP_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(
     os.path.abspath(__file__)
@@ -47,11 +54,14 @@ def _find_freetds_lib():
     return matches[0] if matches else None
 
 
-def get_connection():
+def get_connection(query_timeout=None):
     """
     Return an open pyodbc connection to the SQL Server configured in
     RFID SQL Agent Settings. Raises frappe.ValidationError with a clear
     message if config is incomplete or the connection fails.
+
+    query_timeout: seconds each query may run (screens a person waits on pass one;
+    the background poller leaves it unset).
     """
     try:
         import pyodbc
@@ -124,6 +134,20 @@ def get_connection():
     if is_freetds:
         conn_str += "TDS_Version=7.4;"
 
+    # FreeTDS ignores "Connection Timeout" in the string, so an unreachable host would hang the request.
+    # Only a plain host is checked: a named instance (host\\INSTANCE, port found through SQL Browser) or a
+    # host already carrying its own port connects exactly as before.
+    try:
+        if "\\" not in server and "," not in server:
+            socket.create_connection((server, port), timeout=TCP_TIMEOUT).close()
+    except OSError as e:
+        frappe.throw(
+            f"This server cannot reach SQL Server {server}:{port} (no answer within {TCP_TIMEOUT} seconds: {e}). "
+            "The SQL Server is on the campus network: run this from a machine that can reach it (on campus or "
+            "over the VPN), or check the Server Host / Port in RFID SQL Agent Settings.",
+            title="RFID SQL Agent — SQL Server Not Reachable"
+        )
+
     _prev_openssl_conf = os.environ.get("OPENSSL_CONF")
     _prev_gnutls_prio  = os.environ.get("GNUTLS_SYSTEM_PRIORITY_FILE")
     _prev_gnutls_fail  = os.environ.get("GNUTLS_SYSTEM_PRIORITY_FAIL_ON_INVALID")
@@ -135,7 +159,7 @@ def get_connection():
         os.environ["GNUTLS_SYSTEM_PRIORITY_FAIL_ON_INVALID"] = "0"
 
     try:
-        conn = pyodbc.connect(conn_str, autocommit=True)
+        conn = pyodbc.connect(conn_str, autocommit=True, timeout=LOGIN_TIMEOUT)
     except Exception as e:
         frappe.throw(
             f"Could not connect to SQL Server ({server}:{port}/{database}): {e}",
@@ -152,4 +176,6 @@ def get_connection():
             else:
                 os.environ[var] = prev
 
+    if query_timeout:
+        conn.timeout = int(query_timeout)
     return conn

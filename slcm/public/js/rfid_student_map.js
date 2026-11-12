@@ -213,7 +213,7 @@ frappe.provide("slcm.rfid_student_map");
 					}).join("\n") : __("Unknown error");
 					state("fa-plug", __("Could not read the device database"),
 						__("Check the SQL Server details and the Student Map table/columns in RFID SQL Agent Settings."),
-						`<div class="rsm-err-text">${esc(frappe.utils.strip_html(msg))}</div><br>
+						`<div class="rsm-err-text">${esc(new DOMParser().parseFromString(msg, "text/html").body.textContent || "")}</div><br>
 						<button class="rsm-btn" data-act="retry"><i class="fa fa-refresh"></i> ${__("Try again")}</button>
 						<a class="rsm-btn" href="/app/rfid-sql-agent-settings#tab_student_map" target="_blank" rel="noopener"><i class="fa fa-cog"></i> ${__("Open settings")}</a>`);
 					$b.find('[data-act="retry"]').on("click", load);

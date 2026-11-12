@@ -333,7 +333,7 @@
    "fieldname": "remote_sync_note",
    "fieldtype": "HTML",
    "label": "Remote Sync Note",
-   "options": "<div style=\"background:#e8e9f0; border-left:4px solid #2b2e4a; border-radius:6px; padding:14px 16px; font-size:.84rem; line-height:1.8; color:#333\"><strong>Push to a live/cloud site</strong><br><br>If the campus SQL Server is only reachable from this machine (e.g. over a VPN a cloud-hosted site can't run), enable this to also forward every newly pulled punch to a remote SLCM site over its REST API, immediately after it's pulled here. Create an API Key/Secret on the remote site (User → API Access) and paste them below.</div>"
+   "options": "<div style=\"background:#e8e9f0; border-left:4px solid #2b2e4a; border-radius:6px; padding:14px 16px; font-size:.84rem; line-height:1.8; color:#333\"><strong>Push to a live/cloud site</strong><br><br>If the campus SQL Server is only reachable from this machine (e.g. over a VPN a cloud-hosted site can&#39;t run), enable this to also forward every newly pulled punch to a remote SLCM site over its REST API, immediately after it&#39;s pulled here. Create an API Key/Secret on the remote site (User → API Access) and paste them below.</div>"
   },
   {
    "default": "0",
@@ -431,7 +431,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-11-11 12:00:00.000000",
+ "modified": "2026-11-12 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "RFID SQL Agent Settings",

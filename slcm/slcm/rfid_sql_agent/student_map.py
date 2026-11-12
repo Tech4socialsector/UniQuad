@@ -109,14 +109,24 @@ def _text(v):
 	return str(v).strip()
 
 
+QUERY_TIMEOUT = 60  # seconds; a person is waiting on these screens
+
+
 def _query(sql, params=None):
 	from slcm.slcm.rfid_sql_agent.connection import get_connection
 
-	conn = get_connection()
+	conn = get_connection(query_timeout=QUERY_TIMEOUT)
 	try:
 		cur = conn.cursor()
-		cur.execute(sql, params or [])
-		return cur.fetchall()
+		try:
+			cur.execute(sql, params or [])
+			return cur.fetchall()
+		except Exception as e:
+			if "timeout" in str(e).lower() or "HYT00" in str(e):
+				frappe.throw(_("The device database took longer than {0} seconds to answer. Try again when it is less "
+				               "busy, or point Student Map at a smaller table (e.g. the people table instead of the "
+				               "swipes view).").format(QUERY_TIMEOUT), title=_("Device database too slow"))
+			raise
 	finally:
 		conn.close()
 
@@ -155,10 +165,14 @@ def _fetch_device_records(conf, limit=None):
 def discover_name_sources():
 	"""Tables in the device database that have a code column and a name column — to pick in the UI."""
 	frappe.only_for("System Manager")
+	# permission checked once per table, not once per column
 	rows = _query("""
 		SELECT c.TABLE_SCHEMA, c.TABLE_NAME, c.COLUMN_NAME, c.DATA_TYPE
 		FROM INFORMATION_SCHEMA.COLUMNS c
-		WHERE HAS_PERMS_BY_NAME(QUOTENAME(c.TABLE_SCHEMA) + '.' + QUOTENAME(c.TABLE_NAME), 'OBJECT', 'SELECT') = 1
+		JOIN (
+			SELECT TABLE_SCHEMA, TABLE_NAME FROM INFORMATION_SCHEMA.TABLES
+			WHERE HAS_PERMS_BY_NAME(QUOTENAME(TABLE_SCHEMA) + '.' + QUOTENAME(TABLE_NAME), 'OBJECT', 'SELECT') = 1
+		) t ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME
 		ORDER BY c.TABLE_SCHEMA, c.TABLE_NAME, c.ORDINAL_POSITION
 	""")
 	tables = {}
