@@ -17,6 +17,7 @@ frappe.listview_settings["Student Master"] = {
 		add_bulk_section_upload_button(listview);
 		add_student_map_button(listview);
 		add_remove_rfid_button(listview);
+		add_parent_login_invite_button(listview);
 		style_action_group_button(listview);
 		// Ensure status column is visible
 		ensure_status_column_visible(listview);
@@ -1026,4 +1027,41 @@ function download_base64_file(base64_content, filename, mime) {
 	a.click();
 	a.remove();
 	URL.revokeObjectURL(a.href);
+}
+
+/* --------------------------------------------------
+   List View → Action → Parent Login Invite
+   Ticked students → new Parent Login Invite Tool pre-loaded with them.
+   Nothing ticked → new tool pre-filled from the list's filters.
+-------------------------------------------------- */
+function add_parent_login_invite_button(listview) {
+	if (!frappe.model.can_create("Parent Login Invite Tool")) return;
+	listview.page.add_inner_button(__("Parent Login Invite"), function () {
+		const students = listview.get_checked_items(true);
+		if (!students.length) {
+			const prefill = {};
+			const map = {
+				academic_year: "academic_year",
+				programme_of_study: "programme",
+				batch: "batch",
+				student_status: "student_status",
+			};
+			(listview.filter_area?.get() || []).forEach(([, field, op, value]) => {
+				if (map[field] && op === "=" && value) prefill[map[field]] = value;
+			});
+			frappe.new_doc("Parent Login Invite Tool", prefill);
+			return;
+		}
+		frappe.call({
+			method: "slcm.slcm.doctype.parent_login_invite_tool.parent_login_invite_tool.create_from_students",
+			args: { students },
+			freeze: true,
+			freeze_message: __("Preparing parent invites for {0} student(s)…", [students.length]),
+			callback(r) {
+				if (!r.message) return;
+				listview.clear_checked_items();
+				frappe.set_route("Form", "Parent Login Invite Tool", r.message);
+			},
+		});
+	}, ACTION_GROUP);
 }
