@@ -73,6 +73,8 @@ class GatewayTestCase(unittest.TestCase):
 		frappe.db.rollback()
 		self._commit.stop()
 		frappe.set_user(self._user)
+		# checkout claims live in Redis (not rolled back) and student names repeat after the rollback
+		frappe.cache().delete_value(f"slcm_checkout_claim:{self.student}")
 
 	# ── fixtures ──
 	def make_user(self, email, first_name):
@@ -1618,3 +1620,186 @@ class TestFeeStructureGateway(GatewayTestCase):
 		self.assertEqual(_offer_payment_gateway(self.make_structure("Easebuzz")), "Razorpay")
 		self.assertEqual(_offer_payment_gateway(self.make_structure("Razorpay")), "Razorpay")
 		self.assertEqual(_offer_payment_gateway(None), "Razorpay")
+
+
+class TestStaleDemandLinks(GatewayTestCase):
+	"""A payment is booked even when its demand's Source Document is gone; deleting a re-exam cancels its demand."""
+
+	def test_payment_books_on_demand_whose_source_was_deleted(self):
+		frappe.db.set_value("Fee Demand", self.d_ez, {
+			"trigger_ref_doctype": "Re Exam Registration", "trigger_ref_name": "REX-DELETED-0001",
+		})
+		frappe.set_user(self.student_user)
+		txn = sp.create_bulk_demand_payment_order(json.dumps([self.d_ez]))["txnid"]
+		frappe.set_user("Administrator")
+		self.as_guest_callback(ez.complete, signed(txn, 2500, easepayid="EZSTALE"))
+		self.assertEqual(self.ir_status(txn), "Completed")
+		self.assertEqual(frappe.db.get_value("Fee Demand", self.d_ez, "status"), "Paid")
+
+	def test_deleting_a_re_exam_cancels_its_unpaid_demand(self):
+		from slcm.slcm.fee import event_hooks
+
+		frappe.db.set_value("Fee Demand", self.d_ez, {
+			"trigger_ref_doctype": "Re Exam Registration", "trigger_ref_name": "REX-TRASH-0001",
+		})
+		event_hooks.on_exam_registration_trash(frappe._dict(doctype="Re Exam Registration", name="REX-TRASH-0001"))
+		self.assertEqual(frappe.db.get_value("Fee Demand", self.d_ez, "status"), "Cancelled")
+		self.assertEqual(frappe.db.get_value("Fee Demand", self.d_rzp, "status"), "Pending")
+
+
+class TestUnrecordedPaymentMessage(GatewayTestCase):
+	"""Money captured but booking failed: the payer is told it was received (not "being confirmed")."""
+
+	def test_payer_sees_received_until_a_retry_records_it(self):
+		frappe.set_user(self.student_user)
+		txn = sp.create_demand_payment_order(self.d_ez)["txnid"]
+		frappe.set_user("Administrator")
+
+		def boom(*a, **k):
+			raise frappe.ValidationError("booking failed")
+
+		flows = {**ez.FLOWS, "demands": {**ez.FLOWS["demands"], "success": boom}}
+		with patch.object(ez, "FLOWS", flows), patch.object(frappe, "log_error") as log, \
+				patch.object(frappe.db, "rollback", lambda *a, **k: None):
+			self.as_guest_callback(ez.complete, signed(txn, 2500, easepayid="EZUNREC"))
+			self.as_guest_callback(ez.webhook, signed(txn, 2500, easepayid="EZUNREC"))
+			frappe.set_user(self.student_user)
+			row = {"txnid": txn, "status": "success", "amount": "2500.00", "easepayid": "EZUNREC"}
+			with patch.object(ezs.EasebuzzSettings, "retrieve_transaction", lambda self, t: {"status": True, "msg": [row]}):
+				res = ez.get_payment_result(txn)
+			frappe.set_user("Administrator")
+		self.assertEqual((res["status"], res["payment_id"]), ("received", "EZUNREC"))
+		self.assertEqual(self.ir_status(txn), "Queued")  # still retried
+		titles = [c.args[1] if len(c.args) > 1 else c.kwargs.get("title") for c in log.call_args_list]
+		self.assertEqual(titles.count("Easebuzz payment received but not recorded"), 1)  # logged once
+
+		# the next retry books it and the flag goes away
+		self.as_guest_callback(ez.webhook, signed(txn, 2500, easepayid="EZUNREC"))
+		frappe.set_user(self.student_user)
+		self.assertEqual(ez.get_payment_result(txn)["status"], "success")
+		frappe.set_user("Administrator")
+
+
+class TestConcurrentPayers(GatewayTestCase):
+	"""Student and parent paying the same fees at the same time (slcm.slcm.fee.checkout_guard)."""
+
+	def parent_checkout(self, demands):
+		frappe.set_user(self.parent_user)
+		try:
+			return sp.parent_create_bulk_demand_payment_order(json.dumps(demands), self.student)
+		finally:
+			frappe.set_user("Administrator")
+
+	def student_checkout(self, demands):
+		frappe.set_user(self.student_user)
+		try:
+			return sp.create_bulk_demand_payment_order(json.dumps(demands))
+		finally:
+			frappe.set_user("Administrator")
+
+	def age(self, txn, minutes):
+		frappe.db.set_value("Integration Request", txn, "creation",
+		                    frappe.utils.add_to_date(None, minutes=-minutes), update_modified=False)
+
+	def test_second_payer_is_stopped_while_first_checkout_is_open(self):
+		self.parent_checkout([self.d_ez])
+		with self.assertRaises(frappe.ValidationError) as ctx:
+			self.student_checkout([self.d_ez])
+		self.assertIn("started by the parent", str(ctx.exception))
+
+	def test_own_retry_and_other_fees_are_not_blocked(self):
+		first = self.parent_checkout([self.d_ez])["txnid"]
+		self.assertNotEqual(self.parent_checkout([self.d_ez])["txnid"], first)  # the payer's own retry
+		frappe.cache().delete_value(f"slcm_checkout_claim:{self.student}")
+		from slcm.slcm.fee.checkout_guard import ensure_no_other_checkout
+
+		frappe.set_user(self.student_user)
+		try:
+			ensure_no_other_checkout(self.student, demand_names=[self.d_rzp])  # a different fee: no error
+		finally:
+			frappe.set_user("Administrator")
+
+	def test_finished_or_stale_checkout_does_not_block(self):
+		txn = self.parent_checkout([self.d_ez])["txnid"]
+		frappe.cache().delete_value(f"slcm_checkout_claim:{self.student}")
+		frappe.db.set_value("Integration Request", txn, "status", "Cancelled")
+		self.assertTrue(self.student_checkout([self.d_ez])["txnid"])
+
+		frappe.cache().delete_value(f"slcm_checkout_claim:{self.student}")
+		frappe.db.sql("update `tabIntegration Request` set status = 'Queued' where name = %s", txn)
+		self.age(txn, 25)  # older than ACTIVE_MINUTES: its link has expired
+		from slcm.slcm.fee.checkout_guard import active_checkout
+		self.assertIsNone(active_checkout(self.student, {("Fee Demand", self.d_ez)}, exclude_user=self.student_user))
+
+	def test_claim_stops_a_simultaneous_click(self):
+		from slcm.slcm.fee import checkout_guard as cg
+
+		frappe.set_user(self.parent_user)
+		cg._claim(self.student, {("Fee Demand", self.d_ez)}, self.parent_user, "Parent")
+		frappe.set_user("Administrator")
+		self.assertRaises(frappe.ValidationError, self.student_checkout, [self.d_ez])
+
+	def test_razorpay_checkout_blocks_the_other_payer_too(self):
+		ir = frappe.get_doc({
+			"doctype": "Integration Request", "integration_request_service": "Razorpay", "status": "Queued",
+			"data": json.dumps({"slcm_intent": {
+				"flow": "demands", "student": self.student, "user": self.parent_user, "paid_by_role": "Parent",
+				"demand_names": [self.d_ez], "order_id": "order_TEST",
+			}}),
+		}).insert(ignore_permissions=True)
+		self.assertTrue(ir.name)
+		self.assertRaises(frappe.ValidationError, self.student_checkout, [self.d_ez])
+
+	def test_second_payment_after_expiry_is_reported_as_refund(self):
+		first = self.parent_checkout([self.d_ez])["txnid"]
+		self.age(first, 25)
+		frappe.cache().delete_value(f"slcm_checkout_claim:{self.student}")
+		second = self.student_checkout([self.d_ez])["txnid"]
+		self.as_guest_callback(ez.complete, signed(first, 2500, easepayid="EZPAR1"))
+		with patch.object(frappe, "log_error"):
+			self.as_guest_callback(ez.complete, signed(second, 2500, easepayid="EZSTU1"))
+		frappe.set_user(self.student_user)
+		res = ez.get_payment_result(second)
+		frappe.set_user(self.parent_user)
+		first_res = ez.get_payment_result(first)
+		frappe.set_user("Administrator")
+		self.assertEqual((res["status"], res["refund_amount"]), ("duplicate", 2500))
+		self.assertEqual(first_res["status"], "success")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "EZSTU1"}, ["status", "amount"], as_dict=True)
+		self.assertEqual((pr.status, flt(pr.amount)), ("Paid", 2500))  # recorded for the refund
+
+	def test_razorpay_duplicate_confirm_is_flagged(self):
+		fp = frappe.get_doc({
+			"doctype": "Fee Payment", "student": self.student, "payment_date": today(),
+			"payment_mode": "Online Payment", "amount": 1000, "reference_number": "pay_FIRST1",
+			"payment_gateway": "Razorpay",
+			"payment_demands": [{"fee_demand": self.d_rzp, "outstanding_amount": 1000, "amount_allocated": 1000}],
+		})
+		fp.insert(ignore_permissions=True)
+		fp.submit()
+		self.assertFalse(sp._already_paid("pay_FIRST1")["duplicate"])
+		self.assertTrue(sp._already_paid("pay_SECOND1")["duplicate"])
+
+	def test_unbooked_razorpay_capture_is_recorded_for_refund(self):
+		from slcm.api import razorpay_reconcile as rr
+
+		frappe.get_doc({
+			"doctype": "Integration Request", "integration_request_service": "Razorpay", "status": "Completed",
+			"data": json.dumps({"slcm_intent": {
+				"flow": "demands", "student": self.student, "user": self.student_user, "paid_by_role": "Student",
+				"demand_names": [self.d_rzp], "order_id": "order_DUP1", "amount": 1000,
+			}}),
+		}).insert(ignore_permissions=True)
+		old = frappe.utils.now_datetime().timestamp() - 3600
+		payments = [
+			{"id": "pay_DUPLICATE1", "status": "captured", "amount": 100000, "created_at": old},
+			{"id": "pay_JUSTNOW1", "status": "captured", "amount": 100000, "created_at": old + 3500},  # too fresh
+			{"id": "pay_FAILED1", "status": "failed", "amount": 100000, "created_at": old},
+		]
+		with patch.object(rr, "_order_payments", lambda order_id: payments), patch.object(frappe, "log_error"):
+			self.assertEqual(rr.record_unbooked_captures(), 1)
+			self.assertEqual(rr.record_unbooked_captures(), 0)  # idempotent
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "pay_DUPLICATE1"},
+		                         ["status", "amount", "reference_doctype"], as_dict=True)
+		self.assertEqual((pr.status, flt(pr.amount), pr.reference_doctype), ("Paid", 1000, "Fee Demand"))
+		self.assertFalse(frappe.db.exists("SLCM Payment Request", {"transaction_id": "pay_JUSTNOW1"}))

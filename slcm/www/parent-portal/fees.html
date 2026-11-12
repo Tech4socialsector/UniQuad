@@ -890,7 +890,7 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
         <td class="c-action" data-label="Receipt">
           {% if r.receipt %}
           <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_fee_receipt?receipt_name={{ r.receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
-             aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
+             aria-label="Download receipt {{ r.receipt }}{% if (r.receipt_items or 0) > 1 %}, a combined receipt for {{ r.receipt_items }} fees paid together{% else %} for {{ r.component }}{% endif %}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
           {% elif r.re_exam_receipt %}
           <a class="ppf-btn ppf-btn-ghost ppf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.parent_download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}&student_name={{ ward_student_name | urlencode }}"
              aria-label="Download receipt for {{ r.component }}"><span class="ms" aria-hidden="true">download</span> Receipt</a>
@@ -1360,12 +1360,12 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
             hideOverlay();
             var d = r && r.message;
             if (d && d.status === 'already_paid') {
-              toast('Already Paid', 'This invoice is already fully settled.', 'info');
+              toast('Already Paid', d.duplicate ? 'These fees were already paid by another payment. Your payment will be refunded by the Finance Office.' : 'This invoice is already fully settled.', d.duplicate ? 'warning' : 'info');
             } else {
               toast('Payment Successful', 'Payment recorded. Both student and admin records have been updated.', 'success');
             }
             refreshCard(invName);
-            setTimeout(function () { window.location.reload(); }, 2800);
+            setTimeout(function () { window.location.reload(); }, d && d.duplicate ? 7000 : 2800);
           },
           function (e) {
             hideOverlay();
@@ -1577,13 +1577,13 @@ body.pp-dark .ppf-toast-info    { color: #7cc4f2 !important; border-color: rgba(
             hideOverlay();
             var d = r && r.message;
             if (d && d.status === 'already_paid') {
-              toast('Already Paid', 'These demands are already settled.', 'info');
+              toast('Already Paid', d.duplicate ? 'These fees were already paid by another payment. Your payment will be refunded by the Finance Office.' : 'These demands are already settled.', d.duplicate ? 'warning' : 'info');
             } else {
               toast('Payment Successful',
                 (d && d.demands_paid ? d.demands_paid + ' demand(s) cleared — ' : '') +
                 (d && d.formatted_total || ''), 'success');
             }
-            setTimeout(function () { window.location.reload(); }, 2800);
+            setTimeout(function () { window.location.reload(); }, d && d.duplicate ? 7000 : 2800);
           },
           function (e) {
             hideOverlay();

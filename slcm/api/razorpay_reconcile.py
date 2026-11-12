@@ -397,3 +397,81 @@ def reconcile_pending():
 			frappe.log_error(frappe.get_traceback(), f"Razorpay reconcile failed — {row.name}")
 		# end this row's transaction so a browser confirm never waits on the rest of the run
 		frappe.db.commit()
+
+
+# ── 4. Captures nothing booked ─────────────────────────────────────────────
+
+UNBOOKED_DAYS = 2
+UNBOOKED_AFTER_MINUTES = 30  # leave the browser confirm and reconcile_pending time to book it first
+
+
+def _intent_reference(intent):
+	"""(doctype, name) of the charge an intent was for, for the unapplied SLCM Payment Request."""
+	if intent.get("invoice_name"):
+		return "Fee Invoice", intent.invoice_name
+	if intent.get("registration"):
+		return ("Improvement Exam Registration" if intent.flow == "improvement" else "Re Exam Registration"), intent.registration
+	if intent.get("demand_names"):
+		return "Fee Demand", intent.demand_names[0]
+	if intent.get("re_exam_registrations"):
+		return "Re Exam Registration", intent.re_exam_registrations[0]
+	return None, None
+
+
+def record_unbooked_captures(days=UNBOOKED_DAYS):
+	"""Hourly: a Razorpay portal payment that was captured but never booked is recorded as an unapplied
+	SLCM Payment Request (flagged for refund) instead of staying invisible.
+
+	This is the second payment for dues that were settled first: a student and a parent paying together
+	in windows opened before slcm.slcm.fee.checkout_guard could stop it, or two tabs. Its browser confirm
+	answers "already paid" without booking anything and closes the order, so reconcile_pending never
+	looks at it again. Returns how many were recorded."""
+	from slcm.slcm.fee import payment_ledger as ledger
+
+	rows = frappe.get_all(
+		"Integration Request",
+		filters={
+			"integration_request_service": "Razorpay",
+			"creation": (">", add_to_date(now_datetime(), days=-days)),
+			"data": ("like", f"%{INTENT_KEY}%"),
+		},
+		fields=["name"],
+		order_by="creation asc",
+		limit=500,
+		ignore_permissions=True,
+	)
+	settled_before = now_datetime().timestamp() - UNBOOKED_AFTER_MINUTES * 60
+	recorded = 0
+	for row in rows:
+		intent = get_intent(row.name)
+		if not intent or not intent.get("order_id") or intent.get("legacy"):
+			continue
+		try:
+			payments = _order_payments(intent.order_id)
+		except requests.RequestException:
+			break  # Razorpay unreachable: try again next hour
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), f"Razorpay unbooked-capture check failed — {row.name}")
+			continue
+		for p in payments:
+			pid = p.get("id")
+			if p.get("status") != "captured" or not pid or flt(p.get("created_at")) > settled_before:
+				continue
+			if ledger._existing(pid):
+				continue
+			ledger.sync_quietly(pid)  # booked by a record the ledger has not caught up with yet
+			if ledger._existing(pid):
+				continue
+			ref_doctype, ref_name = _intent_reference(intent)
+			amount = flt(p.get("amount")) / 100
+			note = (
+				f"Razorpay payment {pid} (₹{amount:,.2f}, order {intent.order_id}) was captured but not applied: "
+				"the dues were already paid by another payment. Needs refund."
+			)
+			if ledger.record_unapplied_quietly(
+				"Razorpay", pid, intent.order_id, ref_doctype, ref_name, amount, intent.student, note
+			):
+				frappe.log_error(f"student: {intent.student}\n{note}", "Razorpay duplicate payment needs refund")
+				recorded += 1
+		frappe.db.commit()
+	return recorded

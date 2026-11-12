@@ -247,84 +247,48 @@ def get_context(context):
 
 def _fee_summary(sm):
     """
-    Headline fee figures for the dashboard — mirrors the hero summary on
-    fees.py: invoices are the ground truth when they exist, otherwise the
-    programme-level totals on Student Master are used.
-    Returns None when the student has no fee data at all.
+    Headline fee figures for the dashboard, taken from the parent Fees page's
+    own context build (its "Overall" card and No Dues badge) instead of a
+    separate calculation, so Total / Paid / Outstanding always match that page:
+    programme fee invoices, Fee Demands, re-exam fees and hostel fines.
+    Returns None when the student has no fee data at all; raises when the
+    Fees page itself failed, so the dashboard shows its error state.
     """
+    import importlib
+
     flt = frappe.utils.flt
-
-    sm_total    = flt(sm.total_program_fee or 0)
-    sm_disc     = flt(sm.discount_amount or 0) or flt(sm.scholarship_amount or 0)
-    sm_paid_raw = flt(sm.total_paid_amount or 0)
-    sm_net      = flt(sm.net_program_fee or 0) or max(sm_total - sm_disc, 0)
-    sm_paid        = min(sm_paid_raw, sm_net) if sm_net > 0 else sm_paid_raw
-    sm_outstanding = max(sm_net - sm_paid, 0)
-
-    stored_status = sm.fee_payment_status or "Unpaid"
-    if sm_net > 0:
-        if sm_outstanding <= 0:
-            sm_status = "Paid"
-        elif sm_paid > 0:
-            sm_status = "Partially Paid"
-        elif stored_status in ("Payment Initiated", "Authorized"):
-            sm_status = stored_status
-        else:
-            sm_status = "Unpaid"
-    else:
-        sm_status = stored_status or "Unpaid"
-
-    invoices = frappe.get_all(
-        "Fee Invoice",
-        filters={"student": sm.name},
-        fields=["final_payable_amount", "paid_amount", "scholarship_amount", "status"],
-        ignore_permissions=True,
-    )
-
-    if not sm_total and not invoices:
+    fees_page = importlib.import_module("slcm.www.parent-portal.fees")
+    fctx = fees_page.get_context(frappe._dict())
+    if fctx.get("portal_error"):
+        raise frappe.ValidationError("Parent Fees page context failed")
+    if fctx.get("is_guest") or fctx.get("not_a_parent") or fctx.get("ward_student_name") != sm.name:
         return None
 
-    if not sm_disc and invoices:
-        sm_disc = sum(flt(i.scholarship_amount or 0) for i in invoices)
+    cards = fctx.get("charge_cards") or []
+    if not cards:
+        return None
+    overall = cards[0]  # the "Overall" card
+    total       = sum(flt(r.gross) for r in (fctx.get("charge_rows") or []) if r.get("group") != "Other")
+    paid        = flt(overall.paid_amt)
+    outstanding = flt(overall.outstanding)
 
-    if sm_total > 0 and not invoices:
-        payable, paid, outstanding, status = sm_net, sm_paid, sm_outstanding, sm_status
+    if not fctx.get("has_any_dues") and outstanding <= 0:
+        status = "Paid"
+    elif (overall.overdue or 0) > 0:
+        status = "Overdue"
+    elif paid > 0:
+        status = "Partially Paid"
     else:
-        payable = paid = outstanding = scholarship = 0.0
-        for inv in invoices:
-            inv_payable = flt(inv.final_payable_amount or 0)
-            inv_paid    = flt(inv.paid_amount or 0)
-            if inv_payable > 0:
-                inv_paid = min(inv_paid, inv_payable)
-            payable     += inv_payable
-            paid        += inv_paid
-            outstanding += max(inv_payable - inv_paid, 0)
-            scholarship += flt(inv.scholarship_amount or 0)
-
-        if payable > 0:
-            if outstanding <= 0:
-                status = "Paid"
-            elif paid > 0:
-                status = "Partially Paid"
-            elif sm_status in ("Payment Initiated", "Authorized"):
-                status = sm_status
-            else:
-                status = "Unpaid"
-        else:
-            status = sm_status or ""
-
-        # Scholarship recorded on Student Master but not yet on invoices
-        if round(sm_disc, 2) > round(scholarship, 2) and abs(sm_disc - scholarship) > 0.5 and payable > 0:
-            outstanding = max(outstanding - round(sm_disc - scholarship, 2), 0)
+        status = "Pending"
 
     return {
-        "total":       payable,
+        "total":       total,
         "paid":        paid,
         "outstanding": outstanding,
         "status":      status,
-        "fmt_total":       "₹{:,.0f}".format(payable),
-        "fmt_paid":        "₹{:,.0f}".format(paid),
-        "fmt_outstanding": "₹{:,.0f}".format(outstanding),
+        "fmt_total":       overall.total_fmt,
+        "fmt_paid":        overall.paid_fmt,
+        "fmt_outstanding": overall.outstanding_fmt,
     }
 
 

@@ -180,6 +180,9 @@ def create_payment_order(invoice_name, student_name):
         from slcm.api.student_payment import parent_create_payment_order
         return parent_create_payment_order(invoice_name, student_name)
 
+    from slcm.slcm.fee.checkout_guard import ensure_no_other_checkout
+    ensure_no_other_checkout(student_name, invoice=invoice_name, paid_by_role="Parent")
+
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated",
         update_modified=False,
@@ -203,8 +206,9 @@ def confirm_fee_payment(invoice_name, student_name, integration_request,
     inv = _get_owned_invoice(invoice_name, student_name)
 
     if inv.status == "Paid" or flt(inv.outstanding_amount) <= 0:
+        from slcm.api.student_payment import _already_paid
         return {
-            "status":                "already_paid",
+            **_already_paid(razorpay_payment_id),
             "invoice_status":        inv.status,
             "paid_amount":           flt(inv.paid_amount),
             "outstanding_amount":    0.0,

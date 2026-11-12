@@ -30,6 +30,7 @@ def _cancel_demand_for_trigger(trigger_doctype, trigger_name):
 			continue
 		demand_doc = frappe.get_doc("Fee Demand", d.name)
 		demand_doc.status = "Cancelled"
+		demand_doc.flags.ignore_links = True  # status-only change; the trigger may already be gone
 		demand_doc.save(ignore_permissions=True)
 
 
@@ -152,6 +153,11 @@ def on_reexam_registration_insert(doc, method=None):
 
 
 # ─── 4. Revaluation Request Submitted ───────────────────────────────────────
+
+def on_exam_registration_trash(doc, method=None):
+	"""Cancel the unpaid fee demand of a deleted Re Exam / Improvement Exam Registration."""
+	_cancel_demand_for_trigger(doc.doctype, doc.name)
+
 
 def on_revaluation_request_submit(doc):
 	"""Create Revaluation Fee demand."""

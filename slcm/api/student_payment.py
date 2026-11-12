@@ -31,13 +31,17 @@ from slcm.slcm.fee import payment_gateway as gw
 
 # ── Internal helpers ───────────────────────────────────────────────────────
 
-def _ensure_gateway(gateway, student_name, paid_by_role="Student"):
+def _ensure_gateway(gateway, student_name, paid_by_role="Student", **charges):
     """Refuse up front (before any status is marked "Payment Initiated") when the charge's
-    gateway is not set up, or Easebuzz cannot take this payer (no mobile number)."""
+    gateway is not set up, Easebuzz cannot take this payer (no mobile number), or another payer
+    (student / parent) already has a checkout open for the same ``charges`` (see checkout_guard)."""
     gw.ensure_ready(gateway)
     if gateway == gw.EASEBUZZ:
         from slcm.api.easebuzz_payment import precheck
         precheck(student_name, paid_by_role)
+    if charges:
+        from slcm.slcm.fee.checkout_guard import ensure_no_other_checkout
+        ensure_no_other_checkout(student_name, paid_by_role=paid_by_role, **charges)
 
 
 def _easebuzz_checkout(flow, student_name, amount, intent, productinfo, return_path,
@@ -59,6 +63,18 @@ def _easebuzz_checkout(flow, student_name, amount, intent, productinfo, return_p
             except Exception:
                 frappe.log_error(frappe.get_traceback(), f"Easebuzz checkout revert failed — {flow}")
         raise
+
+
+def _already_paid(payment_id, **extra):
+    """Confirm response for dues that are already settled. ``duplicate`` is True when this payment did
+    not settle them (another payment came first, e.g. the student and a parent paying together): the
+    payer is told it will be refunded; razorpay_reconcile.record_unbooked_captures records it for that."""
+    booked = payment_id and (
+        frappe.db.exists("Fee Payment", {"reference_number": payment_id, "docstatus": 1})
+        or frappe.db.exists("Re Exam Payment Log", {"razorpay_payment_id": payment_id})
+        or frappe.db.exists("Improvement Exam Payment Log", {"razorpay_payment_id": payment_id})
+    )
+    return {"status": "already_paid", "duplicate": not booked, **extra}
 
 
 def _revert_invoice_initiated(invoice_name, student_name):
@@ -374,7 +390,7 @@ def create_payment_order(invoice_name):
         frappe.throw(_("There is no outstanding amount on this invoice."))
 
     gateway = gw.for_invoice(invoice_name)
-    _ensure_gateway(gateway, student_name)
+    _ensure_gateway(gateway, student_name, invoice=invoice_name)
 
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated", update_modified=False
@@ -474,7 +490,7 @@ def ensure_invoice_and_create_order():
     inv.outstanding_amount = effective_outstanding
 
     gateway = gw.for_invoice(inv.name)
-    _ensure_gateway(gateway, student_name)
+    _ensure_gateway(gateway, student_name, invoice=inv.name)
 
     # ── Mark "Payment Initiated" on both SM and Invoice ───────────────
     invoice_name_for_order = inv.name
@@ -542,7 +558,7 @@ def confirm_fee_payment(invoice_name, integration_request,
 
     if inv.status == "Paid" or flt(inv.outstanding_amount) <= 0:
         return {
-            "status":                "already_paid",
+            **_already_paid(razorpay_payment_id),
             "invoice_status":        inv.status,
             "paid_amount":           flt(inv.paid_amount),
             "outstanding_amount":    0.0,
@@ -711,7 +727,7 @@ def create_demand_payment_order(fee_demand_name):
 
     component   = demand.fee_component or demand.description or "Fee"
     gateway     = gw.for_component(demand.fee_component)
-    _ensure_gateway(gateway, student_name)
+    _ensure_gateway(gateway, student_name, demand_names=[fee_demand_name])
 
     if gateway == gw.EASEBUZZ:
         result = _easebuzz_checkout(
@@ -964,7 +980,10 @@ def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=Non
     gateway, split = _pick_gateway_group(demands, re_exams, payment_gateway)
     if split:
         return split
-    _ensure_gateway(gateway, student_name)
+    _ensure_gateway(
+        gateway, student_name,
+        demand_names=[d.name for d in demands], re_exam_registrations=[r.name for r in re_exams],
+    )
 
     sm = frappe.db.get_value(
         "Student Master", student_name,
@@ -1129,7 +1148,7 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
         "name",
     )
     if existing_fp:
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
 
     # ── Build payment_demands rows, verify ownership, compute total ───
     demand_rows = []
@@ -1164,7 +1183,7 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
                 "total_paid":      re_exam_total,
                 "formatted_total": "₹{:,.0f}".format(re_exam_total),
             }
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
 
     # ── Create single Fee Payment covering all demands ────────────────
     fp = frappe.get_doc({
@@ -1180,7 +1199,7 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
     })
     # never record more than this order actually charged
     if not cap_fee_payment(fp, flt(intent.amount) - re_exam_total):
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
     fp.insert(ignore_permissions=True)
     fp.submit()
     demand_rows = [r.as_dict() for r in fp.payment_demands]
@@ -1277,7 +1296,7 @@ def confirm_demand_payment(fee_demand_name, integration_request,
         )
 
     if demand.status == "Paid" and flt(demand.outstanding_amount) <= 0:
-        return {"status": "already_paid", "demand_status": "Paid"}
+        return _already_paid(razorpay_payment_id, demand_status="Paid")
 
     # ── Verify Razorpay HMAC-SHA256 signature locally ─────────────────
     try:
@@ -1570,7 +1589,8 @@ def create_re_exam_payment_order(exam_plan, course):
         frappe.throw(_("This course has no re-exam fee. Use free registration instead."))
 
     gateway = gw.for_re_exam(exam_plan, course)
-    _ensure_gateway(gateway, student_name)
+    _ensure_gateway(gateway, student_name, registration=frappe.db.get_value(
+        "Re Exam Registration", {"student": student_name, "exam_plan": exam_plan, "course": course}, "name"))
 
     # Block override check
     override = frappe.db.get_value(
@@ -1657,7 +1677,7 @@ def confirm_re_exam_payment(registration_name, integration_request,
     reg = _get_owned_registration(registration_name, student_name)
 
     if reg.payment_status in ("Paid", "Captured"):
-        return {"status": "already_paid", "registration_status": "Paid"}
+        return _already_paid(razorpay_payment_id, registration_status="Paid")
 
     # Verify signature locally
     try:
@@ -1904,7 +1924,11 @@ def create_improvement_exam_payment_order(exam_plan, course):
         frappe.throw(_("This course has no improvement exam fee. Use free registration instead."))
 
     gateway = gw.for_improvement_exam(exam_plan, course)
-    _ensure_gateway(gateway, student_name)
+    _ensure_gateway(
+        gateway, student_name, registration_doctype="Improvement Exam Registration",
+        registration=frappe.db.get_value(
+            "Improvement Exam Registration", {"student": student_name, "exam_plan": exam_plan, "course": course}, "name"),
+    )
 
     # Find or create registration
     existing = frappe.db.get_value(
@@ -1983,7 +2007,7 @@ def confirm_improvement_exam_payment(registration_name, integration_request,
     reg = _get_owned_improvement_registration(registration_name, student_name)
 
     if reg.payment_status in ("Paid", "Captured"):
-        return {"status": "already_paid", "registration_status": "Paid"}
+        return _already_paid(razorpay_payment_id, registration_status="Paid")
 
     # Verify signature locally
     try:
@@ -2915,7 +2939,7 @@ def parent_create_payment_order(invoice_name, student_name):
         frappe.throw(_("There is no outstanding amount on this invoice."))
 
     gateway = gw.for_invoice(invoice_name)
-    _ensure_gateway(gateway, student_name, "Parent")
+    _ensure_gateway(gateway, student_name, "Parent", invoice=invoice_name)
 
     frappe.db.set_value(
         "Fee Invoice", invoice_name, "payment_status", "Payment Initiated",
@@ -3001,7 +3025,7 @@ def parent_confirm_fee_payment(invoice_name, student_name, integration_request,
 
     if inv.status == "Paid" or flt(inv.outstanding_amount) <= 0:
         return {
-            "status":                "already_paid",
+            **_already_paid(razorpay_payment_id),
             "invoice_status":        inv.status,
             "paid_amount":           flt(inv.paid_amount),
             "outstanding_amount":    0.0,
@@ -3209,7 +3233,7 @@ def parent_create_demand_payment_order(fee_demand_name, student_name):
 
     component  = demand.fee_component or demand.description or "Fee"
     gateway    = gw.for_component(demand.fee_component)
-    _ensure_gateway(gateway, student_name, "Parent")
+    _ensure_gateway(gateway, student_name, "Parent", demand_names=[fee_demand_name])
 
     if gateway == gw.EASEBUZZ:
         result = _easebuzz_checkout(
@@ -3296,7 +3320,7 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
         frappe.throw(_("Fee Demand not found or access denied."), frappe.PermissionError)
 
     if demand.status == "Paid" and flt(demand.outstanding_amount) <= 0:
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
 
     try:
         rzp_settings = frappe.get_doc("Razorpay Settings")
@@ -3337,7 +3361,7 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
         "name",
     )
     if existing_fp:
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
 
     outstanding = flt(demand.outstanding_amount)
     fp = frappe.get_doc({
@@ -3358,7 +3382,7 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
     })
     # never record more than this order actually charged
     if not cap_fee_payment(fp, intent.amount):
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
     fp.insert(ignore_permissions=True)
     fp.submit()
     outstanding = flt(fp.amount)
@@ -3435,7 +3459,7 @@ def parent_create_bulk_demand_payment_order(fee_demand_names, student_name, paym
     gateway, split = _pick_gateway_group(demands, [], payment_gateway)
     if split:
         return split
-    _ensure_gateway(gateway, student_name, "Parent")
+    _ensure_gateway(gateway, student_name, "Parent", demand_names=[d.name for d in demands])
 
     sm = frappe.db.get_value(
         "Student Master", student_name,
@@ -3577,7 +3601,7 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
         "name",
     )
     if existing_fp:
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
 
     demand_rows = []
     total = 0.0
@@ -3602,7 +3626,7 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
         total += out
 
     if not demand_rows:
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
 
     fp = frappe.get_doc({
         "doctype":          "Fee Payment",
@@ -3617,7 +3641,7 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
     })
     # never record more than this order actually charged
     if not cap_fee_payment(fp, intent.amount):
-        return {"status": "already_paid"}
+        return _already_paid(razorpay_payment_id)
     fp.insert(ignore_permissions=True)
     fp.submit()
     demand_rows = [r.as_dict() for r in fp.payment_demands]

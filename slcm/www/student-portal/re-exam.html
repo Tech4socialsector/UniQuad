@@ -898,7 +898,9 @@ body.sp-dark .rx-toast {
             var d = r && r.message;
             var regName = (d && d.registration_name) || order.registration_name || '';
             if (d && d.status === 'already_paid') {
-              spToast('Already Registered', 'Your payment for this re-examination has already been recorded.', 'info');
+              spToast('Already Registered', d.duplicate
+                ? 'This re-examination was already paid by another payment. Your payment will be refunded by the Finance Office.'
+                : 'Your payment for this re-examination has already been recorded.', d.duplicate ? 'warning' : 'info');
             } else {
               spToast('Payment Successful',
                 'Re-examination registration confirmed. Your payment has been received successfully.',

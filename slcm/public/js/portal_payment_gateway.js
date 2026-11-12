@@ -65,12 +65,18 @@
     document.head.appendChild(st);
   }
 
-  function notice(text, tone) {
+  // sticky: stays until clicked (for messages the payer must read, e.g. "do not pay again")
+  function notice(text, tone, sticky) {
     injectCss();
     var n = document.createElement('div');
     n.className = 'sgw-note sgw-' + (tone || 'info'); n.setAttribute('role', 'status'); n.textContent = text;
     document.body.appendChild(n);
-    setTimeout(function () { n.remove(); }, 6000);
+    if (sticky) {
+      n.title = 'Click to close'; n.style.cursor = 'pointer';
+      n.addEventListener('click', function () { n.remove(); });
+    } else {
+      setTimeout(function () { n.remove(); }, 6000);
+    }
   }
 
   var SlcmGateway = {
@@ -146,6 +152,16 @@
             // refresh once so the charge shows as paid
             if (tries > 0 || r.settled_now) setTimeout(function () { window.location.reload(); }, 2500);
             if (opts.onSuccess) opts.onSuccess(r);
+          } else if (r.status === 'duplicate') {
+            say((r.refund_amount && r.refund_amount + 0.01 < r.amount)
+              ? 'Some of these fees were already paid. ' + r.formatted_refund + ' of your payment will be refunded by the Finance Office.'
+              : 'These fees were already paid. Your payment of ' + r.formatted_amount + ' will be refunded by the Finance Office.',
+              'warn', true);
+            setTimeout(function () { window.location.reload(); }, 6000);
+          } else if (r.status === 'received') {
+            say('Payment of ' + r.formatted_amount + ' received' +
+              (r.payment_id ? ' (Ref: ' + r.payment_id + ')' : '') +
+              '. It will show as paid shortly. Please do not pay again.', 'warn', true);
           } else if (r.status === 'cancelled') {
             say('Payment was cancelled. No money was taken.', 'warn');
           } else if (r.status === 'failed') {

@@ -323,6 +323,7 @@ def charge_rows(student, demands, invoices, re_exams, fines):
 		r["gross"] = r.amount + r.waiver
 		for k in ("amount", "paid", "outstanding", "waiver", "gross"):
 			r[k + "_fmt"] = _fmt_inr(r[k])
+	_mark_shared_receipts(rows)
 	today = frappe.utils.getdate()
 	rows.sort(key=lambda r: (
 		r.group != "Academic", r.status_key == "paid",
@@ -330,6 +331,43 @@ def charge_rows(student, demands, invoices, re_exams, fines):
 	))
 	_attach_details(student, rows, invoices)
 	return rows
+
+
+def _mark_shared_receipts(rows):
+	"""One payment can settle several fees at once; it then has a single Fee Receipt listing
+	all of them. Tag each row whose receipt covers more than one fee with receipt_items (how
+	many fees it covers) and receipt_total_fmt (the receipt amount), so the portal can say the
+	download is a combined receipt instead of looking like a receipt for that fee alone."""
+	names = sorted({r.get("receipt") for r in rows if r.get("receipt")})
+	for r in rows:
+		r["receipt_items"] = 0
+		r["receipt_total_fmt"] = ""
+	if not names:
+		return
+	on_page = {}
+	for r in rows:
+		if r.get("receipt"):
+			on_page[r.receipt] = on_page.get(r.receipt, 0) + 1
+	info = {
+		x.name: x
+		for x in frappe.db.sql(
+			"""SELECT fr.name, fr.amount,
+				(SELECT COUNT(*) FROM `tabFee Receipt Demands Paid` rdp
+				 WHERE rdp.parent = fr.name AND rdp.parenttype = 'Fee Receipt') AS line_count
+			FROM `tabFee Receipt` fr WHERE fr.name IN %(names)s""",
+			{"names": tuple(names)},
+			as_dict=True,
+		)
+	}
+	for r in rows:
+		rc = r.get("receipt")
+		if not rc:
+			continue
+		x = info.get(rc)
+		items = max(on_page.get(rc, 0), int((x.line_count if x else 0) or 0))
+		if items > 1:
+			r["receipt_items"] = items
+			r["receipt_total_fmt"] = _fmt_inr(x.amount) if x and flt(x.amount) else ""
 
 
 def _fmt_date(value):

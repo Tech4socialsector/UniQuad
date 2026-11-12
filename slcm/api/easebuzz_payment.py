@@ -263,8 +263,22 @@ def get_payment_result(payment_ref):
 		"Cancelled": "cancelled",
 		"Failed": "failed",
 	}.get(status, "pending")
+	refund = 0
+	unrecorded = _unrecorded(payment_ref) if status == "Queued" else None
+	if unrecorded:
+		outcome = "received"  # money taken, fee record not updated yet: tell the payer not to pay again
+	elif status == "Completed" and frappe.db.get_value("Integration Request", payment_ref, "error"):
+		# captured but (part) not applied: the fees were paid meanwhile by someone else (or cancelled);
+		# the money is recorded as unapplied for a refund (see _demands_success / flow notes)
+		refund = _unapplied_amount(payment_ref, flt(data.get("amount")))
+		if refund > 0.01:
+			outcome = "duplicate"
+	refund = refund if outcome == "duplicate" else 0
 	return {
 		"status": outcome,
+		"payment_id": (unrecorded or {}).get("easepayid") or "",
+		"refund_amount": refund,
+		"formatted_refund": "₹{:,.0f}".format(refund),
 		"settled_now": settled_now,
 		"flow": data.get("flow"),
 		"amount": flt(data.get("amount")),
@@ -377,8 +391,12 @@ def _settle(txnid, txn, source):
 			frappe.db.commit()
 			return "Failed"
 
-		with _as_user(data.user):
-			note = flow["success"](data, payment_id, txnid, summary)
+		try:
+			with _as_user(data.user):
+				note = flow["success"](data, payment_id, txnid, summary)
+		except Exception:
+			_flag_unrecorded(txnid, summary)
+			raise
 		frappe.db.set_value(
 			"Integration Request", txnid,
 			{
@@ -407,6 +425,54 @@ def _settle(txnid, txn, source):
 	)
 	frappe.db.commit()
 	return new_status
+
+
+def _unapplied_amount(txnid, amount):
+	"""How much of a completed checkout no record took (to be refunded): its amount less what Fee Payments
+	and re-exam / improvement payment logs booked on its Easebuzz payment id."""
+	try:
+		payment_id = json.loads(frappe.db.get_value("Integration Request", txnid, "output") or "{}").get("easepayid")
+	except ValueError:
+		payment_id = None
+	if not payment_id:
+		return flt(amount, 2)
+	booked = flt(frappe.db.sql(
+		"select sum(amount) from `tabFee Payment` where reference_number = %s and docstatus = 1", payment_id
+	)[0][0])
+	for log in ("Re Exam Payment Log", "Improvement Exam Payment Log"):
+		booked += flt(frappe.db.sql(
+			f"select sum(amount) from `tab{log}` where razorpay_payment_id = %s and payment_status = 'Paid'", payment_id
+		)[0][0])
+	return max(flt(amount - booked, 2), 0)
+
+
+def _unrecorded(txnid):
+	"""Summary of a captured payment whose booking failed (see _flag_unrecorded), or None."""
+	error = frappe.db.get_value("Integration Request", txnid, "error") or ""
+	try:
+		row = json.loads(error) if error.startswith("{") else {}
+	except ValueError:
+		row = {}
+	return row if row.get("booking_failed") else None
+
+
+def _flag_unrecorded(txnid, summary):
+	"""Easebuzz captured the money but recording it failed. The checkout stays Queued, so the return,
+	webhook and reconciler keep retrying; the flag tells the payer their money arrived (instead of
+	"being confirmed by the bank") and is cleared when a retry records the payment."""
+	frappe.db.rollback()
+	first = not _unrecorded(txnid)
+	frappe.db.set_value(
+		"Integration Request", txnid, "error", json.dumps({**summary, "booking_failed": 1}), update_modified=False
+	)
+	frappe.db.commit()
+	if first:
+		frappe.log_error(
+			f"txnid: {txnid}\nEasebuzz payment {summary.get('easepayid')} of ₹{summary.get('amount')} was received "
+			"but could not be recorded in SLCM. It is retried automatically every 15 minutes; the "
+			"\"Easebuzz … settle failed\" error log for this txnid has the cause.",
+			"Easebuzz payment received but not recorded",
+		)
 
 
 def _retrieve(txnid):
