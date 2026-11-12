@@ -1803,3 +1803,28 @@ class TestConcurrentPayers(GatewayTestCase):
 		                         ["status", "amount", "reference_doctype"], as_dict=True)
 		self.assertEqual((pr.status, flt(pr.amount), pr.reference_doctype), ("Paid", 1000, "Fee Demand"))
 		self.assertFalse(frappe.db.exists("SLCM Payment Request", {"transaction_id": "pay_JUSTNOW1"}))
+
+
+class TestStudentIdentityInResponse(GatewayTestCase):
+	"""gateway_response names the student: Student Name (first_name) and Student ID (registration_id)."""
+
+	def test_paid_failed_and_backfilled_requests_carry_name_and_id(self):
+		from slcm.slcm.fee import payment_ledger
+
+		frappe.db.set_value("Student Master", self.student, {"first_name": "Gateway", "registration_id": "REG-GW-01"})
+		frappe.set_user(self.student_user)
+		txn = sp.create_bulk_demand_payment_order(json.dumps([self.d_ez]))["txnid"]
+		frappe.set_user("Administrator")
+		self.as_guest_callback(ez.complete, signed(txn, 2500, easepayid="EZIDENT"))
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "EZIDENT"}, "name")
+		response = json.loads(frappe.db.get_value("SLCM Payment Request", pr, "gateway_response"))
+		self.assertEqual((response["student_name"], response["registration_id"]), ("Gateway", "REG-GW-01"))
+		self.assertEqual(list(response)[:6], ["gateway", "payment_id", "order_id", "student", "student_name", "registration_id"])
+
+		# a request written before the fields existed is filled in once
+		old = {k: v for k, v in response.items() if k not in ("student_name", "registration_id")}
+		frappe.db.set_value("SLCM Payment Request", pr, "gateway_response", json.dumps(old))
+		self.assertGreaterEqual(payment_ledger.fill_student_identity(), 1)
+		filled = json.loads(frappe.db.get_value("SLCM Payment Request", pr, "gateway_response"))
+		self.assertEqual(filled["registration_id"], "REG-GW-01")
+		self.assertEqual(payment_ledger.fill_student_identity(), 0)

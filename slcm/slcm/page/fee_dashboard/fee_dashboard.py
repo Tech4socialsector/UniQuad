@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.db_query import DatabaseQuery
 from frappe.utils import add_days, flt, get_first_day, getdate, today
+from slcm.slcm.fee.payment_ledger import LEDGER_DOCTYPES
 
 OPEN_DUES = ["Pending", "Partially Paid", "Overdue"]
 
@@ -260,7 +261,11 @@ def get_home():
 			"draft_refunds": cnt("Fee Refund", {"docstatus": 0}),
 			"overdue": cnt("Fee Demand", {"status": "Overdue"}),
 			"not_generated": cnt("Fee Notification", {"status": "Published", "generation_log": ["is", "not set"]}),
-			"failed_online": cnt("Online Payment Log", {"status": "Failed", "creation": [">=", str(add_days(d, -30))]}),
+			# failed portal payments (both gateways), from the SLCM Payment Request ledger
+			"failed_online": cnt("SLCM Payment Request", {
+				"status": "Failed", "docstatus": 1, "reference_doctype": ["in", list(LEDGER_DOCTYPES)],
+				"creation": [">=", str(add_days(d, -30))],
+			}),
 			"no_structure": cnt("Student Master", {"student_status": "Active", "fee_structure": ["is", "not set"]}),
 			"certificates": cnt("Fee Certificate Request", {"status": "Draft"}),
 		},

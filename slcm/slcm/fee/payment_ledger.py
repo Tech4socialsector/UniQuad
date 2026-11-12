@@ -187,6 +187,16 @@ def _order_id(payment_id, records):
 	)
 
 
+def _student_identity(student):
+	"""Student Name (first name) and Student ID (registration id) shown in a request's gateway_response."""
+	if not student:
+		return {}
+	row = frappe.db.get_value("Student Master", student, ["first_name", "registration_id"], as_dict=True)
+	if not row:
+		return {}
+	return {"student_name": row.first_name or "", "registration_id": row.registration_id or ""}
+
+
 def _student_email(student):
 	if not student:
 		return None
@@ -287,6 +297,7 @@ def sync(payment_id):
 			"payment_id": payment_id,
 			"order_id": order_id,  # Razorpay order / Easebuzz txnid
 			"student": primary.student,
+			**_student_identity(primary.student),
 			"records": [{"doctype": r.doctype, "name": r.name, "amount": r.amount} for r in records],
 			**({"unallocated": flt(captured - allocated, 2)} if captured - allocated > 0.01 else {}),
 		}, indent=2, default=str),
@@ -395,6 +406,7 @@ def record_unapplied(gateway, payment_id, order_id, reference_doctype, reference
 		"paid_on": now_datetime(),
 		"gateway_response": json.dumps({
 			"gateway": gateway, "payment_id": payment_id, "order_id": order_id, "student": student,
+			**_student_identity(student),
 			"records": [], "unallocated": amount, "note": note,
 		}, indent=2, default=str),
 		**_known({**(payment_details or {}), "gateway_order_id": order_id}),
@@ -471,6 +483,7 @@ def record_failure(gateway, payment_id, reference_doctype, reference_name, amoun
 			"payment_id": payment_id or None,
 			"order_id": order_id,  # Razorpay order / Easebuzz txnid
 			"student": student,
+			**_student_identity(student),
 			**(details or {}),
 		}, indent=2, default=str),
 	}
@@ -688,6 +701,42 @@ def sync_all(since=None):
 	return {"synced": done, "failed": failed}
 
 
+def fill_student_identity(limit=2000):
+	"""Add Student Name and Student ID to the gateway_response of student requests written before it had them."""
+	rows = frappe.get_all(
+		DOCTYPE,
+		filters=[
+			["reference_doctype", "in", LEDGER_DOCTYPES],
+			["gateway_response", "like", '%"student": "%'],
+			["gateway_response", "not like", '%"student_name"%'],
+		],
+		fields=["name", "gateway_response"],
+		limit=limit,
+		order_by="creation desc",
+	)
+	updated = 0
+	for row in rows:
+		if '"student_name"' in (row.gateway_response or ""):
+			continue
+		try:
+			response = json.loads(row.gateway_response)
+		except ValueError:
+			continue
+		identity = _student_identity(response.get("student"))
+		if not identity or not isinstance(response, dict):
+			continue
+		ordered = {}
+		for key, value in response.items():
+			ordered[key] = value
+			if key == "student":
+				ordered.update(identity)
+		frappe.db.set_value(
+			DOCTYPE, row.name, "gateway_response", json.dumps(ordered, indent=2, default=str), update_modified=False
+		)
+		updated += 1
+	return updated
+
+
 def fill_common_ids():
 	"""Gateway-neutral ids on every request. Admission / PACE flows update the Razorpay-named fields with db_set,
 	including a retry on the same request (new order / payment id): the common ids follow them, and payment
@@ -862,6 +911,7 @@ def sync_recent():
 	since = add_days(now_datetime(), -3)
 	result = sync_all(since=since)
 	fill_common_ids()
+	result["student_identity"] = fill_student_identity()
 	result["razorpay_details"] = enrich_razorpay_details(since=since)
 	return result
 
@@ -871,5 +921,6 @@ def backfill():
 	bench --site <site> execute slcm.slcm.fee.payment_ledger.backfill"""
 	result = sync_all()
 	fill_common_ids()
+	result["student_identity"] = fill_student_identity(limit=100000)
 	result["razorpay_details"] = enrich_razorpay_details(limit=5000, recheck=True)
 	return result
