@@ -6,7 +6,7 @@ from frappe import _
 from frappe.model.document import Document
 from frappe.utils import today
 
-from slcm.slcm.utils.rfid_cards import sync_student_master
+from slcm.slcm.utils.rfid_cards import set_student_uid, sync_student_master
 
 
 class StudentRFIDCard(Document):
@@ -39,4 +39,4 @@ class StudentRFIDCard(Document):
 
 	def on_trash(self):
 		if self.card_status == "Active" and frappe.db.get_value("Student Master", self.student, "rfid_uid") == self.rfid_uid:
-			frappe.db.set_value("Student Master", self.student, "rfid_uid", None)
+			set_student_uid(self.student, None, _("Student RFID Card deleted"))

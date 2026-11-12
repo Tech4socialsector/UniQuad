@@ -282,7 +282,8 @@
   {
    "fieldname": "registration_id",
    "fieldtype": "Data",
-   "label": "Student ID"
+   "label": "Student ID",
+   "search_index": 1
   },
   {
    "fieldname": "rfid_uid",
@@ -1738,7 +1739,7 @@
    "options": "\nOn Campus\nOff Campus"
   },
   {
-   "description": "Set from the Ongoing term of the student's enrollment (Academic Term \u2192 Term Mapping).",
+   "description": "Set from the Ongoing term of the student's enrollment (Academic Term → Term Mapping).",
    "fieldname": "current_term",
    "fieldtype": "Link",
    "in_standard_filter": 1,

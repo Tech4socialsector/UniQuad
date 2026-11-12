@@ -8,23 +8,21 @@
   "section_filters",
   "academic_year",
   "programme",
-  "student_status",
   "col_break_filters",
   "batch",
-  "section_actions",
-  "get_students_btn",
-  "col_break_actions",
-  "send_invites_btn",
+  "student_status",
+  "selected_students",
+  "resend_unactivated",
+  "section_overview",
+  "summary_html",
   "section_students",
-  "student_list",
-  "section_summary",
-  "summary_html"
+  "student_list"
  ],
  "fields": [
   {
    "fieldname": "section_filters",
    "fieldtype": "Section Break",
-   "label": "Filter Students"
+   "label": "1. Choose Students"
   },
   {
    "fieldname": "academic_year",
@@ -32,23 +30,16 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Academic Year",
-   "options": "Academic Year"
+   "options": "Academic Year",
+   "description": "Student's admission academic year."
   },
   {
    "fieldname": "programme",
-   "fieldtype": "Data",
+   "fieldtype": "Link",
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Programme",
    "options": "Programme"
-  },
-  {
-   "fieldname": "student_status",
-   "fieldtype": "Select",
-   "in_list_view": 1,
-   "in_standard_filter": 1,
-   "label": "Student Status",
-   "options": "\nActive\nInactive\nGraduated\nDropped\nDormant"
   },
   {
    "fieldname": "col_break_filters",
@@ -60,51 +51,59 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Batch",
-   "options": "SLCM Batch"
+   "options": "SLCM Batch",
+   "description": "Filtered by the selected Academic Year."
   },
   {
-   "fieldname": "section_actions",
+   "fieldname": "student_status",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Student Status",
+   "options": "\nActive\nInactive\nGraduated\nDropped\nAlumni\nDormant\nWithdrawn\nDeferral",
+   "default": "Active",
+   "description": "Leave blank to include every status."
+  },
+  {
+   "fieldname": "selected_students",
+   "fieldtype": "Small Text",
+   "label": "Selected Students",
+   "read_only": 1,
+   "depends_on": "eval:doc.selected_students",
+   "description": "Picked from the Student Master list. Only these students are fetched (combined with any filters above)."
+  },
+  {
+   "fieldname": "resend_unactivated",
+   "fieldtype": "Check",
+   "default": "0",
+   "label": "Resend to parents who haven't logged in yet",
+   "description": "Parent-portal accounts that exist but have never been used are marked Pending again so they get a fresh link."
+  },
+  {
+   "fieldname": "section_overview",
    "fieldtype": "Section Break",
-   "label": "Actions"
-  },
-  {
-   "fieldname": "get_students_btn",
-   "fieldtype": "Button",
-   "label": "Get Students"
-  },
-  {
-   "fieldname": "col_break_actions",
-   "fieldtype": "Column Break"
-  },
-  {
-   "fieldname": "send_invites_btn",
-   "fieldtype": "Button",
-   "label": "Send Invites"
-  },
-  {
-   "fieldname": "section_students",
-   "fieldtype": "Section Break",
-   "label": "Student & Parent List"
-  },
-  {
-   "fieldname": "student_list",
-   "fieldtype": "Table",
-   "label": "Student List",
-   "options": "Parent Invite Student Item"
-  },
-  {
-   "fieldname": "section_summary",
-   "fieldtype": "Section Break",
-   "label": "Summary"
+   "label": "2. Review"
   },
   {
    "fieldname": "summary_html",
    "fieldtype": "HTML",
    "label": "Summary"
+  },
+  {
+   "fieldname": "section_students",
+   "fieldtype": "Section Break",
+   "label": "Students & Parents"
+  },
+  {
+   "fieldname": "student_list",
+   "fieldtype": "Table",
+   "label": "Students & Parents",
+   "options": "Parent Invite Student Item",
+   "cannot_add_rows": 1
   }
  ],
  "links": [],
- "modified": "2026-10-27 18:00:00.000000",
+ "modified": "2026-11-11 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Parent Login Invite Tool",

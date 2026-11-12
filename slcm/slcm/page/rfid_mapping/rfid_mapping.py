@@ -16,7 +16,7 @@ import frappe
 from frappe import _
 
 from slcm.permissions import AAD_ROLES
-from slcm.slcm.utils.rfid_cards import assign_card, remove_wrong_assignment
+from slcm.slcm.utils.rfid_cards import UNMAP_REASONS, assign_card, change_source, remove_wrong_assignment, unmap_card
 
 FEED_LIMIT = 200  # rows of live punch feed sent to the browser
 
@@ -209,7 +209,7 @@ def _student_label(row):
 def _load_students():
 	"""All students keyed by Student ID and by system name, for fast row resolution."""
 	rows = frappe.db.sql("""
-		SELECT name, registration_id, first_name, rfid_uid
+		SELECT name, registration_id, first_name, official_email_id, rfid_uid
 		FROM `tabStudent Master`
 	""", as_dict=True)
 	by_id, by_name = {}, {}
@@ -273,7 +273,8 @@ def link_rfid_to_student(rfid_uid, student):
 			frappe.bold(rfid_uid), frappe.bold(_student_label(other or {"name": owner[0]}))
 		))
 
-	linked = assign_card(student, rfid_uid, "Linked in RFID Card Management")
+	with change_source(_("RFID Card Management — Assign")):
+		linked = assign_card(student, rfid_uid, "Linked in RFID Card Management")
 	frappe.db.commit()
 	return {
 		"success": True,
@@ -290,7 +291,8 @@ def unlink_rfid_from_student(student):
 	sm = frappe.db.get_value("Student Master", student, ["name", "registration_id", "first_name"], as_dict=True)
 	if not sm:
 		frappe.throw(_("Student not found."))
-	old_uid = remove_wrong_assignment(student)
+	with change_source(_("RFID Card Management — Unlink wrong card")):
+		old_uid = remove_wrong_assignment(student)
 	frappe.db.commit()
 	if not old_uid:
 		return {"success": False, "message": _("{0} has no active card.").format(_student_label(sm))}
@@ -298,6 +300,98 @@ def unlink_rfid_from_student(student):
 		"success": True,
 		"message": _("Card {0} removed from {1}.").format(frappe.bold(old_uid), frappe.bold(_student_label(sm))),
 	}
+
+
+# picker filter -> Student Master field
+STUDENT_FILTERS = {"programme": "programme_of_study", "batch": "batch", "academic_year": "academic_year", "section": "section"}
+PICK_LIMIT = 500
+MAX_UNMAP = 5000
+
+
+MAX_FILTER_VALUES = 100
+
+
+def _filter_values(value):
+	"""One value or a list (multi-select) -> clean list of strings; anything else is refused."""
+	if value in (None, "", []):
+		return []
+	if isinstance(value, str):
+		value = frappe.parse_json(value) if value.strip().startswith("[") else [value]
+	if not isinstance(value, (list, tuple)) or not all(isinstance(v, (str, int)) for v in value):
+		frappe.throw(_("Filter values must be text."))
+	values = list(dict.fromkeys(str(v).strip() for v in value if str(v).strip()))
+	if len(values) > MAX_FILTER_VALUES:
+		frappe.throw(_("Choose at most {0} values in one filter.").format(MAX_FILTER_VALUES))
+	return values
+
+
+@frappe.whitelist()
+def students_with_cards(txt="", filters=None):
+	"""Students who have a card, for the "Remove RFID Card" picker: search by Student ID, name, email or card,
+	narrowed by Programme / Batch / Academic Year / Section (each one value or several). Returns {rows, total, limit}."""
+	_check_access()
+	filters = frappe.parse_json(filters) if isinstance(filters, str) else (filters or {})
+	if not isinstance(filters, dict):
+		frappe.throw(_("Invalid filters."))
+	conditions, values = ["IFNULL(rfid_uid, '') != ''"], {}
+	for key, field in STUDENT_FILTERS.items():
+		chosen = _filter_values(filters.get(key))
+		if chosen:
+			conditions.append(f"`{field}` IN %({key})s")
+			values[key] = tuple(chosen)
+	if (txt or "").strip():
+		conditions.append("""(registration_id LIKE %(txt)s OR first_name LIKE %(txt)s
+			OR official_email_id LIKE %(txt)s OR rfid_uid LIKE %(txt)s OR name LIKE %(txt)s)""")
+		values["txt"] = f"%{txt.strip()[:140]}%"
+	where = " AND ".join(conditions)
+	total = frappe.db.sql(f"SELECT COUNT(*) FROM `tabStudent Master` WHERE {where}", values)[0][0]
+	rows = frappe.db.sql(f"""
+		SELECT name, registration_id AS student_id, first_name AS student_name, rfid_uid,
+		       programme_of_study AS programme, batch, academic_year, section
+		FROM `tabStudent Master` WHERE {where}
+		ORDER BY registration_id, name LIMIT {PICK_LIMIT}
+	""", values, as_dict=True)
+	return {"rows": rows, "total": total, "limit": PICK_LIMIT}
+
+
+@frappe.whitelist()
+def unmap_cards(students, reason):
+	"""Take the current card off one or many students (see rfid_cards.unmap_card for what each reason does).
+	Each student is done on its own: one failure never undoes the others. Returns one result per student."""
+	_check_access()
+	students = frappe.parse_json(students) if isinstance(students, str) else students
+	if not isinstance(students, (list, tuple)):
+		frappe.throw(_("Select at least one student."))
+	students = [str(s).strip() for s in dict.fromkeys(students) if s and str(s).strip()]
+	if not students:
+		frappe.throw(_("Select at least one student."))
+	if len(students) > MAX_UNMAP:
+		frappe.throw(_("Remove at most {0} cards at a time.").format(MAX_UNMAP))
+	if reason not in UNMAP_REASONS:
+		frappe.throw(_("Choose why the card is being removed."))
+
+	results = []
+	with change_source(_("RFID Card Management — Unmap ({0})").format(reason)):
+		for student in students:
+			sm = frappe.db.get_value("Student Master", student, ["name", "registration_id", "first_name"], as_dict=True)
+			if not sm:
+				results.append({"student": student, "ok": False, "message": _("{0}: student not found").format(student)})
+				continue
+			frappe.db.savepoint("rfid_unmap_row")
+			try:
+				uid = unmap_card(student, reason)
+				results.append({
+					"student": student, "ok": bool(uid), "rfid_uid": uid,
+					"message": _("{0}: card {1} removed").format(_student_label(sm), uid) if uid
+					else _("{0}: has no card").format(_student_label(sm)),
+				})
+			except Exception as e:
+				frappe.db.rollback(save_point="rfid_unmap_row")
+				frappe.clear_messages()
+				results.append({"student": student, "ok": False,
+				                "message": "{0}: {1}".format(_student_label(sm), frappe.utils.strip_html(str(e)))})
+	frappe.db.commit()
+	return results
 
 
 # ── Export for vendor ─────────────────────────────────────────────
@@ -320,7 +414,7 @@ def get_export_data():
 		FROM `tabStudent Master` sm
 		WHERE (sm.rfid_uid IS NULL OR sm.rfid_uid = '')
 		  AND sm.registration_id IS NOT NULL AND sm.registration_id != ''
-		  AND IFNULL(sm.academic_status, 'Active') NOT IN ('Graduated', 'Dropped')
+		  AND IFNULL(sm.student_status, 'Active') NOT IN ('Graduated', 'Dropped', 'Alumni', 'Withdrawn')
 		ORDER BY sm.programme_of_study, sm.batch, sm.registration_id
 	""", as_dict=True)
 
@@ -328,7 +422,7 @@ def get_export_data():
 		SELECT COUNT(*) FROM `tabStudent Master`
 		WHERE (rfid_uid IS NULL OR rfid_uid = '')
 		  AND (registration_id IS NULL OR registration_id = '')
-		  AND IFNULL(academic_status, 'Active') NOT IN ('Graduated', 'Dropped')
+		  AND IFNULL(student_status, 'Active') NOT IN ('Graduated', 'Dropped', 'Alumni', 'Withdrawn')
 	""")[0][0]
 
 	return {"rows": rows, "missing_id": missing_id}
@@ -413,7 +507,7 @@ def bulk_import_rfid(csv_data=None, file_url=None, dry_run=1):
 	seen_students, seen_uids = {}, {}
 
 	for row_no, sid, uid in parsed:
-		item = {"row": row_no, "student_id": sid, "rfid_uid": uid, "student_name": ""}
+		item = {"row": row_no, "student_id": sid, "rfid_uid": uid, "student_name": "", "student_email": ""}
 		rows.append(item)
 
 		if not sid and not uid:
@@ -432,6 +526,7 @@ def bulk_import_rfid(csv_data=None, file_url=None, dry_run=1):
 			continue
 		item["student_id"] = sm.registration_id or sid
 		item["student_name"] = sm.first_name
+		item["student_email"] = sm.official_email_id or ""
 		item["student"] = sm.name
 
 		if sm.name in seen_students:
@@ -457,17 +552,8 @@ def bulk_import_rfid(csv_data=None, file_url=None, dry_run=1):
 		item["status"] = "ready"
 
 	if not dry_run:
-		for item in rows:
-			if item["status"] != "ready":
-				continue
-			frappe.db.savepoint("rfid_import_row")
-			try:
-				item["swipes"] = assign_card(item["student"], item["rfid_uid"], "Bulk import in RFID Card Management")
-				item["status"] = "linked"
-			except Exception as e:
-				frappe.db.rollback(save_point="rfid_import_row")
-				frappe.clear_messages()
-				item.update(status="error", reason=frappe.utils.strip_html(str(e)) or _("Could not link"))
+		with change_source(_("RFID Card Management — Bulk import")):
+			_link_rows(rows)
 		frappe.db.commit()
 
 	counts = {}
@@ -476,3 +562,17 @@ def bulk_import_rfid(csv_data=None, file_url=None, dry_run=1):
 		item.pop("student", None)
 
 	return {"dry_run": dry_run, "counts": counts, "rows": rows}
+
+
+def _link_rows(rows):
+	for item in rows:
+		if item["status"] != "ready":
+			continue
+		frappe.db.savepoint("rfid_import_row")
+		try:
+			item["swipes"] = assign_card(item["student"], item["rfid_uid"], "Bulk import in RFID Card Management")
+			item["status"] = "linked"
+		except Exception as e:
+			frappe.db.rollback(save_point="rfid_import_row")
+			frappe.clear_messages()
+			item.update(status="error", reason=frappe.utils.strip_html(str(e)) or _("Could not link"))
