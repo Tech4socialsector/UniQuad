@@ -1239,7 +1239,20 @@ function _slcmClearSavedHiddenFields() {
 	window._slcmHiddenClearedOnSave = [];
 	if (!wf || !fns.length) return Promise.resolve();
 	var jobs = fns.map(function (fn) {
-		var empty = _slcmEmptyValueFor(wf.fields_dict[fn]);
+		var field = wf.fields_dict[fn];
+		var empty = _slcmEmptyValueFor(field);
+		// Phone: Frappe's control rebuilds the value as "<ISD>-" + value, so set_value(null)
+		// shows "+91 null". Reset the widget directly, the same as an untouched phone field.
+		if (field && field.df && field.df.fieldtype === 'Phone') {
+			try {
+				field.value = '';
+				if (wf.doc) wf.doc[fn] = '';
+				if (typeof field.reset_input === 'function') field.reset_input();
+				else if (field.$input) field.$input.val('');
+				if (typeof field.set_default_country === 'function') field.set_default_country();
+			} catch (e) {}
+			return Promise.resolve();
+		}
 		try {
 			if (wf.doc) wf.doc[fn] = empty;
 			return Promise.resolve(wf.set_value(fn, empty)).catch(function () {});
@@ -2974,8 +2987,60 @@ function _showSuccessModal(title, message, nextUrl) {
  *  4a. Fee > 0 and not paid → show Razorpay modal → on payment → submit
  *  4b. Fee = 0 or paid/waived → submit directly
  */
+/**
+ * Strict pre-submit check: run the page validation (_validateStage, same rules as Next and the
+ * stepper tabs) on EVERY page, not only the one on screen. Submit can be reached without
+ * pressing Next on each page (Enter key, a reopened draft, values changed on an earlier page),
+ * so the whole form is re-checked here. Stops on the first incomplete page and leaves it on screen.
+ */
+function _slcmValidateAllPagesBeforeSubmit(wf) {
+	if (!wf || typeof wf.get_page !== 'function') return true;
+	var lastIdx = (wf.page_breaks && wf.page_breaks.length) || 0;
+	var startIdx = typeof wf.current_section === 'number' ? wf.current_section : lastIdx;
+	var stepsArr = window._slcm_wf_steps || [];
+
+	function showPage(i) {
+		wf.current_section = i;
+		if (typeof wf.toggle_section === 'function') wf.toggle_section();
+	}
+
+	for (var i = 0; i <= lastIdx; i++) {
+		var step = stepsArr.find(function (s) { return s.index === i; });
+		if (step && step.depends_on && !_slcmEvalDependsOn(step.depends_on, wf.doc || {})) continue;
+		var $page = $(wf.get_page(i));
+		if (!$page.length || !$page.find('.frappe-control:not(.hide-control)').length) continue;
+
+		// _validateStage ignores fields on hidden pages, so show the page before checking it.
+		if (wf.current_section !== i) showPage(i);
+		var check = _validateStage(wf, $page);
+		if (!check.ok) {
+			var stepLabel = step && step.label ? step.label : '';
+			frappe.msgprint({
+				title: __('Mandatory Fields Missing'),
+				indicator: 'red',
+				message:
+					_esc(stepLabel
+						? __('Please complete "{0}" before submitting the application.', [stepLabel])
+						: __('Please fill all mandatory fields before submitting the application.')) +
+					'<br><br><ul><li>' +
+					check.missing.map(function (lab) { return _esc(lab); }).join('</li><li>') +
+					'</li></ul>',
+			});
+			window.scrollTo({ top: 0, behavior: 'smooth' });
+			return false;
+		}
+	}
+	if (wf.current_section !== startIdx) showPage(startIdx);
+	return true;
+}
+
 function runSubmitFlow() {
 	var wf = frappe.web_form;
+
+	// ── Every page: mandatory + conditionally mandatory fields ─────
+	if (!_slcmValidateAllPagesBeforeSubmit(wf)) {
+		return;
+	}
 
 	// ── Phone validation ──────────────────────────────────────────
 	if (typeof window._validate_phone_fields === 'function' && !window._validate_phone_fields()) {
