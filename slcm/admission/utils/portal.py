@@ -512,6 +512,60 @@ def resolve_sizes(doc):
 
 
 # ── CONFIG ────────────────────────────────────────────────────────
+
+# Applicant Portal Config fields each NLSAT portal has its own value for: the field itself
+# (NLSAT Admission tab) is the Indian Nationals portal, intl_<field> (International Admission
+# tab) the International portal. Branding, typography, form access etc. stay shared.
+NLSAT_PORTAL_FIELDS = (
+    "portal_subtitle", "title_suffix", "know_more_url",
+    "portal_active", "maintenance_message",
+    "show_announcement", "header_announcement",
+    "hero_image", "admission_website_url", "admission_footer",
+    "show_admission_page", "portal_tagline", "slideshow_images",
+)
+INTL_FIELD_PREFIX = "intl_"
+
+
+def get_config_portal_type(portal_type=None):
+    """NLSAT portal whose settings apply to this request (Domestic / International).
+    PACE pages keep the NLSAT Admission (Domestic) values they always used."""
+    from slcm.admission.utils.nlsat_portal import (
+        DOMESTIC, PACE_PREFIX, get_candidate_prefix, get_current_portal_type, normalize_portal_type,
+    )
+
+    if portal_type:
+        return normalize_portal_type(portal_type)
+    try:
+        if get_candidate_prefix() == PACE_PREFIX:
+            return DOMESTIC
+        return get_current_portal_type()
+    except Exception:
+        return DOMESTIC
+
+
+def portal_fieldname(fieldname, portal_type=None):
+    """Applicant Portal Config fieldname holding `fieldname` for the portal."""
+    from slcm.admission.utils.nlsat_portal import INTERNATIONAL
+
+    if fieldname in NLSAT_PORTAL_FIELDS and get_config_portal_type(portal_type) == INTERNATIONAL:
+        return INTL_FIELD_PREFIX + fieldname
+    return fieldname
+
+
+def get_portal_config_doc_values(config=None, portal_type=None):
+    """Applicant Portal Config as a dict, with the portal's own values under the
+    shared fieldnames (International: intl_hero_image → hero_image, …)."""
+    from slcm.admission.utils.nlsat_portal import INTERNATIONAL
+
+    if config is None:
+        config = frappe.get_doc("Applicant Portal Config", "Applicant Portal Config", ignore_permissions=True)
+    values = config.as_dict() if hasattr(config, "as_dict") else dict(config or {})
+    if get_config_portal_type(portal_type) == INTERNATIONAL:
+        for fn in NLSAT_PORTAL_FIELDS:
+            values[fn] = values.get(INTL_FIELD_PREFIX + fn)
+    return values
+
+
 @frappe.whitelist(allow_guest=True)
 def api_get_portal_config():
     """Alias for get_portal_config to match JS expectations."""
@@ -549,18 +603,26 @@ def api_get_my_application():
 @frappe.whitelist(allow_guest=True)
 def get_portal_config():
     """
-    Returns Applicant Portal Config singleton.
+    Returns Applicant Portal Config singleton, with the NLSAT portal-specific fields
+    (NLSAT_PORTAL_FIELDS) taken from the current portal's tab (Domestic / International).
     Falls back to safe defaults if not configured yet.
     """
     try:
         config = frappe.get_single("Applicant Portal Config")
         sizes = resolve_sizes(config)
+        portal_type = get_config_portal_type()
+
+        def pv(fieldname):
+            return config.get(portal_fieldname(fieldname, portal_type))
+
+        portal_active = pv("portal_active")
         return {
+            "portal_type": portal_type,
             "portal_title": config.portal_title or "Admissions",
             # NLSAT landing-page tab / search-result suffix ("<portal title> — <suffix>"), see admission_base.html
-            "title_suffix": (config.get("title_suffix") or "").strip() or "NLSAT",
-            "portal_subtitle": config.portal_subtitle or "",
-            "hero_image": config.hero_image or "",
+            "title_suffix": (pv("title_suffix") or "").strip() or "NLSAT",
+            "portal_subtitle": pv("portal_subtitle") or "",
+            "hero_image": pv("hero_image") or "",
             # Colours
             "primary_color":         config.get("primary_color") or "#920C24",
             "secondary_color":       config.get("secondary_color") or "#FFFFFF",
@@ -571,13 +633,13 @@ def get_portal_config():
             "show_hero_section":     int(config.show_hero_section) if config.show_hero_section is not None else 0,
             "slideshow_images": [
                 {"image": s.image, "caption": s.caption or "", "idx": s.idx or 0}
-                for s in sorted(config.slideshow_images or [], key=lambda x: x.idx or 0)
+                for s in sorted(pv("slideshow_images") or [], key=lambda x: x.idx or 0)
             ],
-            "show_announcement": config.show_announcement,
-            "header_announcement": config.header_announcement or "",
-            "show_admission_page": int(config.show_admission_page) if config.show_admission_page is not None else 0,
-            "portal_active": config.portal_active if config.portal_active is not None else 1,
-            "maintenance_message": config.maintenance_message or "",
+            "show_announcement": pv("show_announcement"),
+            "header_announcement": pv("header_announcement") or "",
+            "show_admission_page": int(pv("show_admission_page") or 0),
+            "portal_active": portal_active if portal_active is not None else 1,
+            "maintenance_message": pv("maintenance_message") or "",
             "program_card_layout": config.program_card_layout or "Grid",
             "show_intake_count": config.show_intake_count,
             "show_eligibility_hint": config.show_eligibility_hint,
@@ -593,7 +655,7 @@ def get_portal_config():
             "submission_message": config.submission_message or "",
             "enable_portal_notifications": config.enable_portal_notifications
                 if config.enable_portal_notifications is not None else 1,
-            "portal_tagline": config.get("portal_tagline") or config.get("portal_subtitle") or "",
+            "portal_tagline": pv("portal_tagline") or pv("portal_subtitle") or "",
             "pace_tagline": config.get("pace_tagline") or config.get("pace_login_page_tagline_subtitle") or config.get("portal_subtitle") or "",
             "institution_since": config.get("institution_since") or "",
             "hero_cta_label": config.get("hero_cta_label") or "Explore Programs",
@@ -604,8 +666,8 @@ def get_portal_config():
             "powerd_by": config.get("powerd_by") or "boscosoft",
             "support_email": config.get("support_email") or "",
             "pace_support_email": config.get("pace_support_email") or "",
-            "admission_website_url": config.get("admission_website_url") or "",
-            "know_more_url": (config.get("know_more_url") or "").strip(),
+            "admission_website_url": pv("admission_website_url") or "",
+            "know_more_url": (pv("know_more_url") or "").strip(),
             "pace_website_url": config.get("pace_website_url") or "",
             "social_links": [
                 {
@@ -625,6 +687,7 @@ def get_portal_config():
     except Exception:
         # DocType not yet configured — return safe defaults
         return {
+            "portal_type": "Domestic",
             "portal_title": "Admissions",
             "title_suffix": "NLSAT",
             "portal_subtitle": "",
@@ -762,7 +825,7 @@ def update_website_context(context):
                         curr["links"].append({"label": r.get("label"), "route": r.get("route")})
                 return cols
 
-            context.admission_footer = format_footer(pc_doc.get("admission_footer") or [])
+            context.admission_footer = format_footer(pc_doc.get(portal_fieldname("admission_footer")) or [])
             context.pace_footer = format_footer(pc_doc.get("pace_footer") or [])
             context.footer_text = pc_doc.get("footer_text") or ""
         except Exception:
@@ -806,10 +869,11 @@ def api_get_hero_slides():
     """
     try:
         config = frappe.get_single("Applicant Portal Config")
+        portal_type = get_config_portal_type()
         slides = []
 
         # Slide 1: hero_image (always first if set)
-        hero_image = config.get("hero_image")
+        hero_image = config.get(portal_fieldname("hero_image", portal_type))
         if hero_image:
             slides.append({
                 "url": hero_image,
@@ -818,7 +882,7 @@ def api_get_hero_slides():
             })
 
         # Slides 2+: slideshow_images child table
-        for row in config.get("slideshow_images") or []:
+        for row in config.get(portal_fieldname("slideshow_images", portal_type)) or []:
             if row.get("image"):
                 slides.append({
                     "url": row.image,
