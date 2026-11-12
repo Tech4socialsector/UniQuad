@@ -65,6 +65,50 @@ class StudentEnrollment(Document):
         previous = self.get_doc_before_save()
         if previous and previous.batch and previous.batch != self.batch:
             update_enrolled_count(previous.batch)
+        if self.status == "Dropped" and (not previous or previous.status != "Dropped"):
+            self.drop_from_classes()
+
+    def drop_from_classes(self):
+        """A dropped enrollment leaves its class rosters: every Classes row
+        still Enrolled for it becomes Dropped. Rosters drive attendance, the
+        exam timetable clash checks and Students & marks, which all read only
+        Enrolled rows. The class is saved so its student log and exam-plan
+        sync run; the class -> enrollment sync skips this enrollment (its
+        course rows are already closed by close_log_on_status)."""
+        classes = set(frappe.get_all(
+            "Class Enrolled Student",
+            filters={"parenttype": "Classes", "student_enrollment": self.name, "status": "Enrolled"},
+            pluck="parent",
+        ))
+        frappe.flags.roster_sync_skip_enrollment = self.name
+        try:
+            for class_name in classes:
+                frappe.db.savepoint("drop_from_class")
+                try:
+                    cls = frappe.get_doc("Classes", class_name)
+                    for row in cls.enrolled_students:
+                        if row.student_enrollment == self.name and row.status == "Enrolled":
+                            row.status = "Dropped"
+                    cls.flags.ignore_permissions = True
+                    cls.save()
+                except Exception:
+                    # The class itself fails validation (unrelated to this student):
+                    # still take the student off the roster.
+                    frappe.db.rollback(save_point="drop_from_class")
+                    frappe.log_error(f"Dropping {self.name} from class {class_name}", "Student Enrollment")
+                    frappe.db.sql(
+                        """UPDATE `tabClass Enrolled Student` SET status = 'Dropped'
+                        WHERE parenttype = 'Classes' AND parent = %s
+                          AND student_enrollment = %s AND status = 'Enrolled'""",
+                        (class_name, self.name),
+                    )
+        finally:
+            frappe.flags.roster_sync_skip_enrollment = None
+        if classes:
+            frappe.msgprint(
+                _("{0} was marked Dropped in {1} class(es).").format(self.student, len(classes)),
+                indicator="orange", alert=True,
+            )
 
     # ── Academic log ──────────────────────────────────────────────────────────
 
@@ -608,6 +652,8 @@ def sync_class_to_enrollments(class_doc, removed=False):
     ))
 
     for enrollment in set(in_class) | linked:
+        if enrollment == frappe.flags.roster_sync_skip_enrollment:
+            continue  # that enrollment is mid-save and dropping itself from this class
         if not frappe.db.exists("Student Enrollment", enrollment):
             continue
         doc = frappe.get_doc("Student Enrollment", enrollment)

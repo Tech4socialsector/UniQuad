@@ -176,12 +176,16 @@ def bulk_apply_concession(demand_names, concession_type, waiver_value,
 	same waiver rule for all of them. Used by the Fee Demand list view's
 	"Apply Fee Concession / Waiver" bulk action.
 	"""
+	# Waiving dues is a finance action: only roles allowed to create and submit Fee Concessions.
+	frappe.has_permission("Fee Concession", "create", throw=True)
+	frappe.has_permission("Fee Concession", "submit", throw=True)
+
 	if isinstance(demand_names, str):
 		demand_names = frappe.parse_json(demand_names)
 	if not demand_names:
 		frappe.throw(_("Please select at least one Fee Demand."))
 
-	demands = frappe.get_all(
+	demands = frappe.get_list(
 		"Fee Demand",
 		filters={"name": ["in", demand_names]},
 		fields=["name", "student", "status", "outstanding_amount"],
@@ -208,7 +212,7 @@ def bulk_apply_concession(demand_names, concession_type, waiver_value,
 				"waiver_value": flt(waiver_value),
 				"reason": reason,
 			})
-			doc.insert(ignore_permissions=True)
+			doc.insert()
 			doc.submit()
 			created.append(doc.name)
 		except Exception:

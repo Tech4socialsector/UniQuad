@@ -22,6 +22,7 @@ import hmac as _hmac
 import json as _json
 
 import frappe
+from slcm.api.razorpay_reconcile import attach_intent, cap_fee_payment, lock_intent, verify_order
 from frappe import _
 from frappe.utils import flt, today, getdate, add_days
 from slcm.slcm.doctype.academic_term.academic_term import get_current_term
@@ -212,6 +213,9 @@ def _build_order_payload(controller, inv, student_name):
             _("Could not create payment order. Please try again or contact support."),
             frappe.ValidationError,
         )
+
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "invoice", student_name, outstanding, invoice_name=inv.name)
 
     return {
         "order_id":            order.get("id"),
@@ -564,6 +568,9 @@ def confirm_fee_payment(invoice_name, integration_request,
         frappe.log_error(frappe.get_traceback(), "confirm_fee_payment: signature check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "invoice", invoice_name=invoice_name)
+
     # Anti-replay check
     duplicate_payment = frappe.db.exists("Fee Payment", {"reference_number": razorpay_payment_id, "docstatus": 1})
     if duplicate_payment:
@@ -585,6 +592,8 @@ def confirm_fee_payment(invoice_name, integration_request,
     except Exception:
         frappe.log_error(frappe.get_traceback(), "confirm_fee_payment: IR update (non-fatal)")
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     # ── Idempotently create Fee Payment ──────────────────────────────
     existing_fp = frappe.db.get_value(
         "Fee Payment",
@@ -618,8 +627,10 @@ def confirm_fee_payment(invoice_name, integration_request,
                 "reference_number": razorpay_payment_id,
                 "payment_gateway":  "Razorpay",
             })
-            fp.insert(ignore_permissions=True)
-            fp.submit()
+            # never record more than this order actually charged
+            if cap_fee_payment(fp, intent.amount):
+                fp.insert(ignore_permissions=True)
+                fp.submit()
             frappe.db.commit()
 
     # ── Mark gateway payment_status as Captured ───────────────────────
@@ -737,6 +748,9 @@ def create_demand_payment_order(fee_demand_name):
             _("Could not create payment order. Please try again or contact support."),
             frappe.ValidationError,
         )
+
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "demands", student_name, outstanding, demand_names=[fee_demand_name])
 
     from slcm.slcm.doctype.student_master.student_master import _append_payment_log
     _append_payment_log(
@@ -1013,6 +1027,9 @@ def create_bulk_demand_payment_order(fee_demand_names, re_exam_registrations=Non
             frappe.ValidationError,
         )
 
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "demands", student_name, total, demand_names=[d.name for d in demands], re_exam_registrations=[r.name for r in re_exams])
+
     from slcm.slcm.doctype.student_master.student_master import _append_payment_log
     for d in demands:
         _append_payment_log(
@@ -1080,6 +1097,9 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
         frappe.log_error(frappe.get_traceback(), "confirm_bulk_demand_payment: sig check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "demands", demand_names=names, re_exam_registrations=rex_names)
+
     # ── Update Integration Request (best-effort) ──────────────────────
     try:
         from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import order_payment_success
@@ -1094,6 +1114,8 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
     except Exception:
         frappe.log_error(frappe.get_traceback(), "confirm_bulk_demand_payment: IR update (non-fatal)")
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     # ── Re-exam fees in this order (idempotent on its own) ────────────
     re_exams_paid = _mark_re_exams_paid(rex_names, student_name, razorpay_payment_id, razorpay_order_id)
     if re_exams_paid:
@@ -1156,8 +1178,13 @@ def confirm_bulk_demand_payment(fee_demand_names, integration_request,
         "remarks":          f"Bulk payment — Razorpay order {razorpay_order_id} — {len(demand_rows)} demands",
         "payment_demands":  demand_rows,
     })
+    # never record more than this order actually charged
+    if not cap_fee_payment(fp, flt(intent.amount) - re_exam_total):
+        return {"status": "already_paid"}
     fp.insert(ignore_permissions=True)
     fp.submit()
+    demand_rows = [r.as_dict() for r in fp.payment_demands]
+    total = flt(fp.amount)
     frappe.db.commit()
 
     from slcm.slcm.doctype.student_master.student_master import _append_payment_log
@@ -1270,6 +1297,9 @@ def confirm_demand_payment(fee_demand_name, integration_request,
         frappe.log_error(frappe.get_traceback(), "confirm_demand_payment: signature check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "demands", demand_names=[fee_demand_name])
+
     # ── Update Integration Request (best-effort) ───────────────────────
     try:
         from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import (
@@ -1286,6 +1316,8 @@ def confirm_demand_payment(fee_demand_name, integration_request,
     except Exception:
         frappe.log_error(frappe.get_traceback(), "confirm_demand_payment: IR update (non-fatal)")
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     # ── Idempotently create Fee Payment ───────────────────────────────
     existing_fp = frappe.db.get_value(
         "Fee Payment",
@@ -1312,8 +1344,10 @@ def confirm_demand_payment(fee_demand_name, integration_request,
                     "amount_allocated":   outstanding,
                 }],
             })
-            fp.insert(ignore_permissions=True)
-            fp.submit()
+            # never record more than this order actually charged
+            if cap_fee_payment(fp, intent.amount):
+                fp.insert(ignore_permissions=True)
+                fp.submit()
             frappe.db.commit()
 
     # ── Return refreshed demand state ─────────────────────────────────
@@ -1490,6 +1524,9 @@ def _build_re_exam_order_payload(controller, reg, student_name):
             frappe.ValidationError,
         )
 
+    # binds the browser confirm to this registration and amount
+    attach_intent(order, "re_exam", student_name, fee_amount, registration=reg.name)
+
     return {
         "order_id":            order.get("id"),
         "integration_request": order.get("integration_request"),
@@ -1639,6 +1676,11 @@ def confirm_re_exam_payment(registration_name, integration_request,
     except Exception:
         frappe.log_error(frappe.get_traceback(), "confirm_re_exam_payment: signature check")
         frappe.throw(_("Could not verify payment. Please contact the administration."))
+
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "re_exam", registration=registration_name)
+    if flt(intent.amount) + 0.01 < flt(reg.re_exam_fee):
+        frappe.throw(_("The amount paid does not cover the re-exam fee. Please contact the administration."), frappe.PermissionError)
 
     # Update Integration Request (best-effort)
     try:
@@ -1820,6 +1862,9 @@ def _build_improvement_exam_order_payload(controller, reg, student_name):
             frappe.ValidationError,
         )
 
+    # binds the browser confirm to this registration and amount
+    attach_intent(order, "improvement", student_name, fee_amount, registration=reg.name)
+
     return {
         "order_id":            order.get("id"),
         "integration_request": order.get("integration_request"),
@@ -1957,6 +2002,11 @@ def confirm_improvement_exam_payment(registration_name, integration_request,
     except Exception:
         frappe.log_error(frappe.get_traceback(), "confirm_improvement_exam_payment: signature check")
         frappe.throw(_("Could not verify payment. Please contact the administration."))
+
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "improvement", registration=registration_name)
+    if flt(intent.amount) + 0.01 < flt(reg.improvement_fee):
+        frappe.throw(_("The amount paid does not cover the improvement exam fee. Please contact the administration."), frappe.PermissionError)
 
     # Update Integration Request (best-effort)
     try:
@@ -2918,6 +2968,9 @@ def parent_create_payment_order(invoice_name, student_name):
             frappe.ValidationError,
         )
 
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "invoice", student_name, outstanding, paid_by_role="Parent", invoice_name=inv.name)
+
     return {
         "order_id":            order.get("id"),
         "integration_request": order.get("integration_request"),
@@ -2975,6 +3028,9 @@ def parent_confirm_fee_payment(invoice_name, student_name, integration_request,
         frappe.log_error(frappe.get_traceback(), "parent_confirm_fee_payment: sig check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "invoice", invoice_name=invoice_name)
+
     # Update Integration Request (best-effort)
     try:
         import json as _json
@@ -2995,6 +3051,8 @@ def parent_confirm_fee_payment(invoice_name, student_name, integration_request,
             "parent_confirm_fee_payment: IR update (non-fatal)",
         )
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     # Idempotently create Fee Payment
     existing_fp = frappe.db.get_value(
         "Fee Payment",
@@ -3017,8 +3075,10 @@ def parent_confirm_fee_payment(invoice_name, student_name, integration_request,
                 "payment_gateway":  "Razorpay",
                 "remarks":          "Paid by parent via Parent Portal",
             })
-            fp.insert(ignore_permissions=True)
-            fp.submit()
+            # never record more than this order actually charged
+            if cap_fee_payment(fp, intent.amount):
+                fp.insert(ignore_permissions=True)
+                fp.submit()
             frappe.db.commit()
 
     frappe.db.set_value(
@@ -3188,6 +3248,9 @@ def parent_create_demand_payment_order(fee_demand_name, student_name):
             frappe.ValidationError,
         )
 
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "demands", student_name, outstanding, paid_by_role="Parent", demand_names=[fee_demand_name])
+
     from slcm.slcm.doctype.student_master.student_master import _append_payment_log
     _append_payment_log(
         student_name,
@@ -3250,6 +3313,9 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
         frappe.log_error(frappe.get_traceback(), "parent_confirm_demand_payment: sig check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "demands", demand_names=[fee_demand_name])
+
     try:
         from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import order_payment_success
         order_payment_success(
@@ -3263,6 +3329,8 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
     except Exception:
         frappe.log_error(frappe.get_traceback(), "parent_confirm_demand_payment: IR update (non-fatal)")
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     existing_fp = frappe.db.get_value(
         "Fee Payment",
         {"reference_number": razorpay_payment_id, "student": student_name, "docstatus": 1},
@@ -3288,8 +3356,12 @@ def parent_confirm_demand_payment(fee_demand_name, student_name, integration_req
             "amount_allocated":   outstanding,
         }],
     })
+    # never record more than this order actually charged
+    if not cap_fee_payment(fp, intent.amount):
+        return {"status": "already_paid"}
     fp.insert(ignore_permissions=True)
     fp.submit()
+    outstanding = flt(fp.amount)
     frappe.db.commit()
 
     _parent_full_name = (
@@ -3423,6 +3495,9 @@ def parent_create_bulk_demand_payment_order(fee_demand_names, student_name, paym
             frappe.ValidationError,
         )
 
+    # lets the scheduler record this payment if the browser never confirms it
+    attach_intent(order, "demands", student_name, total, paid_by_role="Parent", demand_names=[d.name for d in demands])
+
     from slcm.slcm.doctype.student_master.student_master import _append_payment_log
     for d in demands:
         _append_payment_log(
@@ -3478,6 +3553,9 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
         frappe.log_error(frappe.get_traceback(), "parent_confirm_bulk_demand_payment: sig check")
         frappe.throw(_("Could not verify payment. Please contact the Bursar's Office."))
 
+    # the order must be this student's order for exactly these dues (not just any valid payment)
+    intent = verify_order(integration_request, razorpay_order_id, razorpay_payment_id, student_name, "demands", demand_names=names)
+
     try:
         from payments.payment_gateways.doctype.razorpay_settings.razorpay_settings import order_payment_success
         order_payment_success(
@@ -3491,6 +3569,8 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
     except Exception:
         frappe.log_error(frappe.get_traceback(), "parent_confirm_bulk_demand_payment: IR update (non-fatal)")
 
+    # serialise with the payment reconciler (slcm/api/razorpay_reconcile.py)
+    lock_intent(integration_request)
     existing_fp = frappe.db.get_value(
         "Fee Payment",
         {"reference_number": razorpay_payment_id, "student": student_name, "docstatus": 1},
@@ -3535,8 +3615,13 @@ def parent_confirm_bulk_demand_payment(fee_demand_names, student_name, integrati
         "remarks":          f"Parent bulk payment — Razorpay order {razorpay_order_id} — {len(demand_rows)} demands",
         "payment_demands":  demand_rows,
     })
+    # never record more than this order actually charged
+    if not cap_fee_payment(fp, intent.amount):
+        return {"status": "already_paid"}
     fp.insert(ignore_permissions=True)
     fp.submit()
+    demand_rows = [r.as_dict() for r in fp.payment_demands]
+    total = flt(fp.amount)
     frappe.db.commit()
 
     _parent_full_name = (

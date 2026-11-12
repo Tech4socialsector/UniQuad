@@ -144,6 +144,8 @@ class FeeInvoice(Document):
 		Logs the attempt and returns the checkout URL.
 		Handles gateway resolution server-side to avoid permission issues.
 		"""
+		# run_doc_method only checks read; this saves the invoice and logs a payment attempt
+		self.check_permission("write")
 		self.flags.ignore_links = True
 		self.save(ignore_permissions=True) # Ensure amounts are calculated
 		from slcm.slcm.fee import payment_gateway as gw

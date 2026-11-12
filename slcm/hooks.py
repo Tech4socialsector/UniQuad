@@ -724,7 +724,9 @@ scheduler_events = {
             "slcm.admission.utils.scheduler.auto_manage_announcements",
             "slcm.api.service.fee_service.reconcile_pending_payments",
             # Portal payments through Easebuzz whose return / webhook never arrived
-            "slcm.api.easebuzz_payment.reconcile_pending"
+            "slcm.api.easebuzz_payment.reconcile_pending",
+            # Student / parent Razorpay fee payments whose browser confirm never arrived
+            "slcm.api.razorpay_reconcile.reconcile_pending"
         ],
 		# Once per day: expire Issued/Accepted offers past payment_deadline (updates Offer + Applicant via OfferLetter hooks)
 		"15 2 * * *": [
@@ -927,6 +929,19 @@ permission_query_conditions = {
     "Applicant Notification":      "slcm.security.applicant_access.applicant_notification_query",
     "Applicant Payment Receipt":   "slcm.security.applicant_access.applicant_payment_receipt_query",
     "Applicant Campus Preference": "slcm.security.applicant_access.applicant_campus_preference_query",
+
+    # Student-facing records: a student sees only their own (slcm/security/student_scope.py)
+    "Student Placement Profile": "slcm.security.student_scope.query_conditions",
+    "Placement Application": "slcm.security.student_scope.query_conditions",
+    "Grade Appeal": "slcm.security.student_scope.query_conditions",
+    "Re Exam Registration": "slcm.security.student_scope.query_conditions",
+    "Improvement Exam Registration": "slcm.security.student_scope.query_conditions",
+    "Fee Demand": "slcm.security.student_scope.query_conditions",
+    "Fee Receipt": "slcm.security.student_scope.query_conditions",
+    "Stipend Payment": "slcm.security.student_scope.query_conditions",
+    "Transcript Request": "slcm.security.student_scope.query_conditions",
+    "Student Leave Applications": "slcm.security.student_scope.query_conditions",
+    "Office Hours Attendance": "slcm.security.student_scope.query_conditions",
 }
 
 has_permission = {
@@ -942,4 +957,20 @@ has_permission = {
     "Applicant Campus Preference":   "slcm.security.applicant_access.linked_record_has_permission",
     "Entrance Test Seat Allocation": "slcm.security.applicant_access.linked_record_has_permission",
     "Interview Seat Allocation":     "slcm.security.applicant_access.linked_record_has_permission",
+    # Students: only records linked to their own Student Master (single-record reads, prints, REST)
+    "Student Master": "slcm.security.student_scope.has_permission",
+    "Student Placement Profile": "slcm.security.student_scope.has_permission",
+    "Placement Application": "slcm.security.student_scope.has_permission",
+    "Grade Appeal": "slcm.security.student_scope.has_permission",
+    "Re Exam Registration": "slcm.security.student_scope.has_permission",
+    "Improvement Exam Registration": "slcm.security.student_scope.has_permission",
+    "Fee Demand": "slcm.security.student_scope.has_permission",
+    "Fee Receipt": "slcm.security.student_scope.has_permission",
+    "Stipend Payment": "slcm.security.student_scope.has_permission",
+    "Transcript Request": "slcm.security.student_scope.has_permission",
+    "Student Leave Applications": "slcm.security.student_scope.has_permission",
+    "Office Hours Attendance": "slcm.security.student_scope.has_permission",
+    "Attendance Summary": "slcm.security.student_scope.has_permission",
+    "FA MFA Application": "slcm.security.student_scope.has_permission",
+    "Venue Booking": "slcm.security.student_scope.has_permission",
 }
