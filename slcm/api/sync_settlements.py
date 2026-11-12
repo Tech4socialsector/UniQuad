@@ -575,10 +575,21 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
                     # a refund deducted in this settlement: record it on the student payment's request
                     try:
                         from slcm.slcm.fee.payment_ledger import record_gateway_refund
+                        setl = setl_by_id.get(item.get("settlement_id")) or {}
+                        setl_at = setl.get("created_at") or item.get("settled_at")
+                        setl_date = (
+                            datetime.datetime.utcfromtimestamp(int(setl_at)).date() if setl_at else None
+                        )
+                        payout_ref = (
+                            f"{item.get('settlement_id')} (UTR {setl.get('utr') or item.get('settlement_utr') or '-'})"
+                            if item.get("settlement_id") else None
+                        )
                         record_gateway_refund(
                             item.get("payment_id"), item.get("entity_id") or item.get("id"),
                             abs(frappe.utils.flt(item.get("amount") or item.get("debit") or 0)) / 100,
+                            refunded_on=setl_date,
                             source=f"Razorpay settlement {item.get('settlement_id') or ''}".strip(),
+                            payout=payout_ref, payout_date=setl_date,
                         )
                     except Exception:
                         frappe.log_error(frappe.get_traceback(), "sync_settlements: refund line (non-fatal)")

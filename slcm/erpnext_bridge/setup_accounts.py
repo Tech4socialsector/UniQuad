@@ -15,7 +15,8 @@ from frappe.utils import getdate, today
 from slcm.erpnext_bridge.config import EXAM_FEE_NAMES, component_ledger_name
 
 DEPOSIT_TYPES = ("Student Refundable Deposit",)
-ONLINE_MODES = ("Online Payment", "Online")
+# gateway modes map to the Payment Gateway Clearing ledger ("Payment Gateway": a Fee Refund made from the gateway dashboard)
+ONLINE_MODES = ("Online Payment", "Online", "Payment Gateway")
 
 
 def setup_fee_accounting(company):

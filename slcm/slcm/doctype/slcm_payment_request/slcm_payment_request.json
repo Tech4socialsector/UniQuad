@@ -49,6 +49,10 @@
   "refunded_on",
   "column_break_refund",
   "refund_reference",
+  "refund_settled_amount",
+  "refund_settled_on",
+  "refund_settlement_reference",
+  "refund_log",
   "column_break_usow",
   "gateway_fees",
   "gateway_tax",
@@ -369,11 +373,40 @@
    "label": "Refund Reference",
    "description": "Refund id / UTR from the gateway dashboard",
    "read_only": 1
+  },
+  {
+   "fieldname": "refund_settled_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Deducted from Payouts",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Part of the refunds the gateway has taken off a payout (posted to ERPNext as Dr Gateway Clearing / Cr Bank)"
+  },
+  {
+   "fieldname": "refund_settled_on",
+   "fieldtype": "Date",
+   "label": "Refund Deducted On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_settlement_reference",
+   "fieldtype": "Data",
+   "label": "Refund Payout Reference",
+   "description": "Payout id / UTR the refund was deducted in",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_log",
+   "fieldtype": "Code",
+   "label": "Refund Log",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "One row per refund (refund id, amount, date, source, payout): the source of the refund fields above"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-12 16:00:00.000000",
+ "modified": "2026-11-13 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "SLCM Payment Request",

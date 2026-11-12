@@ -374,7 +374,9 @@ def _detach(request_name, payment_id):
 	still captured - and may already have settled - it, so the request stays Paid and submitted (cancelling it
 	would reverse a real bank settlement in ERPNext). It now points at the charge, which also frees the
 	cancelled record for deletion."""
-	pr = frappe.db.get_value(DOCTYPE, request_name, ["reference_doctype", "reference_name", "gateway_response"], as_dict=True)
+	pr = frappe.db.get_value(
+		DOCTYPE, request_name, ["reference_doctype", "reference_name", "gateway_response", "amount"], as_dict=True
+	)
 	doctype, name = _charge_of(pr.reference_doctype, pr.reference_name)
 	refunded = any(
 		frappe.db.exists(dt, {"razorpay_payment_id": payment_id, "payment_status": "Refunded"})
@@ -400,6 +402,13 @@ def _detach(request_name, payment_id):
 		update["gateway_status"] = "refunded"
 	frappe.db.set_value(DOCTYPE, request_name, update)
 	frappe.get_doc(DOCTYPE, request_name).add_comment("Comment", note)
+	if refunded and not _refund_log(request_name):
+		# the record was marked Refunded (refund made in the gateway dashboard): one refund row for the whole
+		# payment, so ERPNext books it (Gateway Refund) like any other recorded refund
+		_save_refund_log(request_name, [{
+			"refund_id": f"{pr.reference_doctype} {pr.reference_name} marked Refunded", "amount": flt(pr.amount, 2),
+			"refunded_on": str(getdate()), "source": f"{pr.reference_doctype} marked Refunded",
+		}])
 
 
 # ── refunds (recorded, not paid out, by SLCM) ─────────────────────────────────
@@ -426,29 +435,89 @@ def refundable_amount(request_name):
 	return max(flt(held - flt(pr.refunded_amount), 2), 0)
 
 
-def record_gateway_refund(payment_id, refund_id, amount, refunded_on=None, source="settlement"):
-	"""A refund the gateway itself reports (a refund line in a payout): record it on the payment's request once,
-	keyed on the refund id. Returns the request name when recorded, else None."""
-	payment_id, refund_id, amount = (payment_id or "").strip(), (refund_id or "").strip(), flt(amount, 2)
+def _refund_log(request_name):
+	try:
+		log = json.loads(frappe.db.get_value(DOCTYPE, request_name, "refund_log") or "[]")
+	except ValueError:
+		log = []
+	return log if isinstance(log, list) else []
+
+
+def _save_refund_log(request_name, log, comment=None):
+	"""Store the refund log and the summary fields read by reports and the ERPNext bridge:
+	refunded_* = every refund recorded (bridge: Gateway Refund), refund_settled_* = the part a payout deducted
+	(bridge: Gateway Refund Payout)."""
+	settled = [r for r in log if r.get("payout")]
+	frappe.db.set_value(DOCTYPE, request_name, {
+		"refund_log": json.dumps(log, indent=1, default=str),
+		"refunded_amount": flt(sum(flt(r.get("amount")) for r in log), 2),
+		"refunded_on": max((getdate(r["refunded_on"]) for r in log if r.get("refunded_on")), default=None),
+		"refund_reference": ", ".join(str(r.get("refund_id")) for r in log if r.get("refund_id"))[:140],
+		"refund_settled_amount": flt(sum(flt(r.get("amount")) for r in settled), 2),
+		"refund_settled_on": max((getdate(r["payout_date"]) for r in settled if r.get("payout_date")), default=None),
+		"refund_settlement_reference": ", ".join(str(r["payout"]) for r in settled)[:140],
+	})
+	if comment:
+		frappe.get_doc(DOCTYPE, request_name).add_comment("Comment", comment)
+
+
+def record_gateway_refund(payment_id, refund_id, amount, refunded_on=None, source="settlement",
+		payout=None, payout_date=None):
+	"""A refund the gateway reports (payout refund line, refund webhook): record it on the payment's request, once
+	per refund id. ``payout`` / ``payout_date`` say it was taken off that payout (ERPNext: Dr Gateway Clearing /
+	Cr Bank). A refund recorded earlier by hand with the same amount and no payout is the same refund: it gets the
+	payout instead of a second row. Returns the request name when something changed, else None."""
+	payment_id, refund_id, amount = (payment_id or "").strip(), str(refund_id or "").strip(), flt(amount, 2)
 	if not payment_id or not refund_id or amount <= 0:
 		return None
-	pr = frappe.db.get_value(
+	name = frappe.db.get_value(
 		DOCTYPE,
 		{"transaction_id": payment_id, "docstatus": 1, "status": "Paid", "reference_doctype": ("in", LEDGER_DOCTYPES)},
-		["name", "refunded_amount", "refund_reference"], as_dict=True,
+		"name",
 	)
-	if not pr or refund_id in (pr.refund_reference or ""):
+	if not name:
 		return None
-	refs = ", ".join(r for r in (pr.refund_reference, refund_id) if r)
-	frappe.db.set_value(DOCTYPE, pr.name, {
-		"refunded_amount": flt(flt(pr.refunded_amount) + amount, 2),
-		"refunded_on": getdate(refunded_on) if refunded_on else getdate(),
-		"refund_reference": refs[:140],
+	frappe.db.sql(f"SELECT name FROM `tab{DOCTYPE}` WHERE name = %s FOR UPDATE", name)
+	log = _refund_log(name)
+	row = next((r for r in log if r.get("refund_id") == refund_id or r.get("gateway_refund_id") == refund_id), None)
+	if not row:
+		# the same refund recorded earlier without the gateway's id: by hand, or a record marked Refunded
+		row = next((r for r in log if not r.get("gateway_refund_id") and abs(flt(r.get("amount")) - amount) <= 0.01
+		            and (r.get("source") == "recorded by hand" or str(r.get("source") or "").endswith("marked Refunded"))),
+		           None)
+		if row:
+			row["gateway_refund_id"] = refund_id
+			if not payout:
+				_save_refund_log(name, log)
+				return name
+	if row:
+		if not payout or row.get("payout"):
+			return None
+		row.update(payout=payout, payout_date=str(getdate(payout_date)) if payout_date else str(getdate()))
+		_save_refund_log(name, log, _("Refund {0} of ₹{1} was deducted from payout {2}.").format(
+			refund_id, f"{amount:,.2f}", payout))
+		return name
+	log.append({
+		"refund_id": refund_id, "amount": amount,
+		"refunded_on": str(getdate(refunded_on)) if refunded_on else str(getdate()), "source": source,
+		**({"payout": payout, "payout_date": str(getdate(payout_date)) if payout_date else str(getdate())} if payout else {}),
 	})
-	frappe.get_doc(DOCTYPE, pr.name).add_comment(
-		"Comment", _("Refund {0} of ₹{1} reported by the gateway ({2}).").format(refund_id, f"{amount:,.2f}", source)
-	)
-	return pr.name
+	_save_refund_log(name, log, _("Refund {0} of ₹{1} reported by the gateway ({2}).").format(
+		refund_id, f"{amount:,.2f}", source))
+	return name
+
+
+def remove_gateway_refund(payment_id, refund_id):
+	"""A refund the gateway reports as failed: drop it from the request (the money stayed with the university)."""
+	name = frappe.db.get_value(DOCTYPE, {"transaction_id": payment_id, "docstatus": 1, "status": "Paid"}, "name")
+	if not name or not refund_id:
+		return None
+	log = _refund_log(name)
+	kept = [r for r in log if refund_id not in (r.get("refund_id"), r.get("gateway_refund_id"))]
+	if len(kept) == len(log):
+		return None
+	_save_refund_log(name, kept, _("Refund {0} failed at the gateway: removed.").format(refund_id))
+	return name
 
 
 @frappe.whitelist()
@@ -472,19 +541,19 @@ def record_refund(request_name, refund_reference, refunded_on, amount):
 	if amount - refundable > 0.01:
 		frappe.throw(
 			_("Only ₹{0} of this payment is unapplied and can be recorded as refunded here. A refund of fees that "
-			  "were applied to dues is recorded with a Fee Refund.").format(f"{refundable:,.2f}")
+			  "were applied to dues is recorded with a Fee Refund (Refund Mode: Payment Gateway).").format(f"{refundable:,.2f}")
 		)
-	pr = frappe.db.get_value(DOCTYPE, request_name, ["refunded_amount", "refund_reference"], as_dict=True)
-	refs = ", ".join(r for r in (pr.refund_reference, refund_reference) if r)
-	frappe.db.set_value(DOCTYPE, request_name, {
-		"refunded_amount": flt(flt(pr.refunded_amount) + amount, 2),
-		"refunded_on": getdate(refunded_on) if refunded_on else getdate(),
-		"refund_reference": refs[:140],
+	log = _refund_log(request_name)
+	if any(refund_reference in (r.get("refund_id"), r.get("gateway_refund_id")) for r in log):
+		frappe.throw(_("Refund {0} is already recorded on this payment.").format(refund_reference))
+	log.append({
+		"refund_id": refund_reference, "amount": amount,
+		"refunded_on": str(getdate(refunded_on)) if refunded_on else str(getdate()), "source": "recorded by hand",
+		"by": frappe.session.user,
 	})
-	frappe.get_doc(DOCTYPE, request_name).add_comment(
-		"Comment", _("Refund of ₹{0} recorded (reference {1}) by {2}.").format(f"{amount:,.2f}", refund_reference, frappe.session.user)
-	)
-	return {"refunded_amount": flt(flt(pr.refunded_amount) + amount, 2), "still_refundable": refundable_amount(request_name)}
+	_save_refund_log(request_name, log, _("Refund of ₹{0} recorded (reference {1}) by {2}.").format(
+		f"{amount:,.2f}", refund_reference, frappe.session.user))
+	return {"refunded_amount": flt(sum(flt(r["amount"]) for r in log), 2), "still_refundable": refundable_amount(request_name)}
 
 
 # ── failed attempts ─────────────────────────────────────────────────────────────

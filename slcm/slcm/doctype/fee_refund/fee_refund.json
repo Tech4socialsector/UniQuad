@@ -131,8 +131,9 @@
    "fieldname": "refund_mode",
    "fieldtype": "Select",
    "label": "Refund Mode",
-   "options": "\nCash\nNEFT\nCheque\nOnline",
-   "reqd": 1
+   "options": "\nCash\nNEFT\nCheque\nOnline\nPayment Gateway",
+   "reqd": 1,
+   "description": "Online = bank transfer from the university account. Payment Gateway = refunded from the Razorpay / Easebuzz dashboard (comes off Gateway Clearing in ERPNext)."
   },
   {
    "fieldname": "column_break_2",
@@ -239,7 +240,7 @@
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-09-29 12:00:00.000000",
+ "modified": "2026-11-13 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "Fee Refund",

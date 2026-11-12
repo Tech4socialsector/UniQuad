@@ -2259,3 +2259,34 @@ class TestMediumPaymentGaps(GatewayTestCase):
 		self.assertEqual(es.apply_payouts([payout]).get("refunds"), 1)
 		self.assertEqual(es.apply_payouts([payout]).get("refunds"), None)  # same refund id: not twice
 		self.assertEqual((flt(frappe.db.get_value("SLCM Payment Request", pr, "refunded_amount")), pl.refundable_amount(pr)), (2500, 0))
+
+
+class TestRefundLog(GatewayTestCase):
+	"""One refund is recorded once, however it reaches SLCM (by hand, webhook, payout line)."""
+
+	def test_hand_recorded_refund_is_matched_to_its_payout_line(self):
+		from slcm.slcm.fee import payment_ledger as pl
+
+		pl.record_unapplied("Easebuzz", "EZLOG1", "txnLOG1", "Fee Demand", self.d_ez, 2500, self.student, "duplicate")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "EZLOG1"}, "name")
+		pl.record_refund(pr, "UTR-TYPED-BY-STAFF", today(), 2500)
+		self.assertRaises(frappe.ValidationError, pl.record_refund, pr, "UTR-TYPED-BY-STAFF", today(), 1)  # same ref twice
+		# the payout reports it under the gateway's own refund id: same amount, so it is the same refund
+		pl.record_gateway_refund("EZLOG1", "RFEZ-GATEWAY-9", 2500, today(), payout="PO9 (UTR U9)", payout_date=today())
+		row = frappe.db.get_value("SLCM Payment Request", pr,
+		                          ["refunded_amount", "refund_settled_amount", "refund_settlement_reference"], as_dict=True)
+		self.assertEqual((flt(row.refunded_amount), flt(row.refund_settled_amount)), (2500, 2500))
+		self.assertIn("PO9", row.refund_settlement_reference)
+		log = json.loads(frappe.db.get_value("SLCM Payment Request", pr, "refund_log"))
+		self.assertEqual(len(log), 1)
+		self.assertEqual(log[0]["gateway_refund_id"], "RFEZ-GATEWAY-9")
+
+	def test_failed_refund_is_removed(self):
+		from slcm.slcm.fee import payment_ledger as pl
+
+		pl.record_unapplied("Easebuzz", "EZLOG2", "txnLOG2", "Fee Demand", self.d_ez, 1000, self.student, "duplicate")
+		pr = frappe.db.get_value("SLCM Payment Request", {"transaction_id": "EZLOG2"}, "name")
+		pl.record_gateway_refund("EZLOG2", "RF-FAIL-1", 1000, today(), source="webhook")
+		self.assertEqual(pl.refundable_amount(pr), 0)
+		pl.remove_gateway_refund("EZLOG2", "RF-FAIL-1")
+		self.assertEqual(pl.refundable_amount(pr), 1000)

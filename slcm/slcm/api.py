@@ -1,3 +1,4 @@
+import datetime
 import frappe
 import json
 import hmac
@@ -220,6 +221,11 @@ def _handle_refund_failed(payload):
     made for this refund (re-exam payment log + registration, Fee Invoice)."""
     refund  = payload.get("payload", {}).get("refund", {}).get("entity", {})
     payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+    try:
+        from slcm.slcm.fee.payment_ledger import remove_gateway_refund
+        remove_gateway_refund(refund.get("payment_id") or payment.get("id"), refund.get("id"))
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "razorpay_webhook: remove failed refund")
     notes    = (payment.get("notes") or {}) if payment else {}
     ref_type = notes.get("reference_doctype")
     ref_name = notes.get("reference_name")
@@ -245,6 +251,19 @@ def _handle_refund(payload):
     """Handle refund.processed events."""
     refund  = payload.get("payload", {}).get("refund", {}).get("entity", {})
     payment = payload.get("payload", {}).get("payment", {}).get("entity", {})
+
+    # record it on the student payment's SLCM Payment Request (ERPNext: Gateway Refund)
+    try:
+        from slcm.slcm.fee.payment_ledger import record_gateway_refund
+        created = refund.get("created_at")
+        record_gateway_refund(
+            refund.get("payment_id") or payment.get("id"), refund.get("id"), flt(refund.get("amount", 0)) / 100,
+            refunded_on=datetime.datetime.utcfromtimestamp(int(created)).date() if created else None,
+            source="Razorpay refund webhook",
+        )
+        frappe.db.commit()
+    except Exception:
+        frappe.log_error(frappe.get_traceback(), "razorpay_webhook: record refund on payment request")
 
     # Resolve reference from payment notes (Razorpay includes the payment entity in refund events)
     notes    = (payment.get("notes") or {}) if payment else {}

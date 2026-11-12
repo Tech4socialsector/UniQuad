@@ -148,9 +148,12 @@ def apply_payouts(payouts):
 		for refund in payout.get("peb_refunds") or []:
 			from slcm.slcm.fee.payment_ledger import record_gateway_refund
 
+			payout_ref = f"{summary['payout_id']} (UTR {summary['bank_transaction_id'] or '-'})"
 			if record_gateway_refund(
 				refund.get("peb_transaction_id"), refund.get("refund_id"), refund.get("refund_amount"),
 				settled_at, source=f"Easebuzz payout {summary['payout_id']}",
+				# taken off this payout only once it is actually paid out to the bank
+				payout=payout_ref if paid_out else None, payout_date=settled_at,
 			):
 				counts["refunds"] = counts.get("refunds", 0) + 1
 		for txn in payout.get("peb_transactions") or []:

@@ -94,12 +94,44 @@ GATEWAY_RECEIPT_AMOUNT = """src.amount
 	- coalesce((select sum(cn.credit_amount) from `tabStudent Credit Note` cn
 		where cn.received_reference = src.transaction_id and cn.docstatus = 1
 		and ifnull(cn.received_via, '') != '' and ifnull(cn.source_fee_demand, '') = ''), 0)"""
+# A refunded payment keeps its Gateway Receipt: a refunded exam / transcript fee is no longer held by its record, so
+# the receipt is rebooked from the fee ledger to Unallocated Fee Receipts, and the Gateway Refund below releases it.
 GATEWAY_RECEIPT_ACTIVE = f"""src.docstatus = 1 and src.status = 'Paid' and ifnull(src.transaction_id, '') != ''
 	and src.reference_doctype in ({", ".join(f"'{dt}'" for dt in LEDGER_DOCTYPES)})
-	and ifnull(src.gateway_status, '') != 'refunded' and ({GATEWAY_RECEIPT_AMOUNT}) > 0.005"""
+	and ({GATEWAY_RECEIPT_AMOUNT}) > 0.005"""
 SOURCES["Gateway Receipt"] = {
 	"table": "SLCM Payment Request", "date_field": "paid_on", "date": "date(src.paid_on)",
 	"active": GATEWAY_RECEIPT_ACTIVE, "amount": GATEWAY_RECEIPT_AMOUNT, "stage": 1,
+}
+
+# Refunds (SLCM records them; they are paid out from the gateway dashboard, never by SLCM).
+# What a payment's records still hold of it (re-exam / improvement / transcript fees not cancelled or refunded):
+GATEWAY_HELD_AMOUNT = """coalesce((select sum(l.amount) from `tabRe Exam Payment Log` l
+		join `tabRe Exam Registration` r on r.name = l.re_exam_registration
+		where l.razorpay_payment_id = src.transaction_id and l.payment_status = 'Paid' and r.status != 'Cancelled'), 0)
+	+ coalesce((select sum(l.amount) from `tabImprovement Exam Payment Log` l
+		join `tabImprovement Exam Registration` r on r.name = l.improvement_exam_registration
+		where l.razorpay_payment_id = src.transaction_id and l.payment_status = 'Paid' and r.status != 'Cancelled'), 0)
+	+ coalesce((select sum(t.fee_amount) from `tabTranscript Request` t
+		where t.payment_reference = src.transaction_id and t.payment_status = 'Paid'), 0)"""
+# ...so the money its Gateway Receipt parked in Unallocated Fee Receipts (applied to nothing):
+GATEWAY_UNAPPLIED_AMOUNT = f"greatest(({GATEWAY_RECEIPT_AMOUNT}) - ({GATEWAY_HELD_AMOUNT}), 0)"
+# Gateway Refund: the recorded refunds, up to that unapplied money. A refund of a fee that WAS applied to a due is
+# booked by its Fee Refund (Refund Mode: Payment Gateway) instead, so it is never counted twice.
+GATEWAY_REFUND_AMOUNT = f"least(coalesce(src.refunded_amount, 0), {GATEWAY_UNAPPLIED_AMOUNT})"
+SOURCES["Gateway Refund"] = {
+	"table": "SLCM Payment Request", "date_field": "refunded_on", "date": "src.refunded_on",
+	"active": f"""src.docstatus = 1 and src.status = 'Paid' and ifnull(src.transaction_id, '') != ''
+		and src.reference_doctype in ({", ".join(f"'{dt}'" for dt in LEDGER_DOCTYPES)})
+		and ({GATEWAY_REFUND_AMOUNT}) > 0.005""",
+	"amount": GATEWAY_REFUND_AMOUNT, "stage": 2,
+}
+# Gateway Refund Payout: the refunds a payout deducted (the bank received that much less): Dr Clearing / Cr Bank.
+SOURCES["Gateway Refund Payout"] = {
+	"table": "SLCM Payment Request", "date_field": "refund_settled_on", "date": "src.refund_settled_on",
+	"active": f"""src.docstatus = 1 and src.reference_doctype in ({", ".join(f"'{dt}'" for dt in LEDGER_DOCTYPES)})
+		and coalesce(src.refund_settled_amount, 0) > 0.005""",
+	"amount": "coalesce(src.refund_settled_amount, 0)", "stage": 2,
 }
 ERROR_TITLE = "SLCM ERPNext posting failed: {0} {1}"
 
@@ -196,6 +228,17 @@ def gateway_receipt_amount(pr):
 	value = frappe.db.sql(
 		f"select {GATEWAY_RECEIPT_AMOUNT} from `tabSLCM Payment Request` src where src.name = %s", pr.name
 	)
+	return flt(value[0][0], 2) if value else 0.0
+
+
+def gateway_refund_amount(pr):
+	"""What a Gateway Refund books for a request (see GATEWAY_REFUND_AMOUNT)."""
+	value = frappe.db.sql(f"select {GATEWAY_REFUND_AMOUNT} from `tabSLCM Payment Request` src where src.name = %s", pr.name)
+	return flt(value[0][0], 2) if value else 0.0
+
+
+def gateway_unapplied_amount(pr):
+	value = frappe.db.sql(f"select {GATEWAY_UNAPPLIED_AMOUNT} from `tabSLCM Payment Request` src where src.name = %s", pr.name)
 	return flt(value[0][0], 2) if value else 0.0
 
 
@@ -340,9 +383,15 @@ def _should_post(cfg, key, src, already_posted=False):
 	if key == "Gateway Receipt":
 		return (
 			src.docstatus == 1 and src.status == "Paid" and bool(src.transaction_id)
-			and src.reference_doctype in LEDGER_DOCTYPES and src.gateway_status != "refunded"
-			and gateway_receipt_amount(src) > 0.005
+			and src.reference_doctype in LEDGER_DOCTYPES and gateway_receipt_amount(src) > 0.005
 		)
+	if key == "Gateway Refund":
+		return (
+			src.docstatus == 1 and src.status == "Paid" and bool(src.transaction_id)
+			and src.reference_doctype in LEDGER_DOCTYPES and gateway_refund_amount(src) > 0.005
+		)
+	if key == "Gateway Refund Payout":
+		return src.docstatus == 1 and src.reference_doctype in LEDGER_DOCTYPES and flt(src.refund_settled_amount) > 0.005
 	if key == "SLCM Payment Request":
 		if src.docstatus == 2 or src.settlement_status != "Settled":
 			return False
