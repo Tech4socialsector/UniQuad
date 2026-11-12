@@ -208,6 +208,16 @@ class Applicant(Document):
             title=_("Not allowed"),
         )
 
+    def _set_class_xii_status(self):
+        """
+        Class XII Status is asked only for Undergraduate programmes (Completed / Appearing).
+        Postgraduate and Research Course applicants have finished Class XII: always "Completed".
+        Also fills the "Completed" default when the value arrives empty.
+        """
+        level = (self.get("program_level") or "").strip()
+        if (level and level != "Undergraduate") or not self.get("class_xii_status"):
+            self.class_xii_status = "Completed"
+
     def validate(self):
         """
         Runs on every save.
@@ -221,6 +231,7 @@ class Applicant(Document):
 
         set_intake_type(self)
         set_admission_details(self)
+        self._set_class_xii_status()
         self._validate_nationality_matches_foreign_national()
         self._validate_education_percentage_bounds(
             on_submit=self.status in ("Submitted", "Submitted and Paid")

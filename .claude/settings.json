@@ -52,7 +52,13 @@
       "PowerShell(wsl -d Ubuntu-24.04 -- bash /tmp/check_sites.sh)",
       "PowerShell(wsl -d Ubuntu-24.04 -- bash -lc 'export PATH=$HOME/.local/bin:$PATH; which bench; bash /tmp/check_sites.sh')",
       "PowerShell(wsl -d Ubuntu-24.04 -- bash /tmp/check_ug.sh)",
-      "PowerShell(wsl -d Ubuntu-24.04 -- python3 /tmp/row13.py)"
+      "PowerShell(wsl -d Ubuntu-24.04 -- python3 /tmp/row13.py)",
+      "Bash(export MSYS_NO_PATHCONV=1; *)",
+      "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm\" && tail -8 slcm/patches.txt && ls slcm/patches | tail -5)",
+      "Bash(printf 'slcm.patches.v2_0.set_class_xii_status_completed_for_pg\\\\n')"
+    ],
+    "additionalDirectories": [
+      "\\tmp"
     ]
   }
 }

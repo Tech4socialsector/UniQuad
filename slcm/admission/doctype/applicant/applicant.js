@@ -7,7 +7,20 @@ function slcm_applicant_setup_country_state_city_queries(frm) {
     });
 }
 
+// Class XII Status is asked only for Undergraduate (Completed / Appearing); other levels are "Completed".
+function slcm_applicant_sync_class_xii_status(frm) {
+    if (frm.doc.docstatus === 2) return;
+    const level = frm.doc.program_level || "";
+    const current = frm.doc.class_xii_status || "";
+    const wanted = (level && level !== "Undergraduate") ? "Completed" : (current || "Completed");
+    if (wanted !== current) frm.set_value("class_xii_status", wanted);
+}
+
 frappe.ui.form.on("Applicant", {
+
+    program_level: function (frm) {
+        slcm_applicant_sync_class_xii_status(frm);
+    },
 
     if_cgpa_maximum_cgpa_class_xii: function(frm) {
         if (frm.doc.if_cgpa_maximum_cgpa_class_xii && frm.doc.if_cgpa_maximum_cgpa_class_xii > 10) {

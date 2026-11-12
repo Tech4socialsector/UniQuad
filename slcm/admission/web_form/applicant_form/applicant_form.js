@@ -1092,6 +1092,9 @@ function collectDraftData() {
 		'name', 'program', 'admission_cycle', 'academic_year', 'admission_year',
 		'campus', 'status', 'application_fee_status',
 		'application_fee_amount', 'program_level',
+		// Hidden on the portal and set from the entry link (domestic / international); the applicant
+		// cannot change it, so an empty payload value must never wipe the stored Yes / No.
+		'foriegn_national',
 	];
 	var ref = frappe.reference_doc || {};
 	PRESERVE.forEach(function (k) {
@@ -1111,6 +1114,10 @@ function collectDraftData() {
 		}
 	});
 
+	// Class XII Status is only asked for Undergraduate; every other level is "Completed".
+	// Set it before the hidden-field cleanup so the Class XII fields that depend on it survive.
+	data.class_xii_status = _slcmClassXiiStatusFor(data.program_level, data.class_xii_status);
+
 	// Values typed into a field that is now hidden by its "depends_on" (e.g. Karnataka options
 	// after "Whether Karnataka" went back to No) stay in the browser while the applicant edits,
 	// but are not stored: blank them in the payload. The form is cleared after a successful save.
@@ -1129,6 +1136,29 @@ function collectDraftData() {
 // ───────────────────────────────────────────────────────────────────
 var _SLCM_LAYOUT_TYPES = ['Section Break', 'Column Break', 'Tab Break', 'Page Break', 'Fold',
 	'HTML', 'Button', 'Heading'];
+
+// Hidden on purpose but still carries a value that other fields depend on: never blank these.
+var _SLCM_KEEP_WHEN_HIDDEN = { class_xii_status: 1 };
+
+/**
+ * Class XII Status is asked only for Undergraduate programmes (Completed / Appearing).
+ * Postgraduate and Research Course applicants have finished Class XII, so it is "Completed".
+ */
+function _slcmClassXiiStatusFor(programLevel, current) {
+	if (programLevel && programLevel !== 'Undergraduate') return 'Completed';
+	return current || 'Completed';
+}
+
+/** Keep the Class XII Status field in the browser in step with the programme level. */
+function _slcmSyncClassXiiStatus() {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf || typeof wf.get_value !== 'function' || !wf.fields_dict || !wf.fields_dict.class_xii_status) return;
+	var current = wf.get_value('class_xii_status');
+	var wanted = _slcmClassXiiStatusFor(wf.get_value('program_level'), current);
+	if (wanted !== current) {
+		try { wf.set_value('class_xii_status', wanted); } catch (e) {}
+	}
+}
 
 function _slcmEvalDependsOn(expr, doc) {
 	if (!expr) return true;
@@ -1188,6 +1218,7 @@ function _slcmFieldsHiddenByDependency(data) {
 			}
 			if (_SLCM_LAYOUT_TYPES.indexOf(ft) !== -1 || !df.fieldname) return;
 			if (cint(df.hidden)) return;   // statically hidden / script-managed fields: leave alone
+			if (_SLCM_KEEP_WHEN_HIDDEN[df.fieldname]) return;
 			if (cleared[df.fieldname]) return;
 			var shown = sectionShown && columnShown && _slcmEvalDependsOn(df.depends_on, evalDoc);
 			if (!shown && _slcmHasValue(evalDoc[df.fieldname])) {
@@ -1787,6 +1818,7 @@ function scheduleProgramPortalDerivatives() {
 					if (d.intake_type) wf.set_value('intake_type', d.intake_type);
 					if (d.campus) wf.set_value('campus', d.campus);
 				} catch (e) {}
+				_slcmSyncClassXiiStatus();
 				scheduleFeeUpdate();
 				syncTopBarApplyingFor();
 			},
@@ -5513,7 +5545,10 @@ frappe.ready(function () {
 					scheduleProgramPortalDerivatives();
 				});
 				wf.on('admission_cycle', scheduleProgramPortalDerivatives);
+				wf.on('program_level', _slcmSyncClassXiiStatus);
 			} catch (e) {}
+			// Drafts saved before this fix may have an empty Class XII Status for PG / Research.
+			setTimeout(_slcmSyncClassXiiStatus, 1500);
 		} else if (_bindProgN > 120) {
 			clearInterval(_bindProgTimer);
 		}
