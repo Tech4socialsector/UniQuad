@@ -6,8 +6,6 @@
  "field_order": [
   "portal_settings_tab",
   "portal_title",
-  "title_suffix",
-  "portal_subtitle",
   "branding_section",
   "primary_color",
   "navbar_color",
@@ -40,6 +38,10 @@
   "support_name",
   "support_role",
   "admission_tab",
+  "nlsat_portal_section",
+  "title_suffix",
+  "nlsat_portal_col_break",
+  "portal_subtitle",
   "section_break_branding",
   "hero_image",
   "know_more_url",
@@ -91,6 +93,29 @@
   "contact_phone",
   "col_break_6",
   "footer_text",
+  "international_admission_tab",
+  "intl_portal_section",
+  "intl_title_suffix",
+  "intl_portal_col_break",
+  "intl_portal_subtitle",
+  "intl_section_branding",
+  "intl_hero_image",
+  "intl_know_more_url",
+  "intl_col_break_1",
+  "intl_admission_website_url",
+  "intl_section_footer",
+  "intl_admission_footer",
+  "intl_slideshow_section",
+  "intl_show_admission_page",
+  "intl_portal_tagline",
+  "intl_slideshow_images",
+  "intl_section_announcement",
+  "intl_show_announcement",
+  "intl_header_announcement",
+  "intl_section_status",
+  "intl_portal_active",
+  "intl_col_break_2",
+  "intl_maintenance_message",
   "pace_admission_tab",
   "section_break_oiuy",
   "pace_support_email",
@@ -127,7 +152,7 @@
   },
   {
    "default": "NLSAT",
-   "description": "Brand name shown after the Portal title in the browser tab and in Google search results, on the NLSAT home pages only (Indian Nationals: /nlsatadmissions, International: /nlsat-international). Format: Portal title — Title Suffix. Example: National Law School of India University — NLSAT. Other pages (My Profile, Helpdesk, My Applications, etc.) show only their own page name. Keep it short and public-facing. If left blank, NLSAT is used. Google shows the new title only after it re-crawls the site, which can take a few days.",
+   "description": "Brand name shown after the Portal title in the browser tab and in Google search results, on the Indian Nationals home page (/nlsatadmissions) only. Format: Portal title \u2014 Title Suffix. Example: National Law School of India University \u2014 NLSAT. Other pages (My Profile, Helpdesk, My Applications, etc.) show only their own page name. Keep it short and public-facing. If left blank, NLSAT is used. Google shows the new title only after it re-crawls the site, which can take a few days.",
    "fieldname": "title_suffix",
    "fieldtype": "Data",
    "label": "Title Suffix (Browser Tab / Google)"
@@ -607,7 +632,7 @@
   {
    "fieldname": "admission_tab",
    "fieldtype": "Tab Break",
-   "label": "Admission"
+   "label": "NLSAT Admission"
   },
   {
    "fieldname": "pace_admission_tab",
@@ -759,12 +784,152 @@
    "fieldtype": "Data",
    "label": "Know More URL",
    "options": "URL"
+  },
+  {
+   "description": "Settings on this tab apply only to the Indian Nationals portal (/nlsatadmissions). The International portal has its own copy on the International Admission tab.",
+   "fieldname": "nlsat_portal_section",
+   "fieldtype": "Section Break",
+   "label": "Portal Details"
+  },
+  {
+   "fieldname": "nlsat_portal_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "international_admission_tab",
+   "fieldtype": "Tab Break",
+   "label": "International Admission"
+  },
+  {
+   "description": "Settings on this tab apply only to the International portal (/nlsat-international).",
+   "fieldname": "intl_portal_section",
+   "fieldtype": "Section Break",
+   "label": "Portal Details"
+  },
+  {
+   "default": "NLSAT",
+   "description": "Brand name shown after the Portal title in the browser tab and in Google search results, on the International home page (/nlsat-international) only. Format: Portal title \u2014 Title Suffix. If left blank, NLSAT is used.",
+   "fieldname": "intl_title_suffix",
+   "fieldtype": "Data",
+   "label": "Title Suffix (Browser Tab / Google)"
+  },
+  {
+   "fieldname": "intl_portal_col_break",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "intl_portal_subtitle",
+   "fieldtype": "Small Text",
+   "label": "Portal subtitle",
+   "reqd": 1
+  },
+  {
+   "fieldname": "intl_section_branding",
+   "fieldtype": "Section Break",
+   "label": "Branding & Identity"
+  },
+  {
+   "fieldname": "intl_hero_image",
+   "fieldtype": "Attach Image",
+   "label": "Hero / Banner image",
+   "reqd": 1
+  },
+  {
+   "description": "Shown as a \"Know More\" button on the International announcement banner (opens in a new tab). Leave empty to hide the button.",
+   "fieldname": "intl_know_more_url",
+   "fieldtype": "Data",
+   "label": "Know More URL",
+   "options": "URL"
+  },
+  {
+   "fieldname": "intl_col_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "intl_admission_website_url",
+   "fieldtype": "Data",
+   "label": "Admission Website URL",
+   "options": "URL"
+  },
+  {
+   "fieldname": "intl_section_footer",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "intl_admission_footer",
+   "fieldtype": "Table",
+   "label": "Admission Footer",
+   "options": "Footer Context"
+  },
+  {
+   "collapsible": 1,
+   "description": "Images for the hero carousel on the /nlsat-international page.",
+   "fieldname": "intl_slideshow_section",
+   "fieldtype": "Section Break",
+   "label": "Hero Banner Slideshow"
+  },
+  {
+   "default": "0",
+   "fieldname": "intl_show_admission_page",
+   "fieldtype": "Check",
+   "label": "Show Admission Page"
+  },
+  {
+   "fieldname": "intl_portal_tagline",
+   "fieldtype": "Small Text",
+   "label": "Admission Login Page tagline / Subtitle"
+  },
+  {
+   "fieldname": "intl_slideshow_images",
+   "fieldtype": "Table",
+   "label": "Slideshow Images",
+   "options": "Portal Slideshow Image"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "intl_section_announcement",
+   "fieldtype": "Section Break",
+   "label": "Announcement Banner"
+  },
+  {
+   "default": "0",
+   "fieldname": "intl_show_announcement",
+   "fieldtype": "Check",
+   "label": "Show Announcement Banner"
+  },
+  {
+   "depends_on": "eval:doc.intl_show_announcement==1",
+   "fieldname": "intl_header_announcement",
+   "fieldtype": "Text Editor",
+   "label": "Announcement Content"
+  },
+  {
+   "collapsible": 1,
+   "fieldname": "intl_section_status",
+   "fieldtype": "Section Break",
+   "label": "Portal Status"
+  },
+  {
+   "default": "1",
+   "fieldname": "intl_portal_active",
+   "fieldtype": "Check",
+   "label": "Portal Active"
+  },
+  {
+   "fieldname": "intl_col_break_2",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval:doc.intl_portal_active==0",
+   "fieldname": "intl_maintenance_message",
+   "fieldtype": "Text Editor",
+   "label": "Maintenance message"
   }
  ],
  "issingle": 1,
  "links": [],
  "make_attachments_public": 1,
- "modified": "2026-11-06 13:00:00.000000",
+ "modified": "2026-11-12 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant Portal Config",

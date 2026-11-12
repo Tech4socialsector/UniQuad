@@ -128,9 +128,12 @@ def get_portal_shell_data():
     ws = frappe.db.get_singles_dict("Website Settings", cast=True) or {}
 
     # ── Applicant Portal Config ───────────────────────────────────
+    # Portal-specific fields (portal_active, admission_footer, …) come from the
+    # applicant's NLSAT portal tab: Domestic or International.
     try:
-        pc = frappe.get_doc("Applicant Portal Config", "Applicant Portal Config",
-                            ignore_permissions=True).as_dict()
+        from slcm.admission.utils.portal import get_portal_config_doc_values
+
+        pc = get_portal_config_doc_values()
     except Exception:
         pc = {}
 
@@ -146,8 +149,6 @@ def get_portal_shell_data():
         user_image = uinfo.get("user_image") or ""
 
     try:
-        pc_doc = frappe.get_doc("Applicant Portal Config", "Applicant Portal Config", ignore_permissions=True)
-        
         def format_footer(rows):
             cols = []
             curr = None
@@ -162,7 +163,7 @@ def get_portal_shell_data():
                     curr["links"].append({"label": r.get("label"), "route": r.get("route")})
             return cols
 
-        admission_footer = format_footer(pc_doc.get("admission_footer") or [])
+        admission_footer = format_footer(pc.get("admission_footer") or [])
     except Exception:
         admission_footer = []
 

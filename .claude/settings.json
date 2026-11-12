@@ -56,7 +56,21 @@
       "Bash(export MSYS_NO_PATHCONV=1; *)",
       "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm\" && tail -8 slcm/patches.txt && ls slcm/patches | tail -5)",
       "Bash(printf 'slcm.patches.v2_0.set_class_xii_status_completed_for_pg\\\\n')",
-      "Bash(export MSYS_NO_PATHCONV=1; wsl -d Ubuntu-24.04 -- bash -lc \"cd ~/frappe-bench/apps/frappe && grep -rn 'depends_on' --include=*.py frappe/model frappe/utils/safe_exec.py | head -20\"; cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm\" && grep -rn \"def _mandatory_value_missing\\\\|safe_eval\\\\|depends_on\" slcm/admission/doctype/applicant/applicant.py | head)"
+      "Bash(export MSYS_NO_PATHCONV=1; wsl -d Ubuntu-24.04 -- bash -lc \"cd ~/frappe-bench/apps/frappe && grep -rn 'depends_on' --include=*.py frappe/model frappe/utils/safe_exec.py | head -20\"; cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm\" && grep -rn \"def _mandatory_value_missing\\\\|safe_eval\\\\|depends_on\" slcm/admission/doctype/applicant/applicant.py | head)",
+      "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm/www\" && diff nlsatadmissions/index.py nlsat-international/index.py; diff nlsatadmissions/index.html nlsat-international/index.html | head -40; ls nlsat-international nlsatadmissions)",
+      "Read(///wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm/**)",
+      "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm\" && tail -15 patches.txt && ls patches | tail -15)",
+      "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm\" && head -12 patches.txt && cat patches/v2_0/set_rfid_student_map_defaults.py | head -20)",
+      "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm\" && grep -n \"post_model_sync\" patches.txt && tail -c 120 patches.txt | od -c | tail -4)",
+      "Bash(printf 'slcm.patches.v2_0.seed_international_portal_config\\\\r\\\\n')",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -lc 'cd ~/frappe-bench && ls sites | grep -v -E \"\\\\.json$|assets|apps\" ; cat sites/currentsite.txt 2>/dev/null')",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -lc 'cd ~/frappe-bench && grep -l slcm sites/*/site_config.json; cat sites/common_site_config.json | grep -i default_site; bench --site slcm.com list-apps 2>&1 | tail -5')",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -lc 'cd ~/frappe-bench && bench --site slcm.com migrate 2>&1 | tail -15')",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -lc 'cd ~/frappe-bench/sites && PYTHONPATH=/tmp/slcm_check ../env/bin/python -c \" *)",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -lc 'curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:8000/nlsatadmissions')",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -lc ' *)",
+      "Bash(MSYS_NO_PATHCONV=1 wsl -d Ubuntu-24.04 bash -l /tmp/slcm_check/e2e.sh)",
+      "Bash(cd \"//wsl.localhost/Ubuntu-24.04/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm\" && cat admission/doctype/applicant_portal_config/applicant_portal_config.py; sed -n 505,530p admission/web_form/applicant_form/applicant_form.js; grep -rn \"get_portal_shell_data\\\\|portal_fieldname\\\\|get_portal_config_doc_values\" --include=*.py --include=*.js --include=*.html . | grep -v \"^./admission/utils/portal.py\")"
     ],
     "additionalDirectories": [
       "\\tmp"
