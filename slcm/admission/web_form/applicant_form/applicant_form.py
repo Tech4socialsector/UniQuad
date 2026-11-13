@@ -1,3 +1,4 @@
+import re
 from html import unescape
 
 import frappe
@@ -127,9 +128,12 @@ def get_portal_shell_data():
     ws = frappe.db.get_singles_dict("Website Settings", cast=True) or {}
 
     # ── Applicant Portal Config ───────────────────────────────────
+    # Portal-specific fields (portal_active, admission_footer, …) come from the
+    # applicant's NLSAT portal tab: Domestic or International.
     try:
-        pc = frappe.get_doc("Applicant Portal Config", "Applicant Portal Config",
-                            ignore_permissions=True).as_dict()
+        from slcm.admission.utils.portal import get_portal_config_doc_values
+
+        pc = get_portal_config_doc_values()
     except Exception:
         pc = {}
 
@@ -145,8 +149,6 @@ def get_portal_shell_data():
         user_image = uinfo.get("user_image") or ""
 
     try:
-        pc_doc = frappe.get_doc("Applicant Portal Config", "Applicant Portal Config", ignore_permissions=True)
-        
         def format_footer(rows):
             cols = []
             curr = None
@@ -161,7 +163,7 @@ def get_portal_shell_data():
                     curr["links"].append({"label": r.get("label"), "route": r.get("route")})
             return cols
 
-        admission_footer = format_footer(pc_doc.get("admission_footer") or [])
+        admission_footer = format_footer(pc.get("admission_footer") or [])
     except Exception:
         admission_footer = []
 
@@ -500,6 +502,7 @@ def save_applicant_draft(data, ignore_mandatory=True):
     valid_scalar  = {f.fieldname for f in meta.fields if f.fieldtype not in SKIP_TYPES} - PROTECTED_FIELDS
     attach_fields = {f.fieldname for f in meta.fields if f.fieldtype in ["Attach", "Attach Image"]}
     child_tables  = {f.fieldname for f in meta.fields if f.fieldtype == "Table"}
+    phone_fields  = {f.fieldname for f in meta.fields if f.fieldtype == "Phone"}
 
     def _is_valid_file(file_url):
         if not file_url or not isinstance(file_url, str):
@@ -524,6 +527,9 @@ def save_applicant_draft(data, ignore_mandatory=True):
             continue
         if key in valid_scalar:
             if key in attach_fields and value and not _is_valid_file(value):
+                value = None
+            # Phone "+91-", "+91-null", "+91-undefined": an ISD with no number is an empty field.
+            if key in phone_fields and isinstance(value, str) and not re.sub(r"\D", "", value.split("-", 1)[-1] if "-" in value else value):
                 value = None
             try:
                 setattr(doc, key, value)

@@ -208,6 +208,16 @@ class Applicant(Document):
             title=_("Not allowed"),
         )
 
+    def _set_class_xii_status(self):
+        """
+        Class XII Status is asked only for Undergraduate programmes (Completed / Appearing).
+        Postgraduate and Research Course applicants have finished Class XII: always "Completed".
+        Also fills the "Completed" default when the value arrives empty.
+        """
+        level = (self.get("program_level") or "").strip()
+        if (level and level != "Undergraduate") or not self.get("class_xii_status"):
+            self.class_xii_status = "Completed"
+
     def validate(self):
         """
         Runs on every save.
@@ -221,6 +231,7 @@ class Applicant(Document):
 
         set_intake_type(self)
         set_admission_details(self)
+        self._set_class_xii_status()
         self._validate_nationality_matches_foreign_national()
         self._validate_education_percentage_bounds(
             on_submit=self.status in ("Submitted", "Submitted and Paid")
@@ -3308,6 +3319,102 @@ def _mandatory_value_missing(df, value, zero_is_empty):
     return not (strip_html(text).strip() or "<img" in text)
 
 
+_APPLICANT_WEB_FORM = "applicant-form"
+_LAYOUT_FIELDTYPES = {"Section Break", "Column Break", "Tab Break", "Page Break", "HTML", "Button", "Heading", "Fold"}
+_SECTION_FIELDTYPES = {"Section Break", "Tab Break", "Page Break"}
+
+
+def _eval_form_condition(expr, doc_dict):
+    """
+    Evaluate a form condition ("eval:doc.x == 'Y'" or a bare fieldname) on the server, the way the
+    browser does. The conditions are written in JavaScript, so the operators are translated first.
+    Returns None when the expression cannot be evaluated (the caller then skips the rule).
+    """
+    expr = (expr or "").strip()
+    if not expr:
+        return True
+    if not expr.startswith("eval:"):
+        value = doc_dict.get(expr)
+        return bool(value) if not isinstance(value, list) else bool(len(value))
+    code = expr[5:].strip()
+    code = (
+        code.replace("!==", "!=")
+        .replace("===", "==")
+        .replace("&&", " and ")
+        .replace("||", " or ")
+    )
+    try:
+        return bool(frappe.safe_eval(code, None, {"doc": doc_dict, "parent": doc_dict}))
+    except Exception:
+        return None
+
+
+def _get_missing_conditional_mandatory_fields(doc, already_reported):
+    """
+    Labels of fields that are mandatory only under a condition and are empty:
+      • Applicant DocType fields with "Mandatory Depends On" that currently holds;
+      • portal web form fields marked mandatory (reqd) or with "Mandatory Depends On".
+    A field counts only while it is shown: its own "Depends On" and that of its enclosing Section /
+    Column must hold (same rule as the portal's Next / tab / submit checks). Statically hidden
+    web form fields are skipped. Unreadable conditions are skipped, never reported.
+    """
+    doc_dict = frappe._dict(doc.as_dict())
+    missing, seen = [], set(already_reported or ())
+
+    def walk(fields, from_web_form):
+        section_shown = column_shown = True
+        for df in fields:
+            ft = df.get("fieldtype")
+            if ft in _SECTION_FIELDTYPES:
+                section_shown = _eval_form_condition(df.get("depends_on"), doc_dict) is not False
+                column_shown = True
+                continue
+            if ft == "Column Break":
+                column_shown = _eval_form_condition(df.get("depends_on"), doc_dict) is not False
+                continue
+            fieldname = df.get("fieldname")
+            if ft in _LAYOUT_FIELDTYPES or not fieldname or fieldname in seen or ft == "Check":
+                continue
+            if from_web_form and cint(df.get("hidden")):
+                continue
+
+            required = from_web_form and cint(df.get("reqd"))
+            if not required and df.get("mandatory_depends_on"):
+                required = _eval_form_condition(df.get("mandatory_depends_on"), doc_dict) is True
+            if not required:
+                continue
+            if not (section_shown and column_shown):
+                continue
+            if _eval_form_condition(df.get("depends_on"), doc_dict) is False:
+                continue
+
+            meta_df = doc.meta.get_field(fieldname)
+            if not meta_df:
+                continue
+            value = doc.get(fieldname)
+            empty = (not value) if ft in ("Table", "Table MultiSelect") else _mandatory_value_missing(
+                meta_df, value, zero_is_empty=True
+            )
+            if empty:
+                seen.add(fieldname)
+                missing.append(_(df.get("label") or meta_df.label or fieldname))
+
+    walk([f.as_dict() for f in doc.meta.fields], from_web_form=False)
+
+    try:
+        web_form_fields = frappe.get_all(
+            "Web Form Field",
+            filters={"parent": _APPLICANT_WEB_FORM, "parenttype": "Web Form"},
+            fields=["fieldname", "fieldtype", "label", "reqd", "hidden", "depends_on", "mandatory_depends_on"],
+            order_by="idx asc",
+        )
+    except Exception:
+        web_form_fields = []
+    walk(web_form_fields, from_web_form=True)
+
+    return missing
+
+
 def get_missing_mandatory_fields(doc):
     """
     Labels of every mandatory value still missing on an Applicant, including inside child-table
@@ -3338,6 +3445,11 @@ def get_missing_mandatory_fields(doc):
                     missing.append(
                         _("{0} — Row {1}: {2}").format(_(tdf.label), row.idx, _(df.label or df.fieldname))
                     )
+
+    # Conditionally mandatory fields ("Mandatory Depends On") and fields that only the portal
+    # web form marks mandatory — Frappe's own server check enforces neither.
+    reported = {df.fieldname for df in doc.meta.get("fields", {"reqd": 1})}
+    missing.extend(_get_missing_conditional_mandatory_fields(doc, reported))
 
     # Submit-only rules from Applicant.validate (they otherwise surface only after payment)
     if doc.get("national_test_name") and flt(doc.get("percentage")) <= 0:

@@ -583,7 +583,8 @@ def get_context(context):
             context.support_name  = _pc.get("support_name") or ""
             context.support_role  = _pc.get("support_role") or ""
             context.support_email = _pc.get("support_email") or ""
-            context.campus_image  = _pc.get("hero_image") or ""
+            from slcm.admission.utils.portal import portal_fieldname
+            context.campus_image  = _pc.get(portal_fieldname("hero_image")) or ""
         except Exception as ex:
             frappe.log_error(str(ex), "my_applications detail context next steps")
 
