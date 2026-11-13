@@ -64,6 +64,8 @@ LOG_FILE = os.path.join(HERE, "agent.log")
 
 STUDENT_CACHE_TTL = 15 * 60  # seconds
 STALE_LOCK_SECONDS = 10 * 60  # lock is touched every row/cycle, so older means a crashed run
+CARDS_RETRY_SECONDS = 30 * 60  # after a failed card-list send, wait this long before reading etpdb again
+CARDS_LOCK_WAIT = 180          # --cards waits this long for a running scheduled sync to finish
 
 log = logging.getLogger("rfid_sync_agent")
 
@@ -442,21 +444,33 @@ def send_cards(cfg, live, dry_run=False):
     return len(records)
 
 
+def mark_cards(sent):
+    state = read_state()  # re-read: the punch cycle may have moved the watermark meanwhile
+    state["cards_sent_at" if sent else "cards_failed_at"] = time.time()
+    if sent:
+        state.pop("cards_failed_at", None)
+    write_state(state)
+
+
 def maybe_send_cards(cfg, live):
-    """Send the card list when it is older than [agent] cards_every_hours (0 = never on its own)."""
+    """Send the card list when it is older than [agent] cards_every_hours (0 = never on its own).
+    After a failure it waits CARDS_RETRY_SECONDS, so a problem on the live site does not make the agent
+    re-read etpdb every minute."""
     hours = cfg["agent"].getfloat("cards_every_hours", 6)
     if hours <= 0:
         return
     state = read_state()
-    if time.time() - float(state.get("cards_sent_at", 0)) < hours * 3600:
+    now = time.time()
+    if now - float(state.get("cards_sent_at", 0)) < hours * 3600:
+        return
+    if now - float(state.get("cards_failed_at", 0)) < CARDS_RETRY_SECONDS:
         return
     try:
         send_cards(cfg, live)
-        state = read_state()  # the punch cycle may have moved the watermark meanwhile
-        state["cards_sent_at"] = time.time()
-        write_state(state)
+        mark_cards(True)
     except Exception as e:
-        log.warning(f"Card list not sent, will retry next run: {e}")
+        mark_cards(False)
+        log.warning(f"Card list not sent, will retry in {CARDS_RETRY_SECONDS // 60} min: {e}")
 
 
 def test_connections(cfg):
@@ -476,6 +490,15 @@ def test_connections(cfg):
     except Exception as e:
         ok = False
         log.error(f"Live site FAILED: {e}")
+        return ok
+    # Student Map card list: a warning only, swipes work without it
+    try:
+        conf = live.call(STUDENT_MAP_API + "device_map_config")
+        log.info(f"Card list OK: Student Map reads {conf.get('table')}.{conf.get('code_column')}"
+                 f"{' + ' + ', '.join(conf.get('name_columns')) if conf.get('name_columns') else ' (no names)'}")
+    except Exception as e:
+        log.warning(f"Card list WARNING (swipes are not affected): {e}. The live site may not have the "
+                    f"Student Map update yet, or the API user lacks permission.")
     return ok
 
 
@@ -494,13 +517,29 @@ def main():
     if args.test:
         sys.exit(0 if test_connections(cfg) else 1)
 
-    if not acquire_lock():
-        log.info("Another copy is already running — exiting.")
+    got_lock = acquire_lock()
+    if not got_lock and args.cards:
+        # a scheduled sync is running: wait for it rather than skip the requested send
+        log.info("A scheduled sync is running; waiting for it to finish...")
+        deadline = time.time() + CARDS_LOCK_WAIT
+        while not got_lock and time.time() < deadline:
+            time.sleep(5)
+            got_lock = acquire_lock()
+    if not got_lock:
+        log.info("Another copy is already running - exiting." + (" Try --cards again in a few minutes." if args.cards else ""))
+        if args.cards:
+            sys.exit(1)
         return
     try:
         live = LiveSite(cfg)
         if args.cards:
-            send_cards(cfg, live, dry_run=args.dry_run)
+            try:
+                send_cards(cfg, live, dry_run=args.dry_run)
+            except Exception as e:
+                log.error(f"Card list FAILED: {e}")
+                sys.exit(1)
+            if not args.dry_run:
+                mark_cards(True)
             return
         interval = max(30, cfg["agent"].getint("poll_interval_seconds", 60))
         while True:
