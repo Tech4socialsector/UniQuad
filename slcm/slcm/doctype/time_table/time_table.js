@@ -92,6 +92,20 @@ frappe.ui.form.on('Time Table', {
                 }, __('Actions'));
             }
 
+            // RFID swipes of the class's students around this session, as Excel / CSV
+            if (frm.doc.class_name) {
+                frm.add_custom_button(__('RFID Swipe Report'), function () {
+                    frappe.require('/assets/slcm/js/rfid_swipe_report.js', function () {
+                        slcm.rfid_swipe_report.open(frm.doc.class_name, {
+                            time_table: frm.doc.name,
+                            label: [frm.doc.title || frm.doc.course || frm.doc.name,
+                                frappe.datetime.str_to_user(frm.doc.schedule_date),
+                                `${(frm.doc.from_time || '').slice(0, 5)} - ${(frm.doc.to_time || '').slice(0, 5)}`].join(', ')
+                        });
+                    });
+                }, __('Actions'));
+            }
+
             frm.events.render_attendance_lock(frm);
         }
     },

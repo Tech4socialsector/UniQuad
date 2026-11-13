@@ -28,6 +28,12 @@ frappe.listview_settings["Time Table"] = {
 			() => frappe.set_route("query-report", "Time Table Report", get_report_route_options(listview)),
 			group
 		);
+		// Ticked sessions (any classes), or with nothing ticked, chosen classes and dates
+		listview.page.add_inner_button(
+			__("RFID Swipe Report"),
+			() => frappe.require("/assets/slcm/js/rfid_swipe_report.js", () => slcm.rfid_swipe_report.open_list(listview)),
+			group
+		);
 		listview.page.get_inner_group_button(group).addClass("tt-actions-dark");
 		add_dark_actions_style();
 	},

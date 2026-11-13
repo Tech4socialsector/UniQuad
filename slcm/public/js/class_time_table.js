@@ -91,6 +91,11 @@ function ctt_download_base64(content, filename, mime) {
 	setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+/** RFID Swipe Report (public/js/rfid_swipe_report.js, shared with the Time Table form). */
+function ctt_swipe_report(class_name, opts) {
+	frappe.require("/assets/slcm/js/rfid_swipe_report.js", () => slcm.rfid_swipe_report.open(class_name, opts));
+}
+
 /** The Class Participation weeks: dates, classes, students and their names.
  * Full width, scrolling inside its box (about 8 weeks in view). */
 function ctt_weeks_table(weeks) {
@@ -1213,13 +1218,23 @@ slcm.class_time_table.CalendarView = class CalendarView {
 			fields: [{
 				fieldtype: "HTML", fieldname: "calendar_html",
 				options: `<div class="ctt-cal-view">
-						<div class="ctt-legend">${legend}<span class="ctt-muted">${__("Left edge: attendance state; fill: the Time Table Color. Click a class to see its attendance and class participation, or edit it.")}</span></div>
+						<div class="ctt-legend">${legend}<span class="ctt-muted">${__("Left edge: attendance state; fill: the Time Table Color. Click a class to see its attendance and class participation, or edit it.")}</span>
+							<button class="btn btn-default btn-xs ctt-swipe-range" style="margin-left:auto">${__("RFID Swipe Report")}</button></div>
 						<div class="ctt-calendar"></div>
 					</div>
 					<div class="ctt-session-view" style="display:none"></div>`,
 			}],
 		});
 		this.d.$wrapper.addClass("ctt-dialog");
+		// Swipe Report for the dates in view (the month shown, by default)
+		this.d.$wrapper.find(".ctt-swipe-range").on("click", () => {
+			const view = this.calendar && this.calendar.view;
+			const last = view ? new Date(view.currentEnd.getTime() - 86400000) : null;
+			ctt_swipe_report(this.cls.name, {
+				from_date: view ? frappe.datetime.obj_to_str(view.currentStart) : frappe.datetime.month_start(),
+				to_date: last ? frappe.datetime.obj_to_str(last) : frappe.datetime.month_end(),
+			});
+		});
 		$(`<div class="ctt-context"></div>`)
 			.html(ctt_context_chips(this.cls, info))
 			.insertAfter(this.d.$wrapper.find(".modal-header"));
@@ -1297,6 +1312,7 @@ slcm.class_time_table.CalendarView = class CalendarView {
 						${open && !info.is_past ? `<button class="btn btn-default btn-sm ctt-swap">${__("Swap Session")}</button>` : ""}
 						${open ? `<button class="btn btn-default btn-sm ctt-cancel-session">${__("Cancel Session")}</button>` : ""}
 						<button class="btn btn-default btn-sm ctt-open-tt">${__("Open Time Table")}</button>
+						<button class="btn btn-default btn-sm ctt-swipes">${__("RFID Swipe Report")}</button>
 						${info.is_cancelled ? "" : `<button class="btn btn-primary btn-sm ctt-mark">${__("Mark Attendance")}</button>`}
 					</div>
 				</div>
@@ -1339,6 +1355,10 @@ slcm.class_time_table.CalendarView = class CalendarView {
 			});
 			$view.find(".ctt-cancel-session").on("click", () => this.cancel_session(info));
 			$view.find(".ctt-swap").on("click", () => this.swap_session(info));
+			$view.find(".ctt-swipes").on("click", () => ctt_swipe_report(this.cls.name, {
+				time_table: info.name,
+				label: `${info.title || info.name}, ${info.date_fmt}, ${ctt_time(info.from_time)} – ${ctt_time(info.to_time)}`,
+			}));
 			$view.find(".ctt-open-tt").on("click", () => {
 				this.d.hide();
 				frappe.set_route("Form", "Time Table", info.name);
