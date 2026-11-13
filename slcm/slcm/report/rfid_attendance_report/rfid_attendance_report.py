@@ -123,6 +123,26 @@ def _get_columns(filters):
     view = filters.get("view_by", "Daily")
     period_label = {"Daily": _("Date"), "Weekly": _("Week"), "Monthly": _("Month")}[view]
 
+    # Without the Student filter a terminal row covers many students: the student columns show the one who
+    # swiped there most. With it, each row is one student, so they are plain student columns.
+    if _parse_multiselect(filters.get("student")):
+        student_cols = [
+            {"fieldname": "student",       "label": _("Student ID"),    "fieldtype": "Link",
+             "options": "Student Master",                                                       "width": 145},
+            {"fieldname": "student_name",  "label": _("Student Name"),  "fieldtype": "Data",  "width": 175},
+            {"fieldname": "programme",     "label": _("Programme"),     "fieldtype": "Data",  "width": 230},
+            {"fieldname": "academic_year", "label": _("Academic Year"), "fieldtype": "Data",  "width": 120},
+        ]
+    else:
+        student_cols = [
+            {"fieldname": "student",       "label": _("Most Swipes: Student ID"),    "fieldtype": "Link",
+             "options": "Student Master",                                                                 "width": 190},
+            {"fieldname": "student_name",  "label": _("Most Swipes: Student Name"),  "fieldtype": "Data", "width": 210},
+            {"fieldname": "student_swipes","label": _("Most Swipes: Their Swipes"),  "fieldtype": "Int",  "width": 190},
+            {"fieldname": "programme",     "label": _("Most Swipes: Programme"),     "fieldtype": "Data", "width": 230},
+            {"fieldname": "academic_year", "label": _("Most Swipes: Academic Year"), "fieldtype": "Data", "width": 200},
+        ]
+
     return [
         {"fieldname": "period_label",    "label": period_label,               "fieldtype": "Data",     "width": 185},
         {"fieldname": "terminal_alias",  "label": _("Terminal / Room"),       "fieldtype": "Data",     "width": 165},
@@ -131,11 +151,7 @@ def _get_columns(filters):
         {"fieldname": "unique_students", "label": _("Unique Students"),       "fieldtype": "Int",      "width": 130},
         {"fieldname": "known_students",  "label": _("Known Students"),        "fieldtype": "Int",      "width": 130},
         {"fieldname": "unknown_swipes",  "label": _("Unknown Swipes"),        "fieldtype": "Int",      "width": 130},
-        {"fieldname": "student",         "label": _("Student ID"),            "fieldtype": "Link",
-         "options": "Student Master",                                                                   "width": 145},
-        {"fieldname": "student_name",    "label": _("Student Name"),          "fieldtype": "Data",     "width": 175},
-        {"fieldname": "programme",       "label": _("Programme"),             "fieldtype": "Data",     "width": 230},
-        {"fieldname": "academic_year",   "label": _("Academic Year"),         "fieldtype": "Data",     "width": 120},
+        *student_cols,
         {"fieldname": "first_swipe",     "label": _("First Swipe (Period)"),  "fieldtype": "Datetime", "width": 175},
         {"fieldname": "last_swipe",      "label": _("Last Swipe (Period)"),   "fieldtype": "Datetime", "width": 175},
     ]
@@ -210,6 +226,10 @@ def _get_data(filters):
     }[view]
 
     # ── Detail rows: grouped by period + terminal + area ───────────────────────
+    # A terminal row covers every student who swiped there, so it has no single student to show. With the
+    # Student filter set, rows are split per student as well, so each row is one student at one terminal.
+    per_student = bool(_parse_multiselect(filters.get("student")))
+    student_group = ", al.student" if per_student else ""
     detail_sql = f"""
         SELECT
             {period_expr}                                           AS period_key,
@@ -238,10 +258,11 @@ def _get_data(filters):
         FROM `tabAttendance Log` al
         LEFT JOIN `tabStudent Master` sm ON sm.name = al.student
         WHERE {where}
-        GROUP BY period_key, al.terminal_alias, al.location
+        GROUP BY period_key, al.terminal_alias, al.location{student_group}
         ORDER BY period_key ASC, total_swipes DESC
     """
     detail_rows = frappe.db.sql(detail_sql, params, as_dict=True)
+    top = {} if per_student else _top_students(period_expr, where, params)
 
     # ── True unique-student counts per period (avoids double-counting
     #    students who swipe at multiple terminals in the same period) ────────────
@@ -291,7 +312,7 @@ def _get_data(filters):
         # ── Summary row ───────────────────────────────────────────────────────────
         data.append({
             "period_label":    label,
-            "terminal_alias":  f"All terminals  ({len(rows)})",
+            "terminal_alias":  f"All terminals  ({len({(r.terminal_alias, r.area_alias) for r in rows})})",
             "area_alias":      "",
             "total_swipes":    sum_swipes,
             "unique_students": sum_unique,
@@ -299,6 +320,7 @@ def _get_data(filters):
             "unknown_swipes":  sum_unknown,
             "student":         "",
             "student_name":    "",
+            "student_swipes":  None,
             "programme":       "",
             "academic_year":   "",
             "first_swipe":     period_first,
@@ -307,6 +329,12 @@ def _get_data(filters):
 
         # ── Detail rows ────────────────────────────────────────────────────────
         for r in rows:
+            # Without the Student filter: the student who swiped most at this terminal in this period.
+            swipes = None
+            if not per_student:
+                t = top.get((str(r.period_key), r.terminal_alias, r.area_alias)) or {}
+                r.student, r.student_name = t.get("student"), t.get("student_name")
+                r.programme, r.academic_year, swipes = t.get("programme"), t.get("academic_year"), t.get("swipes")
             data.append({
                 "period_label":    "",
                 "terminal_alias":  r.terminal_alias,
@@ -317,6 +345,7 @@ def _get_data(filters):
                 "unknown_swipes":  int(r.unknown_swipes  or 0),
                 "student":         r.student       or "",
                 "student_name":    r.student_name  or "",
+                "student_swipes":  swipes,
                 "programme":       r.programme     or "",
                 "academic_year":   r.academic_year or "",
                 "first_swipe":     r.first_swipe,
@@ -324,6 +353,42 @@ def _get_data(filters):
             })
 
     return data
+
+
+def _top_students(period_expr, where, params):
+    """{(period, terminal, area): {student, student_name, programme, academic_year, swipes}} — the known student
+    with the most swipes at each terminal in each period (a tie goes to the lower Student ID)."""
+    term = "COALESCE(al.terminal_alias, 'Unknown Terminal')"
+    area = "COALESCE(al.location, 'Unknown Area')"
+    rows = frappe.db.sql(f"""
+        SELECT period_key, terminal_alias, area_alias, student, swipes FROM (
+            SELECT {period_expr} AS period_key, {term} AS terminal_alias, {area} AS area_alias,
+                al.student AS student, COUNT(*) AS swipes,
+                ROW_NUMBER() OVER (PARTITION BY {period_expr}, {term}, {area}
+                                   ORDER BY COUNT(*) DESC, al.student ASC) AS rn
+            FROM `tabAttendance Log` al
+            LEFT JOIN `tabStudent Master` sm ON sm.name = al.student
+            WHERE {where} AND al.student IS NOT NULL AND al.student != ''
+            GROUP BY {period_expr}, {term}, {area}, al.student
+        ) ranked
+        WHERE rn = 1
+    """, params, as_dict=True)
+    if not rows:
+        return {}
+    info = {
+        s.name: s for s in frappe.get_all(
+            "Student Master", filters={"name": ["in", list({r.student for r in rows})]},
+            fields=["name", "first_name", "programme_of_study", "academic_year"],
+        )
+    }
+    out = {}
+    for r in rows:
+        sm = info.get(r.student) or frappe._dict()
+        out[(str(r.period_key), r.terminal_alias, r.area_alias)] = {
+            "student": r.student, "student_name": sm.first_name, "programme": sm.programme_of_study,
+            "academic_year": sm.academic_year, "swipes": int(r.swipes or 0),
+        }
+    return out
 
 
 # ── Summary cards ──────────────────────────────────────────────────────────────
