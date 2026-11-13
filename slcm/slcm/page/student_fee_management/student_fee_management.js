@@ -778,13 +778,14 @@ class StudentFeeManagement {
 					<div class="sfm-avatar">${avatar}</div>
 					<div class="sfm-identity">
 						<div class="sfm-name">${sfm_esc(p.first_name || p.name)}</div>
-						<div class="sfm-sub">${sfm_esc(p.registration_id || p.name)}</div>
 						<div class="sfm-pills">
 							${p.student_status ? `<span class="sfm-pill sfm-pill-muted">${sfm_esc(p.student_status)}</span>` : ""}
 						</div>
 						<div class="sfm-sub">${sfm_esc(p.official_email_id || p.email || "")}</div>
 					</div>
 					<div class="sfm-metas">
+						${meta(__("Registration ID"), p.registration_id)}
+						${meta(__("Phone"), p.phone)}
 						${meta(__("Programme"), p.program_name || p.programme_of_study)}
 						${meta(__("Year / Term"), [p.academic_year, p.academic_term].filter(Boolean).join(" · "))}
 					</div>
@@ -873,7 +874,9 @@ class StudentFeeManagement {
 			<div class="sfm-section-head">
 				<h2 class="sfm-section-title sfm-sr-only">${__("Manage Dues")}</h2>
 				<div class="sfm-actions">
+					<!-- Issue Refund hidden for now
 					<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refund">${sfm_icon("undo", 15)}<span>${__("Issue Refund")}</span></button>
+					-->
 					<button type="button" class="sfm-btn sfm-btn-secondary" data-act="refund-excess"
 						title="${sfm_esc(__("Available excess: {0}", [sfm_money(this.detail.summary.excess_amount)]))}">${sfm_icon("wallet", 15)}<span>${__("Refund from Excess")}</span></button>
 					<button type="button" class="sfm-btn sfm-btn-primary" data-act="create">${sfm_icon("plus", 15)}<span>${__("Create a due")}</span></button>
@@ -1273,12 +1276,13 @@ class StudentFeeManagement {
 				{ fieldtype: "Select", fieldname: "university_bank_account", label: __("University bank account"), options: bank_accounts },
 				{ fieldtype: "Data", fieldname: "bank_name", label: __("Bank Name") },
 				{ fieldtype: "Column Break" },
-				{ fieldtype: "Data", fieldname: "reference_number", label: __("Reference / UTR No.") },
+				{ fieldtype: "Data", fieldname: "reference_number", label: __("Reference / UTR No."), reqd: 1 },
 				{ fieldtype: "Date", fieldname: "transaction_date", label: __("Transaction Date") },
 				{ fieldtype: "Small Text", fieldname: "remarks", label: __("Remarks"), reqd: 1 },
 			],
 			primary_action_label: __("Record Payment"),
 			primary_action: (values) => {
+				if (!(values.reference_number || "").trim()) return frappe.msgprint(__("Reference / UTR No. is mandatory."));
 				if (!(values.remarks || "").trim()) return frappe.msgprint(__("Remarks are mandatory."));
 				const allocations = [];
 				let invalid = null;
