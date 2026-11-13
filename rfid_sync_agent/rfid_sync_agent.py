@@ -24,6 +24,7 @@ Usage:
   python rfid_sync_agent.py              # run forever, poll every N seconds
   python rfid_sync_agent.py --once       # catch up on new punches, then exit (Task Scheduler / cron)
   python rfid_sync_agent.py --test       # check SQL + live site connectivity only
+  python rfid_sync_agent.py --cards      # send the Student Map card list (card code + name) now
   python rfid_sync_agent.py --once --dry-run [--from-id N]
                                          # show what would be pushed, write nothing
 """
@@ -260,6 +261,14 @@ class LiveSite:
             raise RuntimeError(f"Live site rejected the API key/secret: HTTP {resp.status_code} {resp.text[:200]}")
         return resp.json().get("message")
 
+    def call(self, method, data=None):
+        """Whitelisted method; GET without data, POST (JSON body) with it. Returns `message`."""
+        path = f"/api/method/{method}"
+        resp = self._request("POST", path, json=data) if data is not None else self._request("GET", path)
+        if resp.status_code != 200:
+            raise TransientError(f"{method}: HTTP {resp.status_code} {resp.text[:300]}")
+        return resp.json().get("message")
+
     def max_source_log_id(self):
         rows = self.get_list("RFID SQL Punch Log", [], ["source_log_id"], order_by="source_log_id desc")
         return int(rows[0]["source_log_id"]) if rows else 0
@@ -355,7 +364,7 @@ def run_cycle(cfg, live, dry_run=False, from_id=None):
         last_id = live.max_source_log_id()
         log.info(f"First run: starting after the live site's highest source_log_id {last_id}")
         if not dry_run:
-            write_state({"last_log_id": last_id})
+            write_state({**state, "last_log_id": last_id})
 
     rows = fetch_rows(cfg, last_id, cfg["agent"].getint("batch_size", 500))
     if not rows:
@@ -380,13 +389,74 @@ def run_cycle(cfg, live, dry_run=False, from_id=None):
             break
 
     if not dry_run and new_last > last_id:
-        write_state({"last_log_id": new_last, "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")})
+        write_state({**read_state(), "last_log_id": new_last, "updated_at": time.strftime("%Y-%m-%d %H:%M:%S")})
 
     log.info(f"Cycle: fetched={len(rows)} pushed={pushed} skipped={skipped} watermark {last_id} -> {new_last}"
              + (" (dry-run, not saved)" if dry_run else ""))
     if failed:
         log.warning(f"Stopped early, will retry next cycle: {failed}")
     return len(rows)
+
+
+# ---------------------------------------------------------------------------
+# Student Map card list
+# ---------------------------------------------------------------------------
+# The live site cannot reach the campus SQL Server, so its Student Map uses the
+# card list this agent sends. Table and columns come from the live site's
+# RFID SQL Agent Settings -> Student Map, so they are set in one place only.
+
+STUDENT_MAP_API = "slcm.slcm.rfid_sql_agent.student_map."
+
+
+def _cell(v):
+    if v is None:
+        return ""
+    if isinstance(v, float) and v.is_integer():
+        v = int(v)
+    return str(v).strip()
+
+
+def send_cards(cfg, live, dry_run=False):
+    conf = live.call(STUDENT_MAP_API + "device_map_config")
+    table = _safe_ident(conf.get("table"), "")
+    code_col = _safe_ident(conf.get("code_column"), "")
+    name_cols = [c for c in (_safe_ident(n, "") for n in conf.get("name_columns") or []) if c]
+    if not table or not code_col:
+        raise RuntimeError(f"Student Map table/column not set on the live site: {conf}")
+
+    distinct = "" if name_cols else "DISTINCT "
+    conn = get_sql_connection(cfg)
+    try:
+        cur = conn.cursor()
+        cur.execute(f"SELECT {distinct}{', '.join([code_col] + name_cols)} FROM {table} WHERE {code_col} IS NOT NULL")
+        rows = cur.fetchall()
+    finally:
+        conn.close()
+
+    records = [[_cell(r[0]), re.sub(r"\s+", " ", " ".join(p for p in (_cell(x) for x in r[1:]) if p))] for r in rows]
+    if dry_run:
+        log.info(f"[dry-run] card list: {len(records)} records from {table}; first: {records[:3]}")
+        return len(records)
+    result = live.call(STUDENT_MAP_API + "upload_device_records", {"records": records, "table": table})
+    log.info(f"Card list sent: {len(records)} read from {table}, {(result or {}).get('stored')} stored on the live site")
+    return len(records)
+
+
+def maybe_send_cards(cfg, live):
+    """Send the card list when it is older than [agent] cards_every_hours (0 = never on its own)."""
+    hours = cfg["agent"].getfloat("cards_every_hours", 6)
+    if hours <= 0:
+        return
+    state = read_state()
+    if time.time() - float(state.get("cards_sent_at", 0)) < hours * 3600:
+        return
+    try:
+        send_cards(cfg, live)
+        state = read_state()  # the punch cycle may have moved the watermark meanwhile
+        state["cards_sent_at"] = time.time()
+        write_state(state)
+    except Exception as e:
+        log.warning(f"Card list not sent, will retry next run: {e}")
 
 
 def test_connections(cfg):
@@ -413,6 +483,7 @@ def main():
     ap = argparse.ArgumentParser(description="SLCM RFID Sync Agent")
     ap.add_argument("--once", action="store_true", help="run one cycle and exit")
     ap.add_argument("--test", action="store_true", help="test SQL Server and live site connectivity")
+    ap.add_argument("--cards", action="store_true", help="send the Student Map card list now, then exit")
     ap.add_argument("--dry-run", action="store_true", help="show what would be pushed; write nothing")
     ap.add_argument("--from-id", type=int, help="with --dry-run: start after this SQL id")
     args = ap.parse_args()
@@ -428,6 +499,9 @@ def main():
         return
     try:
         live = LiveSite(cfg)
+        if args.cards:
+            send_cards(cfg, live, dry_run=args.dry_run)
+            return
         interval = max(30, cfg["agent"].getint("poll_interval_seconds", 60))
         while True:
             try:
@@ -437,6 +511,7 @@ def main():
                 log.error(f"Cycle failed: {e}")
             if args.dry_run:
                 break
+            maybe_send_cards(cfg, live)
             # A full batch means there's a backlog — go again straight away.
             if fetched < cfg["agent"].getint("batch_size", 500):
                 if args.once:

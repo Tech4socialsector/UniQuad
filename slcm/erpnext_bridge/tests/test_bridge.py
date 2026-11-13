@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 import frappe
 from frappe.tests import IntegrationTestCase
-from frappe.utils import add_days, getdate
+from frappe.utils import add_days, flt, getdate
 
 from slcm.erpnext_bridge import config as conf
 from slcm.erpnext_bridge import install, sync
@@ -388,20 +388,23 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		self.assertEqual(rows[self.saved.slcm_unallocated_fee_account].credit, 500)
 		self.assertEqual(rows[conf.gateway_clearing_account(self.cfg)].debit, 1500)
 
-	def test_gateway_receipt_skips_refunded_admission_and_fully_booked_payments(self):
+	def test_gateway_receipt_skips_admission_and_fully_booked_payments(self):
 		pr = self.paid_request(2000)
 		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
+		# a refund no longer cancels the receipt: the Gateway Refund entry books it (see the refund tests)
 		frappe.db.set_value("SLCM Payment Request", pr.name, "gateway_status", "refunded")
 		frappe.db.commit()
-		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Cancelled")
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
 		frappe.db.set_value("SLCM Payment Request", pr.name, {"gateway_status": "captured", "reference_doctype": "Applicant"})
 		frappe.db.commit()
-		self.assertIsNone(sync.sync_document("Gateway Receipt", pr.name))  # admission: its receipt books it
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Cancelled")  # admission: its receipt books it
 		frappe.db.set_value("SLCM Payment Request", pr.name, "reference_doctype", "Fee Demand")
 		frappe.db.commit()
 		with patch("slcm.slcm.fee.payment_ledger.on_fee_payment"):
 			self.pay(self.demand(amount=2000), 2000, mode="Online Payment", ref=PAY_ID)
-		self.assertIsNone(sync.sync_document("Gateway Receipt", pr.name))  # all on the Fee Payment
+		# all on the Fee Payment (the receipt withdrawn above is not posted again)
+		self.assertIn(sync.sync_document("Gateway Receipt", pr.name), (None, "Cancelled in ERPNext"))
+		self.assertIsNone(sync.live_journal_entry("Gateway Receipt", pr.name))
 
 	def test_counter_exam_fee_posts_to_cash_and_online_logs_are_left_to_their_request(self):
 		from slcm.slcm.fee.counter_payment import record_counter_payment
@@ -950,6 +953,7 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 				frappe.db.count("Bank Account", {"company": self.company}),
 			)
 
+		setup_fee_accounting(self.company)  # brings a company set up before a new SLCM payment mode up to date
 		before = counts()
 		setup_fee_accounting(self.company)
 		setup_fee_accounting(self.company)
@@ -1033,3 +1037,93 @@ class TestSLCMERPNextBridge(IntegrationTestCase):
 		tuition = next(r for r in rows if r["name"] == self.tuition)
 		self.assertTrue(tuition["ok"])
 		self.assertEqual(tuition["account"], conf.component_account(self.cfg, self.tuition)[0])
+
+	# ── refunds recorded in SLCM (paid out from the gateway dashboard) ─────────────────────────────────────────
+
+	def balances(self, pr_name, *accounts):
+		"""Net (Dr - Cr) of the given accounts across every live entry this request posted."""
+		jes = frappe.get_all("Journal Entry", {"slcm_reference_name": pr_name, "docstatus": 1}, pluck="name")
+		out = {a: 0.0 for a in accounts}
+		for row in frappe.get_all("Journal Entry Account", {"parent": ("in", jes or ["-"])}, ["account", "debit", "credit"]):
+			if row.account in out:
+				out[row.account] = round(out[row.account] + row.debit - row.credit, 2)
+		return out
+
+	def test_refund_of_unapplied_money_releases_it_and_payout_deducts_it(self):
+		from slcm.slcm.fee import payment_ledger as pl
+
+		clearing = conf.gateway_clearing_account(self.cfg)
+		held, bank = self.saved.slcm_unallocated_fee_account, self.saved.default_bank_account
+		pr = self.paid_request(2000)  # applied to nothing: a duplicate payment
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
+		self.settle(pr, 2000, fees=40)
+		self.assertEqual(sync.sync_document("SLCM Payment Request", pr.name), "Posted", sync.last_error("SLCM Payment Request", pr.name))
+
+		# ① the refund is recorded (here: reported by the gateway, not yet in a payout)
+		pl.record_gateway_refund(PAY_ID, "rfnd_ERPTEST1", 2000, refunded_on=self.date, source="test")
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Gateway Refund", pr.name), "Posted", sync.last_error("Gateway Refund", pr.name))
+		je = frappe.get_doc("Journal Entry", sync.live_journal_entry("Gateway Refund", pr.name))
+		rows = self.je_rows(je.name)
+		self.assertEqual((rows[held].debit, rows[clearing].credit), (2000, 2000))
+		self.assertIn("gateway refund", je.user_remark)
+		self.assertIn("rfnd_ERPTEST1", je.user_remark)
+		self.assertEqual(sync.sync_document("Gateway Refund Payout", pr.name), None)  # not deducted yet
+
+		# ② a later payout deducts it: the same refund id gets the payout, not a second refund
+		pl.record_gateway_refund(PAY_ID, "rfnd_ERPTEST1", 2000, refunded_on=self.date, source="test",
+		                         payout="PO-ERPTEST (UTR U123)", payout_date=self.date)
+		frappe.db.commit()
+		self.assertEqual(flt(frappe.db.get_value("SLCM Payment Request", pr.name, "refunded_amount")), 2000)
+		self.assertEqual(sync.sync_document("Gateway Refund Payout", pr.name), "Posted", sync.last_error("Gateway Refund Payout", pr.name))
+		rows = self.je_rows(sync.live_journal_entry("Gateway Refund Payout", pr.name))
+		self.assertEqual((rows[clearing].debit, rows[bank].credit), (2000, 2000))
+
+		# every account the payment touched ends where the money really is
+		self.assertEqual(self.balances(pr.name, clearing, held, bank), {clearing: 0.0, held: 0.0, bank: 1960 - 2000})
+
+	def test_partial_refunds_rebook_and_never_exceed_the_unapplied_money(self):
+		from slcm.slcm.fee import payment_ledger as pl
+
+		held = self.saved.slcm_unallocated_fee_account
+		pr = self.paid_request(1500)
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
+		pl.record_gateway_refund(PAY_ID, "rfnd_ERPTEST2", 500, refunded_on=self.date, source="test")
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Gateway Refund", pr.name), "Posted")
+		pl.record_gateway_refund(PAY_ID, "rfnd_ERPTEST3", 700, refunded_on=self.date, source="test")
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Gateway Refund", pr.name), "Posted")
+		self.assertEqual(self.je_rows(sync.live_journal_entry("Gateway Refund", pr.name))[held].debit, 1200)
+		self.assertEqual(frappe.db.count("Journal Entry", {"slcm_reference_doctype": "Gateway Refund",
+		                                                   "slcm_reference_name": pr.name, "docstatus": 1}), 1)
+		# a refund larger than the unapplied money left (₹300) is a fee applied to a due: left to its Fee Refund
+		pl.record_gateway_refund(PAY_ID, "rfnd_ERPTEST4", 900, refunded_on=self.date, source="test")
+		frappe.db.commit()
+		self.assertEqual(sync.gateway_refund_amount(frappe.get_doc("SLCM Payment Request", pr.name)), 1200)
+		row = next(r for r in pl._refund_log(pr.name) if r["refund_id"] == "rfnd_ERPTEST4")
+		self.assertEqual(row["applies_to"], "applied")
+
+	def test_refunded_payment_keeps_its_receipt(self):
+		pr = self.paid_request(1000)
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
+		frappe.db.set_value("SLCM Payment Request", pr.name, "gateway_status", "refunded")
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Gateway Receipt", pr.name), "Posted")
+
+	def test_fee_refund_through_the_gateway_comes_off_clearing(self):
+		demand = self.demand(amount=3000)
+		self.pay(demand, 3000)
+		refund = frappe.get_doc({
+			"doctype": "Fee Refund", "student": self.student, "refund_source": "Fee Demand", "fee_demand": demand,
+			"refund_type": "Overpayment", "refund_amount": 800, "refund_date": self.date,
+			"refund_mode": "Payment Gateway", "utr_number": "rfnd_ERPTESTFR", "reason": TAG,
+		}).insert(ignore_permissions=True)
+		refund.submit()
+		frappe.db.commit()
+		self.assertEqual(sync.sync_document("Fee Refund", refund.name), "Posted", sync.last_error("Fee Refund", refund.name))
+		je = frappe.get_doc("Journal Entry", sync.live_journal_entry("Fee Refund", refund.name))
+		rows = self.je_rows(je.name)
+		self.assertEqual(rows[conf.gateway_clearing_account(self.cfg)].credit, 800)
+		self.assertEqual(rows[self.saved.slcm_fee_refund_account].debit, 800)
+		self.assertIn("Payment Gateway", je.user_remark)

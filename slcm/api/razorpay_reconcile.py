@@ -287,7 +287,7 @@ def record_invoice_payment(intent, payment_id, captured_amount, source):
 		"payment_mode": "Online Payment",
 		"reference_number": payment_id,
 		"payment_gateway": "Razorpay",
-		"remarks": f"Razorpay order {intent.order_id} ({source})",
+		"remarks": f"{intent.get('paid_by_role') or 'Student'} portal payment — Razorpay order {intent.order_id} ({source})",
 	})
 	fp.insert(ignore_permissions=True)
 	fp.submit()
@@ -302,13 +302,92 @@ def record_invoice_payment(intent, payment_id, captured_amount, source):
 		paid_by_role=intent.get("paid_by_role") or "Student",
 		razorpay_payment_id=payment_id,
 		razorpay_order_id=intent.order_id,
-		webhook_status="Processed",
+		webhook_status="Not Applicable" if source == "browser" else "Processed",
+		to_status=frappe.db.get_value("Fee Invoice", invoice, "status"),
 		remarks=f"Payment captured via Razorpay ({source}) — order {intent.order_id}",
 	)
 	return "recorded"
 
 
-RECORDERS = {"demands": record_demands_payment, "invoice": record_invoice_payment}
+def _exam_recorder(doctype, log_doctype, link_field, fee_field):
+	"""Recorder for a captured re-exam / improvement exam order: the payment log and the registration's Paid
+	mark, exactly what the browser confirm writes. Idempotent on the payment id."""
+
+	def record(intent, payment_id, captured_amount, source):
+		reg = frappe.db.get_value(
+			doctype, {"name": intent.get("registration"), "student": intent.student},
+			["name", "status", "payment_status", fee_field], as_dict=True,
+		)
+		if not reg:
+			return "no_registration"
+		if frappe.db.exists(log_doctype, {"razorpay_payment_id": payment_id}):
+			return "already_recorded"
+		if reg.payment_status in ("Paid", "Captured") or reg.status == "Cancelled":
+			# paid by another payment, or cancelled meanwhile: record_unbooked_captures flags this one for a refund
+			return "nothing_to_allocate"
+		fee = flt(reg.get(fee_field))
+		if flt(captured_amount, 2) + 0.01 < fee:
+			frappe.log_error(
+				f"order: {intent.order_id}\npayment: {payment_id}\n{doctype}: {reg.name}\n"
+				f"captured ₹{flt(captured_amount):,.2f} does not cover the fee ₹{fee:,.2f}. Needs manual review.",
+				"Razorpay exam payment short",
+			)
+			return "short"
+		frappe.get_doc({
+			"doctype": log_doctype,
+			link_field: reg.name,
+			"razorpay_payment_id": payment_id,
+			"razorpay_order_id": intent.order_id,
+			"payment_gateway": "Razorpay",
+			"payment_status": "Paid",
+			"amount": fee,
+			"settlement_amount": fee,
+			"transaction_date": now_datetime(),
+			"gateway_response": json.dumps({
+				"razorpay_payment_id": payment_id, "razorpay_order_id": intent.order_id, "source": source,
+			}, indent=2),
+		}).insert(ignore_permissions=True)
+		frappe.db.set_value(doctype, reg.name, {"payment_status": "Paid", "payment_reference": payment_id})
+		return "recorded"
+
+	return record
+
+
+def record_transcript_payment(intent, payment_id, captured_amount, source):
+	"""Recorder for a captured transcript order: marks the request paid the way the browser confirm does
+	(mark_request_paid also records a second payment of an already-paid request for a refund)."""
+	from slcm.api.transcript_request import mark_request_paid
+
+	name = intent.get("request_name")
+	req = frappe.db.get_value(
+		"Transcript Request", name, ["student", "status", "payment_reference", "fee_amount"], as_dict=True
+	) if name else None
+	if not req or req.student != intent.student:
+		return "no_request"
+	if req.payment_reference == payment_id:
+		return "already_recorded"
+	if req.status == "Cancelled":
+		return "nothing_to_allocate"  # record_unbooked_captures flags it for a refund
+	if flt(captured_amount, 2) + 0.01 < flt(req.fee_amount):
+		frappe.log_error(
+			f"order: {intent.order_id}\npayment: {payment_id}\nrequest: {name}\n"
+			f"captured ₹{flt(captured_amount):,.2f} does not cover the fee ₹{flt(req.fee_amount):,.2f}.",
+			"Razorpay transcript payment short",
+		)
+		return "short"
+	mark_request_paid(name, intent.student, payment_id, intent.order_id)
+	return "recorded"
+
+
+RECORDERS = {
+	"demands": record_demands_payment,
+	"invoice": record_invoice_payment,
+	"re_exam": _exam_recorder("Re Exam Registration", "Re Exam Payment Log", "re_exam_registration", "re_exam_fee"),
+	"improvement": _exam_recorder(
+		"Improvement Exam Registration", "Improvement Exam Payment Log", "improvement_exam_registration", "improvement_fee"
+	),
+	"transcript": record_transcript_payment,
+}
 
 
 # ── 3. Scheduler ──────────────────────────────────────────────────────────
@@ -397,3 +476,84 @@ def reconcile_pending():
 			frappe.log_error(frappe.get_traceback(), f"Razorpay reconcile failed — {row.name}")
 		# end this row's transaction so a browser confirm never waits on the rest of the run
 		frappe.db.commit()
+
+
+# ── 4. Captures nothing booked ─────────────────────────────────────────────
+
+UNBOOKED_DAYS = 2
+UNBOOKED_AFTER_MINUTES = 30  # leave the browser confirm and reconcile_pending time to book it first
+
+
+def _intent_reference(intent):
+	"""(doctype, name) of the charge an intent was for, for the unapplied SLCM Payment Request."""
+	if intent.get("request_name"):
+		return "Transcript Request", intent.request_name
+	if intent.get("invoice_name"):
+		return "Fee Invoice", intent.invoice_name
+	if intent.get("registration"):
+		return ("Improvement Exam Registration" if intent.flow == "improvement" else "Re Exam Registration"), intent.registration
+	if intent.get("demand_names"):
+		return "Fee Demand", intent.demand_names[0]
+	if intent.get("re_exam_registrations"):
+		return "Re Exam Registration", intent.re_exam_registrations[0]
+	return None, None
+
+
+def record_unbooked_captures(days=UNBOOKED_DAYS):
+	"""Hourly: a Razorpay portal payment that was captured but never booked is recorded as an unapplied
+	SLCM Payment Request (flagged for refund) instead of staying invisible.
+
+	This is the second payment for dues that were settled first: a student and a parent paying together
+	in windows opened before slcm.slcm.fee.checkout_guard could stop it, or two tabs. Its browser confirm
+	answers "already paid" without booking anything and closes the order, so reconcile_pending never
+	looks at it again. Returns how many were recorded."""
+	from slcm.slcm.fee import payment_ledger as ledger
+
+	rows = frappe.get_all(
+		"Integration Request",
+		filters={
+			"integration_request_service": "Razorpay",
+			"creation": (">", add_to_date(now_datetime(), days=-days)),
+			"data": ("like", f"%{INTENT_KEY}%"),
+		},
+		fields=["name"],
+		order_by="creation asc",
+		limit=500,
+		ignore_permissions=True,
+	)
+	settled_before = now_datetime().timestamp() - UNBOOKED_AFTER_MINUTES * 60
+	recorded = 0
+	for row in rows:
+		intent = get_intent(row.name)
+		if not intent or not intent.get("order_id") or intent.get("legacy"):
+			continue
+		try:
+			payments = _order_payments(intent.order_id)
+		except requests.RequestException:
+			break  # Razorpay unreachable: try again next hour
+		except Exception:
+			frappe.log_error(frappe.get_traceback(), f"Razorpay unbooked-capture check failed — {row.name}")
+			continue
+		for p in payments:
+			pid = p.get("id")
+			if p.get("status") != "captured" or not pid or flt(p.get("created_at")) > settled_before:
+				continue
+			if ledger._existing(pid):
+				continue
+			ledger.sync_quietly(pid)  # booked by a record the ledger has not caught up with yet
+			if ledger._existing(pid):
+				continue
+			ref_doctype, ref_name = _intent_reference(intent)
+			amount = flt(p.get("amount")) / 100
+			note = (
+				f"Razorpay payment {pid} (₹{amount:,.2f}, order {intent.order_id}) was captured but no SLCM record "
+				"took it (dues already paid by another payment, the charge cancelled, or the payment short of the fee). "
+				"Needs refund or manual allocation."
+			)
+			if ledger.record_unapplied_quietly(
+				"Razorpay", pid, intent.order_id, ref_doctype, ref_name, amount, intent.student, note
+			):
+				frappe.log_error(f"student: {intent.student}\n{note}", "Razorpay duplicate payment needs refund")
+				recorded += 1
+		frappe.db.commit()
+	return recorded

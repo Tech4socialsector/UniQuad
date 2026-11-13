@@ -1363,6 +1363,12 @@ function _ixOpenModal(order) {
           var regName = (d && d.registration_name) || order.registration_name || '';
           _spImprovState.regName = regName;
           _spImprovRender('paid');
+          if (d && d.status === 'already_paid' && d.duplicate) {
+            // the exam was already paid by another payment: this one is refunded
+            _spImprovShowMsg('err', 'info', 'This improvement exam was already paid by another payment. Your payment will be refunded by the Finance Office.');
+            setTimeout(function() { location.reload(); }, 7000);
+            return;
+          }
           setTimeout(function() { location.reload(); }, 2500);
         },
         function() {
@@ -1378,6 +1384,11 @@ function _ixOpenModal(order) {
     _spImprovSetBtnBusy(false);
     _spImprovShowMsg('err', 'error',
       (resp.error && resp.error.description) || 'Payment was not completed. Please try again.');
+    var e = resp.error || {};
+    spCall('slcm.api.student_payment.mark_exam_payment_failed', {
+      registration_name: order.registration_name, kind: 'improvement',
+      payment_id: (e.metadata && e.metadata.payment_id) || '', error_description: e.description || '', error_code: e.code || '',
+    }, function () {}, function () {});
   });
   rzp.open();
 }

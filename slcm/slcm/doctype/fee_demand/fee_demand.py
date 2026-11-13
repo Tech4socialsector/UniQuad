@@ -144,6 +144,9 @@ class FeeDemand(Document):
 			self.credit_adjusted = 0
 
 		self.flags.payment_update = True
+		# Money already received must always be booked: a link that went stale since the demand was raised
+		# (e.g. its Source Document re-exam was deleted) must not roll back the whole payment.
+		self.flags.ignore_links = True
 		self._calculate_amounts()
 		self._update_status()
 		self.save(ignore_permissions=True)

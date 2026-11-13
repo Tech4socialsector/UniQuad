@@ -840,7 +840,7 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
         <td class="c-action" data-label="Receipt">
           {% if r.receipt %}
           <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_fee_receipt?receipt_name={{ r.receipt | urlencode }}"
-             aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
+             aria-label="Download receipt {{ r.receipt }}{% if (r.receipt_items or 0) > 1 %}, a combined receipt for {{ r.receipt_items }} fees paid together{% else %} for {{ r.component }}{% endif %}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
           {% elif r.re_exam_receipt %}
           <a class="spf-btn spf-btn-ghost spf-btn-sm" target="_blank" rel="noopener noreferrer" href="/api/method/slcm.api.student_portal.download_re_exam_receipt?registration_name={{ r.re_exam_receipt | urlencode }}"
              aria-label="Download receipt for {{ r.component }}"><span class="sp-ms" aria-hidden="true">download</span> Receipt</a>
@@ -1210,9 +1210,9 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
           invoice_name: name, integration_request: order.integration_request,
           razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
           function (r) { hideOverlay(); var d = r && r.message;
-            if (d && d.status === 'already_paid') toast('Already Paid', 'This invoice is already fully settled.', 'info');
+            if (d && d.status === 'already_paid') toast('Already Paid', d.duplicate ? 'These fees were already paid by another payment. Your payment will be refunded by the Finance Office.' : 'This invoice is already fully settled.', d.duplicate ? 'warning' : 'info');
             else toast('Payment Successful', 'Your payment has been recorded successfully.', 'success');
-            setTimeout(function () { window.location.reload(); }, 2800); },
+            setTimeout(function () { window.location.reload(); }, d && d.duplicate ? 7000 : 2800); },
           /* Pay stays locked: the payment may already be captured */
           function (e) { hideOverlay(); toast('Pending', e || 'Payment captured but confirmation is pending. Refresh in a few minutes.', 'warning'); });
       }
@@ -1354,9 +1354,9 @@ body.sp-dark .fee-modal-body [style*="color:#475569"] { color: var(--sp-text-2) 
           fee_demand_names: JSON.stringify(names), re_exam_registrations: JSON.stringify(rex), integration_request: order.integration_request,
           razorpay_payment_id: resp.razorpay_payment_id, razorpay_order_id: resp.razorpay_order_id, razorpay_signature: resp.razorpay_signature },
           function (r) { hideOverlay(); var d = r && r.message;
-            if (d && d.status === 'already_paid') toast('Already Paid', 'These charges are already settled.', 'info');
+            if (d && d.status === 'already_paid') toast('Already Paid', d.duplicate ? 'These fees were already paid by another payment. Your payment will be refunded by the Finance Office.' : 'These charges are already settled.', d.duplicate ? 'warning' : 'info');
             else toast('Payment Successful', (d && d.demands_paid ? d.demands_paid + ' charge(s) cleared — ' : '') + (d && d.formatted_total || ''), 'success');
-            setTimeout(function () { window.location.reload(); }, 2800); },
+            setTimeout(function () { window.location.reload(); }, d && d.duplicate ? 7000 : 2800); },
           function (e) { hideOverlay(); toast('Pending', e || 'Payment captured but confirmation pending. Refresh in a few minutes.', 'warning'); });
       }
     });

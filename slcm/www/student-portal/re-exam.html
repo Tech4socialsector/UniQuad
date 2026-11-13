@@ -898,7 +898,9 @@ body.sp-dark .rx-toast {
             var d = r && r.message;
             var regName = (d && d.registration_name) || order.registration_name || '';
             if (d && d.status === 'already_paid') {
-              spToast('Already Registered', 'Your payment for this re-examination has already been recorded.', 'info');
+              spToast('Already Registered', d.duplicate
+                ? 'This re-examination was already paid by another payment. Your payment will be refunded by the Finance Office.'
+                : 'Your payment for this re-examination has already been recorded.', d.duplicate ? 'warning' : 'info');
             } else {
               spToast('Payment Successful',
                 'Re-examination registration confirmed. Your payment has been received successfully.',
@@ -925,6 +927,11 @@ body.sp-dark .rx-toast {
         (resp.error && resp.error.description) || 'Payment was not completed.',
         'error');
       setButtonBusy(btn, false);
+      var e = resp.error || {};
+      spCall('slcm.api.student_payment.mark_exam_payment_failed', {
+        registration_name: order.registration_name, kind: 're_exam',
+        payment_id: (e.metadata && e.metadata.payment_id) || '', error_description: e.description || '', error_code: e.code || '',
+      }, function () {}, function () {});
     });
     rzp.open();
   }

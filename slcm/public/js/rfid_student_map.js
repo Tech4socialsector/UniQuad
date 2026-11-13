@@ -147,12 +147,15 @@ frappe.provide("slcm.rfid_student_map");
 			["academic_year", "Academic Year", __("Academic Year")],
 			["section", "Section", __("Section")],
 		];
-		let loaded_scope = null, scope_timer = null;
+		let loaded_scope = null, scope_timer = null, load_seq = 0;
 		const scope_fields = [];
+		// a filter changed: wait a moment so ticking several values re-filters once
+		const scope_changed = () => { clearTimeout(scope_timer); scope_timer = setTimeout(rescope, 300); };
 		SCOPE.forEach(([fieldname, options, label], i) => {
 			if (i) scope_fields.push({ fieldname: `scope_cb_${i}`, fieldtype: "Column Break" });
-			scope_fields.push({ fieldname, fieldtype: "Link", options, label,
-				onchange: () => { clearTimeout(scope_timer); scope_timer = setTimeout(rescope, 250); } });
+			// one or several values per filter (a student matches any of them)
+			scope_fields.push({ fieldname, fieldtype: "MultiSelectList", label, placeholder: __("Any"),
+				get_data: (txt) => frappe.db.get_link_options(options, txt), onchange: scope_changed });
 		});
 
 		const d = new frappe.ui.Dialog({
@@ -166,6 +169,12 @@ frappe.provide("slcm.rfid_student_map");
 		});
 		d.$wrapper.addClass("rsm-dlg");
 		const $b = d.fields_dict.body.$wrapper.addClass("rsm-scope");
+		// the multi-select keeps its values in one array, so onchange does not always fire: watch its clicks and its closing too
+		SCOPE.forEach(([f]) => {
+			const $w = d.fields_dict[f].$wrapper;
+			$w.on("click", ".selectable-item, .select-all-options, .clear-selections", scope_changed);
+			$w.on("hidden.bs.dropdown", scope_changed);
+		});
 		const on_progress = (msg) => {
 			if (!msg || msg.log !== log_name) return;
 			if (msg.total) $b.find(".rsm-bar > div").css("width", Math.round((msg.done / msg.total) * 100) + "%");
@@ -188,7 +197,10 @@ frappe.provide("slcm.rfid_student_map");
 
 		function current_scope() {
 			const scope = {};
-			SCOPE.forEach(([f]) => { const v = d.get_value(f); if (v) scope[f] = v; });
+			SCOPE.forEach(([f]) => {
+				const v = [...new Set((d.fields_dict[f].get_value() || []).filter(Boolean))].sort();
+				if (v.length) scope[f] = v;
+			});
 			return scope;
 		}
 
@@ -206,6 +218,7 @@ frappe.provide("slcm.rfid_student_map");
 		function load() {
 			d.get_primary_btn().prop("disabled", true);
 			const scope = current_scope();
+			const mine = ++load_seq; // answers to older filter choices are dropped
 			const reuse = !!(data && data.token);
 			// Re-filtering (an option or a filter changed): keep the table on screen, dimmed, so the dialog does not
 			// collapse and jump; the view (tile, search, page) and scroll position are kept.
@@ -223,6 +236,7 @@ frappe.provide("slcm.rfid_student_map");
 				args: { include_name_mismatch: include == null ? "" : include ? 1 : 0, scope: JSON.stringify(scope), token: reuse ? data.token : "",
 					include_removed: include_removed ? 1 : 0 },
 				callback(r) {
+					if (mine !== load_seq) return;
 					if (!r.message) return;
 					data = r.message;
 					loaded_scope = JSON.stringify(scope);
@@ -242,8 +256,11 @@ frappe.provide("slcm.rfid_student_map");
 						d.$wrapper.scrollTop(view.top);
 						$b.find(".rsm-tablebox").scrollTop(view.table);
 					}
+					// a filter picked while the first read was running is applied now
+					if (JSON.stringify(current_scope()) !== loaded_scope) scope_changed();
 				},
 				error(r) {
+					if (mine !== load_seq) return;
 					if (soft) {
 						// keep what is on screen; the server message is shown by Frappe
 						$b.removeClass("rsm-busy").removeAttr("aria-busy");
@@ -283,6 +300,16 @@ frappe.provide("slcm.rfid_student_map");
 							${__("Map even when names differ")}</label>`
 						: `<span class="rsm-toggle rsm-tag warn" style="cursor:default">${__("No names in this source — matching by Student ID only")}</span>`}
 				</div>
+				${data.origin && data.origin.kind === "agent" ? `<div class="rsm-callout ${data.origin.stale ? "" : "on"}" role="note">
+					<i class="fa ${data.origin.stale ? "fa-exclamation-triangle" : "fa-wifi"}" aria-hidden="true"></i>
+					<div class="rsm-callout-text">
+						<b>${__("Card list sent by the campus agent on {0} ({1} records)",
+							[esc(frappe.datetime.str_to_user(data.origin.at)), fmt(data.origin.count || 0)])}</b><br>
+						${data.origin.stale
+							? __("This list is more than a day old. Cards added on the device since then are not in it; run the campus agent with --cards for a fresh list.")
+							: __("This site cannot reach the device database directly, so it uses the list the campus RFID Sync Agent sends.")}
+					</div>
+				</div>` : ""}
 				${(k.removed_by_hand || include_removed) ? `<div class="rsm-callout ${include_removed ? "on" : ""}" role="group">
 					<i class="fa ${include_removed ? "fa-check-circle" : "fa-hand-paper-o"}" aria-hidden="true"></i>
 					<div class="rsm-callout-text">
@@ -313,8 +340,8 @@ frappe.provide("slcm.rfid_student_map");
 						<button class="rsm-iconbtn" data-act="next"><i class="fa fa-chevron-right"></i></button></div>
 				</div>
 				<div class="rsm-tablebox"><table class="rsm-table">
-					<thead><tr><th class="rsm-dev">${__("Card code")}</th><th class="rsm-dev">${__("Name in etpdb")}</th><th></th><th>${__("Student ID")}</th>
-						<th>${__("Student name")}</th><th>${__("Email")}</th><th>${__("Name check")}</th><th>${__("Result")}</th><th>${__("Note")}</th></tr></thead>
+					<thead><tr><th class="rsm-dev">${__("Card code")}</th>${data.has_names ? `<th class="rsm-dev">${__("Name in etpdb")}</th>` : ""}<th></th><th>${__("Student ID")}</th>
+						<th>${__("Student name")}</th><th>${__("Email")}</th>${data.has_names ? `<th>${__("Name check")}</th>` : ""}<th>${__("Result")}</th><th>${__("Note")}</th></tr></thead>
 					<tbody></tbody></table></div>`);
 
 			$b.find(".rsm-kpi[data-filter]").on("click", function () {
@@ -361,16 +388,16 @@ frappe.provide("slcm.rfid_student_map");
 			$b.find('[data-act="next"]').prop("disabled", page >= max);
 			$b.find("tbody").html(slice.length ? slice.map((r) => `<tr>
 				<td class="rsm-dev"><span class="rsm-code">${esc(r.rfid_uid)}</span></td>
-				<td class="rsm-dev">${esc(r.device_name) || dash}</td>
+				${data.has_names ? `<td class="rsm-dev">${esc(r.device_name) || dash}</td>` : ""}
 				<td class="rsm-arrow">→</td>
 				<td>${r.student_id ? `<span class="rsm-sid">${esc(r.student_id)}</span>` : dash}</td>
 				<td><b>${esc(r.student_name) || dash}</b></td>
 				<td class="rsm-dim">${esc(r.student_email) || dash}</td>
-				<td>${r.name_check === "Same" ? `<span class="rsm-tag ok">${__("Same")}</span>`
-					: r.name_check === "Different" ? `<span class="rsm-tag warn">${__("Different")}</span>` : dash}</td>
+				${data.has_names ? `<td>${r.name_check === "Same" ? `<span class="rsm-tag ok">${__("Same")}</span>`
+					: r.name_check === "Different" ? `<span class="rsm-tag warn">${__("Different")}</span>` : dash}</td>` : ""}
 				<td>${slcm.rfid_student_map.status_tag(r.status)}</td>
 				<td class="rsm-note">${esc(r.message)}</td></tr>`).join("")
-				: `<tr class="rsm-empty"><td colspan="9">${__("Nothing to show here.")}</td></tr>`);
+				: `<tr class="rsm-empty"><td colspan="${data.has_names ? 9 : 7}">${__("Nothing to show here.")}</td></tr>`);
 		}
 
 		// Step 2: review exactly what will be linked before anything is saved
@@ -426,7 +453,7 @@ frappe.provide("slcm.rfid_student_map");
 					<td class="rsm-dim">${esc(r.batch) || dash}</td>
 					${data.has_names ? `<td>${r.name_check === "Different" ? `<span class="rsm-tag warn">${__("Different")}</span>`
 						: r.name_check === "Same" ? `<span class="rsm-tag ok">${__("Same")}</span>` : dash}</td>` : ""}
-				</tr>`).join("") || `<tr class="rsm-empty"><td colspan="10">${__("Nothing matches your search.")}</td></tr>`);
+				</tr>`).join("") || `<tr class="rsm-empty"><td colspan="${data.has_names ? 10 : 8}">${__("Nothing matches your search.")}</td></tr>`);
 			};
 			$b.find(".rsm-search").on("input", frappe.utils.debounce(function () { draw((this.value || "").trim().toLowerCase()); }, 150));
 			draw("");

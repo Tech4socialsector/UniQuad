@@ -49,6 +49,43 @@ frappe.ui.form.on("SLCM Payment Request", {
             }).addClass("btn-primary");
         }
 
+        // Money no SLCM record holds (duplicate / unapplied): record the refund made in the gateway dashboard
+        if (frm.doc.docstatus === 1 && frm.doc.status === "Paid" && frappe.user.has_role(["System Manager", "Accounts Manager"])) {
+            frappe.call({
+                method: "slcm.slcm.fee.payment_ledger.get_refundable",
+                args: { request_name: frm.doc.name },
+                callback: function(r) {
+                    const refundable = flt(r.message);
+                    if (refundable <= 0) return;
+                    frm.dashboard.set_headline_alert(
+                        __("₹{0} of this payment is not applied to any fee and needs a refund.", [format_number(refundable, null, 2)]), "orange"
+                    );
+                    frm.add_custom_button(__("Record Refund"), function() {
+                        const d = new frappe.ui.Dialog({
+                            title: __("Record Refund"),
+                            fields: [
+                                { fieldname: "amount", fieldtype: "Currency", label: __("Refunded Amount"), reqd: 1, default: refundable,
+                                  description: __("At most ₹{0}", [format_number(refundable, null, 2)]) },
+                                { fieldname: "refunded_on", fieldtype: "Date", label: __("Refunded On"), reqd: 1, default: frappe.datetime.get_today() },
+                                { fieldname: "refund_reference", fieldtype: "Data", label: __("Refund Reference"), reqd: 1,
+                                  description: __("Refund id / UTR from the gateway dashboard. SLCM does not send the refund; do it in the gateway first.") },
+                            ],
+                            primary_action_label: __("Record"),
+                            primary_action(values) {
+                                frappe.call({
+                                    method: "slcm.slcm.fee.payment_ledger.record_refund",
+                                    args: { request_name: frm.doc.name, ...values },
+                                    freeze: true,
+                                    callback: function() { d.hide(); frm.reload_doc(); },
+                                });
+                            },
+                        });
+                        d.show();
+                    });
+                }
+            });
+        }
+
         // Easebuzz payouts
         if (frm.doc.docstatus === 1 && frm.doc.payment_gateway === "Easebuzz" && frm.doc.status === "Paid" && frm.doc.settlement_status !== "Settled") {
             frm.add_custom_button(__("Sync Settlement"), function() {

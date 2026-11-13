@@ -96,34 +96,108 @@ class FeeInvoice(Document):
 
 
 	def on_payment_authorized(self, payment_status):
-		"""Called by the payments app after a successful transaction."""
+		"""Called by the payments app after a desk "Pay Online" checkout succeeds.
+
+		Books what Razorpay actually took (not the client's checkout options), capped at what is still due;
+		any excess - or the whole payment when the invoice was settled meanwhile - is recorded as unapplied
+		on its SLCM Payment Request so it is refunded instead of lost. Idempotent on the payment id."""
 		if payment_status not in ("Authorized", "Completed"):
 			return
 
-		# Reload to get the latest outstanding_amount (may have changed)
-		self.reload()
-		outstanding = flt(self.outstanding_amount)
-		if outstanding <= 0:
-			return  # already fully paid — nothing to record
-
 		# Razorpay payment ID is passed via frappe.flags.data by authorize_payment()
 		flags_data = frappe.flags.get("data") or {}
-		razorpay_payment_id = (
-			flags_data.get("razorpay_payment_id") or ""
-			if isinstance(flags_data, dict) else ""
-		)
+		razorpay_payment_id = (flags_data.get("razorpay_payment_id") or "") if isinstance(flags_data, dict) else ""
+		intent = flags_data.get("slcm_intent") if isinstance(flags_data, dict) else None
+		if intent and intent.get("paid_by_role") != "Desk":
+			# a Student / Parent Portal order: its confirm (or the reconciler) books it right after this, with the
+			# payer, the captured amount and its payment log (razorpay_reconcile.record_invoice_payment)
+			return
+		if razorpay_payment_id and frappe.db.exists(
+			"Fee Payment", {"reference_number": razorpay_payment_id, "docstatus": 1}
+		):
+			return
 
-		payment = frappe.get_doc({
-			"doctype":          "Fee Payment",
-			"fee_invoice":      self.name,
-			"student":          self.student,
-			"amount":           outstanding,
-			"payment_date":     frappe.utils.today(),
-			"payment_mode":     "Online Payment",
-			"reference_number": razorpay_payment_id,
-		})
-		payment.insert(ignore_permissions=True)
-		payment.submit()
+		captured, order_id = None, None
+		if razorpay_payment_id:
+			try:
+				from slcm.api.razorpay_reconcile import _payment
+
+				gateway_payment = _payment(razorpay_payment_id)
+				if gateway_payment.get("status") in ("captured", "authorized"):
+					captured = flt(gateway_payment.get("amount")) / 100
+					order_id = gateway_payment.get("order_id")
+			except Exception:
+				frappe.log_error(frappe.get_traceback(), f"Fee Invoice {self.name}: could not fetch Razorpay payment")
+
+		# Reload to get the latest outstanding_amount (may have changed)
+		self.reload()
+		outstanding = max(flt(self.outstanding_amount), 0)
+		amount = min(captured, outstanding) if captured is not None else outstanding
+
+		if amount > 0:
+			payment = frappe.get_doc({
+				"doctype":          "Fee Payment",
+				"fee_invoice":      self.name,
+				"student":          self.student,
+				"amount":           amount,
+				"payment_date":     frappe.utils.today(),
+				"payment_mode":     "Online Payment",
+				"payment_gateway":  "Razorpay",
+				"reference_number": razorpay_payment_id,
+				"remarks":          "Desk Pay Online (Fee Invoice)",
+			})
+			payment.insert(ignore_permissions=True)
+			payment.submit()
+
+		if razorpay_payment_id and captured is not None and order_id:
+			self._attach_desk_intent(razorpay_payment_id, order_id, captured)
+		excess = flt((captured or 0) - amount, 2)
+		if razorpay_payment_id and excess > 0.01:
+			from slcm.slcm.fee.payment_ledger import record_unapplied_quietly, sync_quietly
+
+			if amount > 0:
+				sync_quietly(razorpay_payment_id)  # its request shows the captured amount, the excess as unallocated
+			else:
+				record_unapplied_quietly(
+					"Razorpay", razorpay_payment_id, order_id, "Fee Invoice", self.name, excess, self.student,
+					f"Desk Pay Online on {self.name}: Razorpay payment {razorpay_payment_id} (₹{excess:,.2f}) arrived "
+					"after the invoice was settled. Needs refund.",
+				)
+
+		# the attempt logged by initiate_online_payment
+		log = frappe.db.get_value(
+			"Online Payment Log", {"fee_invoice": self.name, "status": "Pending"}, "name", order_by="creation desc"
+		)
+		if log:
+			frappe.db.set_value("Online Payment Log", log, {
+				"status": "Success", "transaction_id": razorpay_payment_id, "amount": captured if captured is not None else amount,
+			})
+
+	def _attach_desk_intent(self, payment_id, order_id, captured):
+		"""Give the desk checkout's Integration Request the same intent portal orders carry
+		(slcm.api.razorpay_reconcile.attach_intent), so the payment ledger knows what the order charged and
+		record_unbooked_captures can see it."""
+		import json
+
+		rows = frappe.get_all(
+			"Integration Request",
+			filters={"integration_request_service": "Razorpay", "reference_docname": self.name,
+			         "data": ("like", f"%{payment_id}%")},
+			fields=["name", "data"], limit=1, ignore_permissions=True,
+		)
+		if not rows:
+			return
+		try:
+			data = json.loads(rows[0].data or "{}")
+		except ValueError:
+			return
+		if not isinstance(data, dict) or data.get("slcm_intent"):
+			return
+		data["slcm_intent"] = {
+			"flow": "invoice", "order_id": order_id, "student": self.student, "amount": flt(captured, 2),
+			"user": frappe.session.user, "paid_by_role": "Desk", "invoice_name": self.name,
+		}
+		frappe.db.set_value("Integration Request", rows[0].name, "data", json.dumps(data, default=str), update_modified=False)
 
 	def get_payment_details(self):
 		"""Returns details for the payment gateway."""

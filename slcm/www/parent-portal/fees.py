@@ -396,6 +396,9 @@ def get_context(context):
                 order_by="due_date asc, creation asc",
                 ignore_permissions=True,
             )
+            from slcm.slcm.fee.portal_charges import is_unpaid_exam_demand
+            # unpaid exam fees are paid on the Re-Exam / Results pages, not from Fees & Payments
+            demands_raw = [d for d in demands_raw if not is_unpaid_exam_demand(d)]
             _today = frappe.utils.getdate(frappe.utils.today())
             overdue_list = []
             for d in demands_raw:

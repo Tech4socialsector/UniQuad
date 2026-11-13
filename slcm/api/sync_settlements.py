@@ -449,7 +449,7 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
         """
         SELECT name, razorpay_payment_id, transaction_id, amount as paid_amount, settlement_id, gateway_response
         FROM `tabSLCM Payment Request`
-        WHERE status = 'Paid' AND (settlement_status IS NULL OR settlement_status != 'processed')
+        WHERE status = 'Paid' AND (settlement_status IS NULL OR settlement_status NOT IN ('processed', 'Settled'))
         """,
         as_dict=True,
     )
@@ -571,6 +571,29 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
 
             for item in items:
                 entity_type = (item.get("type") or item.get("entity_type") or "").lower()
+                if entity_type == "refund":
+                    # a refund deducted in this settlement: record it on the student payment's request
+                    try:
+                        from slcm.slcm.fee.payment_ledger import record_gateway_refund
+                        setl = setl_by_id.get(item.get("settlement_id")) or {}
+                        setl_at = setl.get("created_at") or item.get("settled_at")
+                        # (run_sync imports the datetime class, not the module)
+                        setl_date = datetime.utcfromtimestamp(int(setl_at)).date() if setl_at else None
+                        # deducted from a payout only once that settlement is actually paid out
+                        payout_ref = (
+                            f"{item.get('settlement_id')} (UTR {setl.get('utr') or item.get('settlement_utr') or '-'})"
+                            if item.get("settlement_id") and (setl.get("status") or "processed") == "processed" else None
+                        )
+                        record_gateway_refund(
+                            item.get("payment_id"), item.get("entity_id") or item.get("id"),
+                            abs(frappe.utils.flt(item.get("amount") or item.get("debit") or 0)) / 100,
+                            refunded_on=setl_date,
+                            source=f"Razorpay settlement {item.get('settlement_id') or ''}".strip(),
+                            payout=payout_ref, payout_date=setl_date,
+                        )
+                    except Exception:
+                        frappe.log_error(frappe.get_traceback(), "sync_settlements: refund line (non-fatal)")
+                    continue
                 if entity_type and entity_type not in ("payment", ""):
                     continue
 
@@ -620,6 +643,14 @@ def run_sync(from_date=None, to_date=None, skip_fle=False):
                 if target_doctype == "SLCM Payment Request":
                     fields_to_update["settlement_amount"] = round(gross_paise / 100, 2)
                     fields_to_update["settlement_response"] = json.dumps(item, indent=4)
+                    from slcm.slcm.fee.payment_ledger import LEDGER_DOCTYPES
+                    if frappe.db.get_value("SLCM Payment Request", log_name, "reference_doctype") in LEDGER_DOCTYPES:
+                        # a student / parent request keeps Razorpay's word in gateway_settlement_status and SLCM's
+                        # own status (what the ERPNext bridge reads) in settlement_status, as the webhook does
+                        fields_to_update["gateway_settlement_status"] = status if status in ("created", "processed", "failed") else None
+                        fields_to_update["settlement_status"] = {
+                            "processed": "Settled", "created": "Processing", "failed": "Failed",
+                        }.get(status, "Pending")
 
                 frappe.db.set_value(target_doctype, log_name, fields_to_update, update_modified=False)
 

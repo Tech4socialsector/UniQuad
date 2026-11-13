@@ -54,6 +54,22 @@ def _find_freetds_lib():
     return matches[0] if matches else None
 
 
+def unreachable_reason():
+    """None when this server can open the SQL Server port, else why not (a few words). Never raises.
+    A named instance (host\\INSTANCE) or a host carrying its own port is not checked here."""
+    cfg = frappe.get_single("RFID SQL Agent Settings")
+    server = (cfg.db_server or "").strip()
+    if not server:
+        return "Server Host is not set"
+    if "\\" in server or "," in server:
+        return None
+    try:
+        socket.create_connection((server, int(cfg.db_port or 1433)), timeout=TCP_TIMEOUT).close()
+        return None
+    except (OSError, ValueError) as e:
+        return f"{server}:{cfg.db_port or 1433} did not answer within {TCP_TIMEOUT} seconds ({e})"
+
+
 def get_connection(query_timeout=None):
     """
     Return an open pyodbc connection to the SQL Server configured in
@@ -142,9 +158,10 @@ def get_connection(query_timeout=None):
             socket.create_connection((server, port), timeout=TCP_TIMEOUT).close()
     except OSError as e:
         frappe.throw(
-            f"This server cannot reach SQL Server {server}:{port} (no answer within {TCP_TIMEOUT} seconds: {e}). "
-            "The SQL Server is on the campus network: run this from a machine that can reach it (on campus or "
-            "over the VPN), or check the Server Host / Port in RFID SQL Agent Settings.",
+            f"This SLCM server cannot reach SQL Server {server}:{port} (no answer within {TCP_TIMEOUT} seconds: {e}).<br><br>"
+            "The connection is made by the SLCM server, not by your browser, so being on the campus Wi-Fi does not "
+            "help when SLCM is hosted outside campus. Punches and the Student Map card list reach this site through "
+            "the <b>SLCM RFID Sync Agent</b> running on a campus machine. Otherwise check the Server Host / Port.",
             title="RFID SQL Agent — SQL Server Not Reachable"
         )
 

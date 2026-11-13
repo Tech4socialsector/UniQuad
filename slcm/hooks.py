@@ -429,6 +429,8 @@ doc_events = {
     "Re Exam Payment Log": {
         "on_update": [
             "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+            # paid on the exam page: its enrolment Fee Demand is cancelled
+            "slcm.slcm.fee.event_hooks.on_exam_payment_log",
             # counter (cash / cheque) payments → ERPNext
             "slcm.erpnext_bridge.sync.enqueue_sync",
         ],
@@ -436,6 +438,8 @@ doc_events = {
     "Improvement Exam Payment Log": {
         "on_update": [
             "slcm.slcm.fee.payment_ledger.on_exam_payment_log",
+            # paid on the exam page: its enrolment Fee Demand is cancelled
+            "slcm.slcm.fee.event_hooks.on_exam_payment_log",
             "slcm.erpnext_bridge.sync.enqueue_sync",
         ],
     },
@@ -443,8 +447,9 @@ doc_events = {
         "after_insert": "slcm.slcm.fee.payment_ledger.on_payment_log",
     },
     "Fee Refund": {
-        "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
-        "on_cancel": "slcm.erpnext_bridge.sync.enqueue_sync",
+        # a refund made through the gateway is linked to its refund row first (so ERPNext books it once)
+        "on_submit": ["slcm.slcm.fee.payment_ledger.link_fee_refund", "slcm.erpnext_bridge.sync.enqueue_sync"],
+        "on_cancel": ["slcm.slcm.fee.payment_ledger.link_fee_refund", "slcm.erpnext_bridge.sync.enqueue_sync"],
     },
     "Student Credit Note": {
         "on_submit": "slcm.erpnext_bridge.sync.enqueue_sync",
@@ -559,7 +564,13 @@ doc_events = {
         "after_insert": "slcm.slcm.fee.event_hooks.on_hostel_fine_insert"
     },
     "Re Exam Registration": {
-        "after_insert": "slcm.slcm.fee.event_hooks.on_reexam_registration_insert"
+        "after_insert": "slcm.slcm.fee.event_hooks.on_reexam_registration_insert",
+        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_registration",
+        "on_trash": "slcm.slcm.fee.event_hooks.on_exam_registration_trash"
+    },
+    "Improvement Exam Registration": {
+        "on_update": "slcm.slcm.fee.payment_ledger.on_exam_registration",
+        "on_trash": "slcm.slcm.fee.event_hooks.on_exam_registration_trash"
     },
     "Convocation Registration": {
         "on_submit": "slcm.slcm.fee.event_hooks.on_convocation_registration_submit",
@@ -758,6 +769,8 @@ scheduler_events = {
 		"slcm.admission.events.auto_update_cycle_status",
 		# SLCM Payment Request for student payments a doc event missed (before the daily settlement sync)
 		"slcm.slcm.fee.payment_ledger.sync_recent",
+		# Razorpay portal payments captured but never booked (paid twice) → unapplied request, flagged for refund
+		"slcm.api.razorpay_reconcile.record_unbooked_captures",
         "slcm.admission.utils.notifications.check_and_send_offer_reminders",
         # "slcm.admission.utils.auto_draft.auto_save_all_drafts"
         # Parent RFID absence alert — fires every hour; skips if outside configured window/days

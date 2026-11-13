@@ -61,7 +61,7 @@ def get_context(context):
         # is never hidden, regardless of the `status` field or role setup.
         raw_regs = frappe.db.sql(
             """
-            SELECT name, exam_plan, course, status, payment_status, payment_reference
+            SELECT name, exam_plan, course, status, payment_status, payment_reference, re_exam_fee
             FROM `tabRe Exam Registration`
             WHERE student = %(student)s
             ORDER BY modified DESC
@@ -217,7 +217,8 @@ def get_context(context):
                 "course_name":        course_name,
                 "grade":              row.grade,
                 "total_marks":        row.total_marks,
-                "re_exam_fee":        setting.get("re_exam_fee"),
+                # an enrolled student pays the fee on the registration (what checkout charges)
+                "re_exam_fee":        reg.get("re_exam_fee") or setting.get("re_exam_fee"),
                 "deadline_from":      deadline_from_str,
                 "deadline_to":        deadline_to_str,
                 "_deadline_to_raw":   frappe.utils.getdate(setting["deadline_to"]) if setting.get("deadline_to") else None,

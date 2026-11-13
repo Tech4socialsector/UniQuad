@@ -110,7 +110,7 @@ def _owned_request(request_name, student_name):
             "name", "student", "status",
             "payment_status", "razorpay_payment_status",
             "fee_amount", "payment_required", "transcript_type", "num_copies",
-            "razorpay_order_id", "transcript_doc",
+            "razorpay_order_id", "transcript_doc", "payment_reference",
         ],
         as_dict=True,
     )
@@ -483,6 +483,10 @@ def initiate_payment(request_name, gateway_aware=0, return_path=None):
             receipt=request_name,   # use Transcript Request name as receipt
         )
         razorpay_order_id = order.get("id")
+        # what this order pays for: binds the payment to this request at confirm (an older order paid
+        # late still counts) and lets the reconciler record it when the browser never comes back
+        from slcm.api.razorpay_reconcile import attach_intent
+        attach_intent(order, "transcript", student_name, fee_rupees, request_name=request_name)
 
         frappe.db.set_value("Transcript Request", request_name, {
             "razorpay_order_id": razorpay_order_id,
@@ -543,7 +547,7 @@ def confirm_payment(request_name, razorpay_payment_id,
     student_name = _require_student()
     req = _owned_request(request_name, student_name)
 
-    if req.payment_status == "Paid":
+    if req.payment_status == "Paid" and req.payment_reference == razorpay_payment_id:
         return {"success": True, "already_paid": True, "status": req.status}
 
     # ── Signature verification ─────────────────────────────────────────────────
@@ -564,14 +568,65 @@ def confirm_payment(request_name, razorpay_payment_id,
             "Payment verification failed. Please contact support with your payment ID: {0}"
         ).format(razorpay_payment_id))
 
+    # A valid signature only proves Razorpay took *some* payment on that order: it must be an order made for
+    # this request, and the payment must not already pay another one (else one cheap payment unlocks others).
+    if not _order_belongs_to(razorpay_order_id, request_name, student_name, req):
+        frappe.log_error(
+            f"request: {request_name}\norder: {razorpay_order_id}\npayment: {razorpay_payment_id}\nuser: {frappe.session.user}",
+            "Transcript confirm: order does not match",
+        )
+        frappe.throw(_("This payment does not belong to this transcript request. Please contact support."),
+                     frappe.PermissionError)
+    used_by = frappe.db.get_value(
+        "Transcript Request", {"payment_reference": razorpay_payment_id, "name": ("!=", request_name)}, "name"
+    )
+    if used_by:
+        frappe.throw(_("This payment has already been used for another request."), frappe.PermissionError)
+
     return mark_request_paid(request_name, student_name, razorpay_payment_id, razorpay_order_id)
+
+
+def _order_belongs_to(order_id, request_name, student_name, req=None):
+    """True when Razorpay order ``order_id`` was created for this transcript request."""
+    if not order_id:
+        return False
+    req = req or frappe.db.get_value("Transcript Request", request_name, ["razorpay_order_id"], as_dict=True)
+    if req and req.get("razorpay_order_id") == order_id:
+        return True
+    # an earlier order of the same request (the student retried, then the first payment went through)
+    for row in frappe.get_all(
+        "Integration Request",
+        filters={"integration_request_service": "Razorpay", "data": ("like", f"%{order_id}%")},
+        fields=["data"], limit=5, ignore_permissions=True,
+    ):
+        try:
+            intent = (_json.loads(row.data or "{}") or {}).get("slcm_intent") or {}
+        except (ValueError, AttributeError):
+            continue
+        if (intent.get("order_id") == order_id and intent.get("flow") == "transcript"
+                and intent.get("request_name") == request_name and intent.get("student") == student_name):
+            return True
+    return False
 
 
 def mark_request_paid(request_name, student_name, payment_id, order_id, gateway="Razorpay"):
     """Record a verified gateway payment on the request, email the student and auto-approve
     (generate the transcript) when configured. Idempotent. Used by confirm_payment (Razorpay)
     and by the Easebuzz settlement (slcm.api.easebuzz_payment)."""
+    # One payer path at a time (browser confirm, reconciler, Easebuzz return / webhook): lock the request in a
+    # fresh transaction, so a second path sees the first one's result (no second email / transcript)
+    frappe.db.commit()
+    frappe.db.sql("SELECT name FROM `tabTranscript Request` WHERE name = %s FOR UPDATE", request_name)
     req = _owned_request(request_name, student_name)
+    if req.status == "Cancelled" and req.payment_status != "Paid":
+        # the student cancelled the request: never revive it - keep the money visible for a refund
+        from slcm.slcm.fee.payment_ledger import record_unapplied_quietly
+        record_unapplied_quietly(
+            gateway, payment_id, order_id, "Transcript Request", request_name, req.fee_amount, student_name,
+            f"{request_name} is Cancelled; payment {payment_id} needs a refund.",
+        )
+        frappe.db.commit()
+        return {"success": True, "already_paid": True, "status": req.status, "duplicate": True}
     if req.payment_status == "Paid":
         paid_with = frappe.db.get_value("Transcript Request", request_name, "payment_reference")
         if payment_id and paid_with and paid_with != payment_id:
@@ -582,7 +637,10 @@ def mark_request_paid(request_name, student_name, payment_id, order_id, gateway=
                 f"{request_name} was already paid ({paid_with}); payment {payment_id} is a duplicate and needs a refund.",
             )
             frappe.db.commit()
-        return {"success": True, "already_paid": True, "status": req.status}
+        return {
+            "success": True, "already_paid": True, "status": req.status,
+            "duplicate": bool(payment_id and paid_with and paid_with != payment_id),
+        }
 
     # ── Mark Paid (captured) ───────────────────────────────────────────────────
     _set_payment_fields(

@@ -130,6 +130,7 @@ def _find_request(txn):
 def apply_payouts(payouts):
 	"""Write each settled transaction's payout on its Easebuzz request. Returns counts."""
 	counts = {"settled": 0, "unchanged": 0, "not_found": 0}
+	unmatched = []
 	for payout in payouts or []:
 		paid_out = bool(payout.get("paid_out"))
 		settled_at = _parse_date(payout.get("payout_actual_date") or payout.get("payout_scheduled_date"))
@@ -144,10 +145,22 @@ def apply_payouts(payouts):
 			"account_number": _mask(payout.get("account_number")),
 			"bank_transaction_id": payout.get("bank_transaction_id"),
 		}
+		for refund in payout.get("peb_refunds") or []:
+			from slcm.slcm.fee.payment_ledger import record_gateway_refund
+
+			payout_ref = f"{summary['payout_id']} (UTR {summary['bank_transaction_id'] or '-'})"
+			if record_gateway_refund(
+				refund.get("peb_transaction_id"), refund.get("refund_id"), refund.get("refund_amount"),
+				settled_at, source=f"Easebuzz payout {summary['payout_id']}",
+				# taken off this payout only once it is actually paid out to the bank
+				payout=payout_ref if paid_out else None, payout_date=settled_at,
+			):
+				counts["refunds"] = counts.get("refunds", 0) + 1
 		for txn in payout.get("peb_transactions") or []:
 			name = _find_request(txn)
 			if not name:
 				counts["not_found"] += 1
+				unmatched.append(f"{txn.get('peb_transaction_id')} / {txn.get('txnid')} ₹{flt(txn.get('amount')):,.2f}")
 				continue
 			settled = paid_out and (txn.get("status") or "settled").lower() == "settled"
 			status = "Settled" if settled else "Processing"
@@ -170,17 +183,20 @@ def apply_payouts(payouts):
 				"settlement_response": json.dumps({"payout": summary, "transaction": txn}, indent=2, default=str),
 			})
 			counts["settled"] += 1
+	if unmatched:
+		# money Easebuzz settled that no SLCM request explains (another product on the account, or a gap)
+		frappe.logger("slcm.easebuzz_settlement").info(f"payout transactions without an SLCM request: {unmatched[:50]}")
 	return counts
 
 
 def sync_range(from_date, to_date):
 	"""Fetch and apply payouts week by week between the two dates. Returns counts."""
 	start, end = getdate(from_date), min(getdate(to_date), getdate(today()))
-	totals = {"settled": 0, "unchanged": 0, "not_found": 0}
+	totals = {"settled": 0, "unchanged": 0, "not_found": 0, "refunds": 0}
 	while start <= end:
 		stop = min(add_days(start, WINDOW_DAYS - 1), end)
 		for k, v in apply_payouts(fetch_payouts(start, stop)).items():
-			totals[k] += v
+			totals[k] = totals.get(k, 0) + v
 		frappe.db.commit()
 		start = add_days(stop, 1)
 	return totals

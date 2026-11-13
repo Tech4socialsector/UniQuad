@@ -44,6 +44,16 @@
   "settlement_date",
   "settlement_status",
   "gateway_settlement_status",
+  "refund_section",
+  "refunded_amount",
+  "refunded_unapplied_amount",
+  "refunded_on",
+  "column_break_refund",
+  "refund_reference",
+  "refund_settled_amount",
+  "refund_settled_on",
+  "refund_settlement_reference",
+  "refund_log",
   "column_break_usow",
   "gateway_fees",
   "gateway_tax",
@@ -93,7 +103,6 @@
    "options": "Currency"
   },
   {
-   "allow_on_submit": 1,
    "default": "Draft",
    "fieldname": "status",
    "fieldtype": "Select",
@@ -140,7 +149,6 @@
    "label": "Gateway Details"
   },
   {
-   "allow_on_submit": 1,
    "fieldname": "gateway_status",
    "fieldtype": "Select",
    "label": "Gateway Status",
@@ -335,11 +343,79 @@
    "label": "Gateway Settlement Status",
    "options": "\ncreated\nprocessed\nfailed",
    "read_only": 1
+  },
+  {
+   "fieldname": "refund_section",
+   "fieldtype": "Section Break",
+   "label": "Refund (recorded)",
+   "collapsible": 1,
+   "depends_on": "eval:doc.refunded_amount"
+  },
+  {
+   "fieldname": "refunded_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded Amount",
+   "options": "currency",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refunded_unapplied_amount",
+   "fieldtype": "Currency",
+   "label": "Refunded (unapplied money)",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Refunds of money applied to no fee (ERPNext: Gateway Refund). Refunds of fees applied to dues are booked by their Fee Refund."
+  },
+  {
+   "fieldname": "refunded_on",
+   "fieldtype": "Date",
+   "label": "Refunded On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_refund",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "refund_reference",
+   "fieldtype": "Data",
+   "label": "Refund Reference",
+   "description": "Refund id / UTR from the gateway dashboard",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_settled_amount",
+   "fieldtype": "Currency",
+   "label": "Refund Deducted from Payouts",
+   "options": "currency",
+   "read_only": 1,
+   "description": "Part of the refunds the gateway has taken off a payout (posted to ERPNext as Dr Gateway Clearing / Cr Bank)"
+  },
+  {
+   "fieldname": "refund_settled_on",
+   "fieldtype": "Date",
+   "label": "Refund Deducted On",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_settlement_reference",
+   "fieldtype": "Data",
+   "label": "Refund Payout Reference",
+   "description": "Payout id / UTR the refund was deducted in",
+   "read_only": 1
+  },
+  {
+   "fieldname": "refund_log",
+   "fieldtype": "Code",
+   "label": "Refund Log",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "One row per refund (refund id, amount, date, source, payout): the source of the refund fields above"
   }
  ],
  "is_submittable": 1,
  "links": [],
- "modified": "2026-11-02 12:00:00.000000",
+ "modified": "2026-11-13 14:00:00.000000",
  "modified_by": "Administrator",
  "module": "SLCM",
  "name": "SLCM Payment Request",

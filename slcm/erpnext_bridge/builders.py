@@ -10,6 +10,11 @@ Hostel Refund Request (Processed) Dr Fee Refunds                        Cr Cash 
 Online receipt    (Payment Req.)  Dr Gateway Clearing                    Cr Re-exam / transcript fee ledger
   (no Fee Payment: "Gateway Receipt")                                    Cr Unallocated Fee Receipts (not applied)
 Gateway settlement (Payment Req.) Dr Bank (net) + Gateway Charges + GST  Cr Gateway Clearing (gross)
+Gateway refund    (Payment Req.)  Dr Unallocated Fee Receipts            Cr Gateway Clearing
+  (refund of money applied to no fee, recorded in SLCM; the gateway pays it back out of the money it holds)
+Refund off a payout (Payment Req.) Dr Gateway Clearing                   Cr Bank
+  (the payout that deducted the refund: the bank received that much less - matches the payout UTR)
+Fee Refund via Payment Gateway    Dr Fee Refunds                         Cr Gateway Clearing
 Moved to excess (Credit Note)     Dr Fee ledger of the due (+ Output GST) Cr Unallocated Fee Receipts
 Excess adjusted to a due (row)    Dr Unallocated Fee Receipts            Cr Fee ledger of the due (+ Output GST)
 
@@ -34,6 +39,8 @@ def build_entry(cfg, src, key=None):
 		"Fee Refund": _refund,
 		"SLCM Payment Request": _settlement,
 		"Gateway Receipt": _gateway_receipt,
+		"Gateway Refund": _gateway_refund_student,
+		"Gateway Refund Payout": _gateway_refund_payout,
 		"Student Credit Note": _moved_to_excess,
 		"Credit Adjustment Row": _excess_adjusted,
 		"Applicant Payment Receipt": _applicant_receipt,
@@ -109,9 +116,14 @@ def _credit_component(cfg, credits, component, share):
 
 def _refund(cfg, fr):
 	amount = flt(fr.refund_amount, PRECISION)
-	cash_account = conf.mode_of_payment_account(cfg, fr.refund_mode) or conf.require(
-		cfg, "default_cash_account" if fr.refund_mode == "Cash" else "default_bank_account"
-	)
+	if fr.refund_mode == "Payment Gateway":
+		# refunded from the Razorpay / Easebuzz dashboard: out of the money the gateway holds (its payout then
+		# deducts it - see Gateway Refund Payout)
+		cash_account = conf.gateway_clearing_account(cfg)
+	else:
+		cash_account = conf.mode_of_payment_account(cfg, fr.refund_mode) or conf.require(
+			cfg, "default_cash_account" if fr.refund_mode == "Cash" else "default_bank_account"
+		)
 
 	if fr.get("refund_source") == "Excess Amount":
 		debits = _excess_refund_debits(cfg, fr, amount)
@@ -128,8 +140,9 @@ def _refund(cfg, fr):
 		"posting_date": getdate(fr.refund_date),
 		"cash_account": cash_account,
 		"reference": fr.get("utr_number") or fr.name,
-		"remark": _("SLCM Fee Refund {0} | {1} | {2} | {3}").format(
-			fr.name, fr.student, fr.refund_type, fr.refund_source
+		"remark": _("SLCM Fee Refund {0} | {1} | {2} | {3} | refunded by {4}{5}").format(
+			fr.name, fr.student, fr.refund_type, fr.refund_source, fr.refund_mode or "-",
+			f" ({fr.utr_number})" if fr.get("utr_number") else "",
 		),
 		"student": fr.student,
 		"programme": _programme_of(None, fr.student),
@@ -321,6 +334,89 @@ def _gateway_receipt(cfg, pr):
 		"student": student,
 		"programme": _programme_of(None, student),
 		"lines": [(clearing, amount, 0.0)] + [(acc, 0.0, flt(cr, PRECISION)) for acc, cr in credits.items()],
+	}
+
+
+def _refund_rows(pr):
+	try:
+		rows = json.loads(pr.get("refund_log") or "[]")
+	except ValueError:
+		rows = []
+	return rows if isinstance(rows, list) else []
+
+
+def _who(pr):
+	"""'STUD-.. Name (Reg ID)' from the request's gateway_response, for remarks."""
+	try:
+		data = json.loads(pr.get("gateway_response") or "{}")
+	except ValueError:
+		data = {}
+	student = data.get("student") or "-"
+	name = data.get("student_name") or ""
+	reg = data.get("registration_id") or ""
+	return f"{student} {name}".strip() + (f" ({reg})" if reg else "")
+
+
+def _gateway_refund_student(cfg, pr):
+	"""A refund of a student's online payment that was applied to no fee (duplicate payment, excess over the dues,
+	cancelled exam / transcript / Fee Payment), recorded in SLCM. The gateway pays it back out of the money it
+	holds, so it comes off Gateway Clearing, and releases the Unallocated Fee Receipts its Gateway Receipt booked."""
+	from slcm.erpnext_bridge.sync import gateway_refund_amount, gateway_student
+
+	amount = gateway_refund_amount(pr)
+	if amount <= 0:
+		frappe.throw(_("{0}: no unapplied money refunded").format(pr.name))
+	clearing = conf.gateway_clearing_account(cfg)
+	refunds = ", ".join(
+		f"{r.get('refund_id')} ₹{flt(r.get('amount')):,.2f} ({r.get('source') or '-'})"
+		for r in _refund_rows(pr) if r.get("applies_to", "unapplied") == "unapplied"
+	) or pr.get("refund_reference") or "-"
+	capped = flt(pr.get("refunded_unapplied_amount"), PRECISION) - amount
+	student = gateway_student(pr)
+	return {
+		"posting_date": getdate(pr.refunded_on or pr.modified),
+		"cash_account": clearing,
+		"reference": (pr.get("refund_reference") or pr.transaction_id or pr.name)[:140],
+		"remark": _(
+			"SLCM gateway refund | {0} payment {1} | request {2} | {3} | refunds: {4} | money that was applied to no fee, "
+			"paid back to the payer by the gateway: released from Unallocated Fee Receipts, out of Gateway Clearing{5}"
+		).format(
+			pr.payment_gateway or "-", pr.transaction_id, pr.name, _who(pr), refunds,
+			_(" | ₹{0} recorded beyond the unapplied money: check whether it was a fee applied to a due (Fee Refund)").format(f"{capped:,.2f}")
+			if capped > 0.005 else "",
+		),
+		"student": student,
+		"programme": _programme_of(None, student),
+		"lines": [(conf.require(cfg, "slcm_unallocated_fee_account"), amount, 0.0), (clearing, 0.0, amount)],
+	}
+
+
+def _gateway_refund_payout(cfg, pr):
+	"""The gateway took recorded refunds of this payment off a payout: the bank received that much less than the
+	payout's payments settled, so it leaves the bank and evens out Gateway Clearing. Matches the payout UTR."""
+	from slcm.erpnext_bridge.sync import gateway_student
+
+	amount = flt(pr.refund_settled_amount, PRECISION)
+	if amount <= 0:
+		frappe.throw(_("{0}: no refund deducted from a payout").format(pr.name))
+	bank = conf.require(cfg, "default_bank_account", _("Razorpay and Easebuzz settle into the Company's default bank account"))
+	clearing = conf.gateway_clearing_account(cfg)
+	settled = [r for r in _refund_rows(pr) if r.get("payout")
+	           and (r.get("applies_to", "unapplied") == "unapplied" or r.get("fee_refund"))]
+	detail = ", ".join(f"{r.get('gateway_refund_id') or r.get('refund_id')} ₹{flt(r.get('amount')):,.2f} in {r.get('payout')}"
+	                   for r in settled) or pr.get("refund_settlement_reference") or "-"
+	student = gateway_student(pr)
+	return {
+		"posting_date": getdate(pr.refund_settled_on or pr.modified),
+		"cash_account": bank,
+		"reference": (pr.get("refund_settlement_reference") or pr.name)[:140],
+		"remark": _(
+			"SLCM refund deducted from {0} payout | payment {1} | request {2} | {3} | {4} | the payout paid that much "
+			"less into the bank"
+		).format(pr.payment_gateway or "gateway", pr.transaction_id, pr.name, _who(pr), detail),
+		"student": student,
+		"programme": _programme_of(None, student),
+		"lines": [(clearing, amount, 0.0), (bank, 0.0, amount)],
 	}
 
 

@@ -13,6 +13,15 @@ import frappe
 from frappe.utils import flt, formatdate
 
 
+# Exam fees are paid on the Re-Exam / Results pages only, never from Fees & Payments: their unpaid Fee Demands
+# (raised at enrolment) are left out of the portal fee pages, and paying the registration cancels the demand.
+EXAM_TRIGGERS = ("Re Exam Registration", "Improvement Exam Registration")
+
+
+def is_unpaid_exam_demand(d):
+	return d.get("trigger_ref_doctype") in EXAM_TRIGGERS and d.get("status") not in ("Paid", "Waived")
+
+
 def _fmt_inr(amount):
 	return "₹{:,.0f}".format(flt(amount))
 
@@ -76,8 +85,8 @@ def re_exam_and_fine_rows(student, re_exams, fines):
 		demand = rex_demands.get(r.name)
 		paid_online = r.payment_status in ("Paid", "Captured")
 		paid = paid_online or (demand and demand.status == "Paid")
-		if not paid and demand:
-			continue
+		if not paid:
+			continue  # unpaid exam fees are paid on the Re-Exam / Results page, not here
 		receipt = receipts.get(demand.name) if demand else None
 		rows.append(frappe._dict(
 			component=r.get("course_name") or r.course or "Re-examination fee",
@@ -323,6 +332,7 @@ def charge_rows(student, demands, invoices, re_exams, fines):
 		r["gross"] = r.amount + r.waiver
 		for k in ("amount", "paid", "outstanding", "waiver", "gross"):
 			r[k + "_fmt"] = _fmt_inr(r[k])
+	_mark_shared_receipts(rows)
 	today = frappe.utils.getdate()
 	rows.sort(key=lambda r: (
 		r.group != "Academic", r.status_key == "paid",
@@ -330,6 +340,43 @@ def charge_rows(student, demands, invoices, re_exams, fines):
 	))
 	_attach_details(student, rows, invoices)
 	return rows
+
+
+def _mark_shared_receipts(rows):
+	"""One payment can settle several fees at once; it then has a single Fee Receipt listing
+	all of them. Tag each row whose receipt covers more than one fee with receipt_items (how
+	many fees it covers) and receipt_total_fmt (the receipt amount), so the portal can say the
+	download is a combined receipt instead of looking like a receipt for that fee alone."""
+	names = sorted({r.get("receipt") for r in rows if r.get("receipt")})
+	for r in rows:
+		r["receipt_items"] = 0
+		r["receipt_total_fmt"] = ""
+	if not names:
+		return
+	on_page = {}
+	for r in rows:
+		if r.get("receipt"):
+			on_page[r.receipt] = on_page.get(r.receipt, 0) + 1
+	info = {
+		x.name: x
+		for x in frappe.db.sql(
+			"""SELECT fr.name, fr.amount,
+				(SELECT COUNT(*) FROM `tabFee Receipt Demands Paid` rdp
+				 WHERE rdp.parent = fr.name AND rdp.parenttype = 'Fee Receipt') AS line_count
+			FROM `tabFee Receipt` fr WHERE fr.name IN %(names)s""",
+			{"names": tuple(names)},
+			as_dict=True,
+		)
+	}
+	for r in rows:
+		rc = r.get("receipt")
+		if not rc:
+			continue
+		x = info.get(rc)
+		items = max(on_page.get(rc, 0), int((x.line_count if x else 0) or 0))
+		if items > 1:
+			r["receipt_items"] = items
+			r["receipt_total_fmt"] = _fmt_inr(x.amount) if x and flt(x.amount) else ""
 
 
 def _fmt_date(value):

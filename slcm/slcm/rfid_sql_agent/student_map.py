@@ -161,6 +161,105 @@ def _fetch_device_records(conf, limit=None):
 	return out
 
 
+# ── Card list sent by the campus agent ────────────────────────────
+# A cloud-hosted SLCM cannot reach the campus SQL Server. The SLCM RFID Sync Agent (apps/slcm/rfid_sync_agent)
+# runs on campus, reads the same table/columns set here, and uploads the card list; Student Map then uses that
+# list whenever this server cannot reach the SQL Server itself.
+
+UPLOAD_KEY = "rfid_student_map_device_upload"
+UPLOAD_MAX_ROWS = 200000
+UPLOAD_STALE_HOURS = 24
+
+
+def _check_agent_access():
+	"""The Student Map roles, or the agent's API user (it already creates RFID SQL Punch Logs)."""
+	roles = set(frappe.get_roles())
+	if roles & ({"System Manager"} | set(AAD_ROLES)):
+		return
+	if not frappe.has_permission("RFID SQL Punch Log", "create"):
+		raise frappe.PermissionError(_("Not allowed to send the RFID card list."))
+
+
+@frappe.whitelist()
+def device_map_config():
+	"""For the campus agent: which table/columns to read for the card list (one place to set them)."""
+	_check_agent_access()
+	conf = _config()
+	return {"table": conf.table, "code_column": conf.code_col, "name_columns": conf.name_cols}
+
+
+@frappe.whitelist(methods=["POST"])
+def upload_device_records(records, table=None):
+	"""Campus agent: replace the stored card list. records = [[code, name], …] read from `table`."""
+	_check_agent_access()
+	if isinstance(records, str):
+		records = frappe.parse_json(records)
+	if not isinstance(records, list):
+		frappe.throw(_("records must be a list of [card code, name] pairs."))
+	if len(records) > UPLOAD_MAX_ROWS:
+		frappe.throw(_("Too many records ({0}); the limit is {1}.").format(len(records), UPLOAD_MAX_ROWS))
+	clean, seen = [], set()
+	for r in records:
+		if not isinstance(r, (list, tuple)) or not r:
+			continue
+		code = _text(r[0])[:140]
+		name = re.sub(r"\s+", " ", _text(r[1] if len(r) > 1 else ""))[:280]
+		if (code, name) in seen:
+			continue
+		seen.add((code, name))
+		clean.append((code, name))
+	conf = _config()
+	table = (table or "").strip()
+	if table and table != conf.table:
+		frappe.throw(_("The agent read {0}, but Student Map is set to {1}. Restart the agent so it picks up the "
+		               "new setting.").format(frappe.bold(table), frappe.bold(conf.table)))
+	frappe.db.set_global(UPLOAD_KEY, frappe.as_json({
+		"records": clean,
+		"table": conf.table,
+		"uploaded_at": str(now_datetime()),
+		"uploaded_by": frappe.session.user,
+	}, indent=None))
+	return {"stored": len(clean)}
+
+
+def _uploaded_records():
+	raw = frappe.db.get_global(UPLOAD_KEY)
+	if not raw:
+		return None
+	try:
+		data = frappe.parse_json(raw)
+		data["records"] = [tuple(r) for r in data.get("records") or []]
+		return frappe._dict(data)
+	except Exception:
+		return None
+
+
+def _device_records(conf):
+	"""(records, origin): read the SQL Server directly when reachable, else the list the campus agent sent."""
+	from slcm.slcm.rfid_sql_agent.connection import unreachable_reason
+
+	why = unreachable_reason()
+	if not why:
+		return _fetch_device_records(conf), {"kind": "direct"}
+	up = _uploaded_records()
+	if not up:
+		frappe.throw(
+			_("This SLCM server cannot reach the device database ({0}), and the campus agent has not sent a card "
+			  "list yet.<br><br>Being on the campus Wi-Fi does not help: the connection is made by the SLCM server, "
+			  "not your browser. On the campus machine running the <b>SLCM RFID Sync Agent</b>, run "
+			  "<code>rfid_sync_agent.py --cards</code> (it also sends the list on its own every few hours), then "
+			  "open Student Map again.").format(frappe.utils.escape_html(why)),
+			title=_("Device database not reachable"),
+		)
+	if up.table and up.table != conf.table:
+		frappe.throw(_("The card list from the campus agent was read from {0}, but Student Map is now set to {1}. "
+		               "Run <code>rfid_sync_agent.py --cards</code> on the campus machine to send a fresh list.")
+		             .format(frappe.bold(up.table), frappe.bold(conf.table)), title=_("Card list is out of date"))
+	age_h = (now_datetime() - frappe.utils.get_datetime(up.uploaded_at)).total_seconds() / 3600
+	return up.records, {"kind": "agent", "at": up.uploaded_at, "count": len(up.records),
+	                    "stale": age_h > UPLOAD_STALE_HOURS}
+
+
 @frappe.whitelist()
 def discover_name_sources():
 	"""Tables in the device database that have a code column and a name column — to pick in the UI."""
@@ -249,18 +348,35 @@ def _students(conf):
 	""", as_dict=True)
 
 
+SCOPE_MAX_VALUES = 100
+
+
 def _scope(scope):
-	"""{"programme": ..., "batch": ..., ...} with only the filters that are set (any one, or several together)."""
+	"""{"programme": [...], "batch": [...], ...} with only the filters that are set. Each filter takes one value or a
+	list (a student matches when it has any of them); different filters must all match."""
 	scope = frappe.parse_json(scope) if isinstance(scope, str) else (scope or {})
-	return {k: str(v).strip() for k, v in (scope or {}).items() if k in SCOPE_FIELDS and v and str(v).strip()}
+	out = {}
+	for k, v in (scope or {}).items():
+		if k not in SCOPE_FIELDS:
+			continue
+		values = v if isinstance(v, (list, tuple, set)) else [v]
+		clean = sorted({str(x).strip() for x in values if x is not None and str(x).strip()})
+		if len(clean) > SCOPE_MAX_VALUES:
+			frappe.throw(_("Pick at most {0} values in {1}.").format(SCOPE_MAX_VALUES, _(SCOPE_FIELDS[k][1])))
+		if clean:
+			out[k] = clean
+	return out
 
 
 def _scope_label(scope):
-	return " · ".join(f"{_(label)}: {scope[k]}" for k, (_field, label) in SCOPE_FIELDS.items() if k in scope)
+	def values(v):
+		return ", ".join(v) if len(v) <= 3 else _("{0} and {1} more").format(", ".join(v[:3]), len(v) - 3)
+
+	return " · ".join(f"{_(label)}: {values(scope[k])}" for k, (_field, label) in SCOPE_FIELDS.items() if k in scope)
 
 
 def _in_scope(student, scope):
-	return all((student.get(SCOPE_FIELDS[k][0]) or "") == v for k, v in scope.items())
+	return all((student.get(SCOPE_FIELDS[k][0]) or "") in v for k, v in scope.items())
 
 
 def _card_owners():
@@ -416,14 +532,23 @@ def preview(include_name_mismatch=None, scope=None, token=None, include_removed=
 	cached = frappe.cache.get_value(CACHE_PREFIX + token) if token else None
 	if cached and cached.get("user") == frappe.session.user:
 		records = cached["records"]
+		origin = cached.get("origin") or {"kind": "direct"}
 	else:
-		records = _fetch_device_records(conf)
+		records, origin = _device_records(conf)
 		token = uuid.uuid4().hex
 	rows, kpi = _classify(records, conf, include, scope, cint(include_removed))
-	frappe.cache.set_value(CACHE_PREFIX + token, {"user": frappe.session.user, "records": records}, expires_in_sec=CACHE_SECS)
+	frappe.cache.set_value(CACHE_PREFIX + token, {"user": frappe.session.user, "records": records, "origin": origin},
+	                       expires_in_sec=CACHE_SECS)
 	return {"token": token, "kpi": kpi, "rows": rows, "source": conf.source, "match_rule": conf.match_rule,
+	        "origin": origin,
 	        "include_name_mismatch": include, "has_names": bool(conf.name_cols),
 	        "scope": scope, "scope_label": _scope_label(scope), "include_removed": cint(include_removed)}
+
+
+def _source_label(conf, origin):
+	if (origin or {}).get("kind") == "agent":
+		return _("{0} (campus agent list, {1})").format(conf.source, str(origin.get("at") or "")[:16])[:140]
+	return conf.source
 
 
 def _running_log():
@@ -450,7 +575,7 @@ def apply(token, include_name_mismatch=0, scope=None, include_removed=0):
 		"status": "In Progress",
 		"run_by": frappe.session.user,
 		"run_on": now_datetime(),
-		"source": conf.source,
+		"source": _source_label(conf, cached.get("origin")),
 		"match_rule": conf.match_rule,
 		"include_name_mismatch": cint(include_name_mismatch),
 		"include_removed": cint(include_removed),

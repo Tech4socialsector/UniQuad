@@ -30,6 +30,7 @@ def _cancel_demand_for_trigger(trigger_doctype, trigger_name):
 			continue
 		demand_doc = frappe.get_doc("Fee Demand", d.name)
 		demand_doc.status = "Cancelled"
+		demand_doc.flags.ignore_links = True  # status-only change; the trigger may already be gone
 		demand_doc.save(ignore_permissions=True)
 
 
@@ -152,6 +153,23 @@ def on_reexam_registration_insert(doc, method=None):
 
 
 # ─── 4. Revaluation Request Submitted ───────────────────────────────────────
+
+def on_exam_registration_trash(doc, method=None):
+	"""Cancel the unpaid fee demand of a deleted Re Exam / Improvement Exam Registration."""
+	_cancel_demand_for_trigger(doc.doctype, doc.name)
+
+
+def on_exam_payment_log(doc, method=None):
+	"""A re-exam / improvement fee paid on its own page (any gateway, browser or reconciler) settles the
+	registration: cancel the unpaid Fee Demand raised for it at enrolment, so it is neither left as a due nor
+	paid a second time."""
+	if doc.get("payment_status") != "Paid":
+		return
+	if doc.doctype == "Re Exam Payment Log" and doc.get("re_exam_registration"):
+		_cancel_demand_for_trigger("Re Exam Registration", doc.re_exam_registration)
+	elif doc.doctype == "Improvement Exam Payment Log" and doc.get("improvement_exam_registration"):
+		_cancel_demand_for_trigger("Improvement Exam Registration", doc.improvement_exam_registration)
+
 
 def on_revaluation_request_submit(doc):
 	"""Create Revaluation Fee demand."""

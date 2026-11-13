@@ -520,14 +520,9 @@ body.pp-dark .pp-progress { background: #1a2540; }
         <span class="pp-att-caption">Payment status</span>
         {% if _fs %}
         <span
-          class="pp-pill {{ 'pp-pill-success' if _fs == 'Paid' else ('pp-pill-warning' if _fs in ('Partially Paid', 'Payment Initiated', 'Authorized') else 'pp-pill-danger') }}">{{
+          class="pp-pill {{ 'pp-pill-success' if _fs == 'Paid' else ('pp-pill-warning' if _fs in ('Partially Paid', 'Pending', 'Payment Initiated', 'Authorized') else 'pp-pill-danger') }}">{{
           _fs }}</span>
         {% endif %}
-      </div>
-      {% set _pct = ((fee_summary.paid / fee_summary.total * 100) if fee_summary.total > 0 else 0) %}
-      <div class="pp-progress" role="progressbar" aria-label="Fees paid" aria-valuemin="0" aria-valuemax="100"
-        aria-valuenow="{{ [_pct, 100]|min|round|int }}" style="margin-bottom:16px;">
-        <div class="pp-progress-bar" style="width:{{ [_pct, 100]|min }}%;background:var(--pp-success);"></div>
       </div>
       <div class="pp-metric-row">
         <div class="pp-metric">
