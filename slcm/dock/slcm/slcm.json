@@ -30,15 +30,15 @@
    "title": "Programme Management"
   },
   {
- "added": 0,
- "hidden": 0,
- "icon": "wallet",
- "link_to": "Fee Management",
- "link_type": "Sidebar",
- "title": "Fees & Payments"
-}
+   "added": 0,
+   "hidden": 0,
+   "icon": "indian-rupee",
+   "link_to": "Fee Management",
+   "link_type": "Sidebar",
+   "title": "Fees Management"
+  }
  ],
- "modified": "2026-10-29 13:00:00.000000",
+ "modified": "2026-11-13 12:00:00.000000",
  "modified_by": "Administrator",
  "name": "slcm",
  "owner": "Administrator",
