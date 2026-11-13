@@ -207,17 +207,43 @@ The API user does not need any change. The card list uses the same permission th
 
 ---
 
-## Part 3: Upgrade the installed agent (IT, Windows, about 10 minutes)
+## Part 3: Steps on the IT Admin laptop (Windows, about 15 minutes)
 
-### Step 3.1: Open an Administrator Command Prompt
+These steps are done on the campus machine that already runs the agent: the IT Admin laptop where the
+SQL Server runs. Do them **after** Part 2 is finished on the live site.
+
+### Before you start
+
+You need:
+
+- The file **slcm_rfid_sync_agent_v2.zip** from the SLCM team.
+- A Windows login with **administrator** rights on this laptop.
+- About 15 minutes. Swipes pause only while you are doing Steps 3.5 to 3.10 and catch up by themselves
+  afterwards. No swipe is lost.
+
+### Step 3.1: Put the new file on the laptop
+
+1. Copy **slcm_rfid_sync_agent_v2.zip** to the laptop's **Desktop** (by USB, email or shared drive).
+2. Right-click the zip and choose **Extract All… → Extract**.
+3. You now have a folder **slcm_rfid_sync_agent_v2** on the Desktop. The new file is:
+
+```text
+Desktop\slcm_rfid_sync_agent_v2\slcm_rfid_sync_agent_v2\rfid_sync_agent\rfid_sync_agent.py
+```
+
+Windows sometimes creates the folder only once. If you cannot find the file there, search the Desktop for
+**rfid_sync_agent.py** and note where it is.
+
+### Step 3.2: Open an Administrator Command Prompt
 
 1. Click **Start**.
 2. Type **cmd**.
 3. Right-click **Command Prompt** and choose **Run as administrator**.
+4. Click **Yes** on the "Do you want to allow…" prompt.
 
-Type every command below in this window.
+Type every command below in this black window. Press **Enter** after each one.
 
-### Step 3.2: Find the install folder
+### Step 3.3: Find the install folder
 
 Run:
 
@@ -228,13 +254,33 @@ schtasks /Query /TN "SLCM RFID Sync" /V /FO LIST | findstr /C:"Task To Run"
 You will see a line like this:
 
 ```text
-Task To Run:   "C:\...\python.exe" C:\slcm_rfid_sync\rfid_sync_agent.py --once
+Task To Run:   "C:\Program Files\Python312\python.exe" C:\slcm_rfid_sync\rfid_sync_agent.py --once
 ```
 
-The folder before `rfid_sync_agent.py` (here **C:\slcm_rfid_sync**) is the **install folder**. If yours is
-different, use your folder in the steps below.
+Write down two things from that line:
 
-### Step 3.3: Pause the scheduled sync
+- the **install folder**: the folder before `rfid_sync_agent.py`, here **C:\slcm_rfid_sync**
+- the **Python path**: the part in quotes, here **C:\Program Files\Python312\python.exe**
+
+The steps below use C:\slcm_rfid_sync. **If your install folder is different, use yours in every
+command.**
+
+If you see `ERROR: The system cannot find the file specified`, the task has another name. Open
+**Task Scheduler** from the Start menu, find the task that runs **rfid_sync_agent.py**, and use its name
+in Steps 3.5 and 3.10 instead of SLCM RFID Sync.
+
+### Step 3.4: Check the current agent is healthy
+
+Run:
+
+```bat
+powershell -command "Get-Content C:\slcm_rfid_sync\agent.log -Tail 5"
+```
+
+You should see recent lines starting with today's date, such as `Cycle: fetched=...`. This shows the old
+agent works before you change anything.
+
+### Step 3.5: Pause the scheduled sync
 
 Run:
 
@@ -242,19 +288,39 @@ Run:
 schtasks /Change /TN "SLCM RFID Sync" /DISABLE
 ```
 
-Expected: `SUCCESS: The parameters of scheduled task "SLCM RFID Sync" have been changed.`
+Expected:
 
-### Step 3.4: Replace one file
+```text
+SUCCESS: The parameters of scheduled task "SLCM RFID Sync" have been changed.
+```
 
-Copy the new **rfid_sync_agent.py** into the install folder and choose **Replace**.
+### Step 3.6: Back up the current file
 
-**Do NOT replace or delete these files in the install folder:**
+Run:
+
+```bat
+copy /Y C:\slcm_rfid_sync\rfid_sync_agent.py C:\slcm_rfid_sync\rfid_sync_agent.py.old
+```
+
+Expected: `1 file(s) copied.` This backup is used if you ever need to undo.
+
+### Step 3.7: Copy in the new file
+
+Run (if the file from Step 3.1 is somewhere else, change the first path):
+
+```bat
+copy /Y "%USERPROFILE%\Desktop\slcm_rfid_sync_agent_v2\slcm_rfid_sync_agent_v2\rfid_sync_agent\rfid_sync_agent.py" C:\slcm_rfid_sync\
+```
+
+Expected: `1 file(s) copied.`
+
+Copy **only this one file.** Do **not** copy or replace anything else in C:\slcm_rfid_sync:
 
 - **config.ini** holds the SQL password and the API key.
 - **state.json** records how far the swipes have been sent. Losing it can re-send or skip swipes.
 - **agent.log** is the activity log.
 
-### Step 3.5: Go to the install folder
+### Step 3.8: Go to the install folder
 
 Run:
 
@@ -262,12 +328,19 @@ Run:
 cd /d C:\slcm_rfid_sync
 ```
 
-### Step 3.6: Test the connections
+### Step 3.9: Test the connections
 
 Run:
 
 ```bat
 py rfid_sync_agent.py --test
+```
+
+If you see `'py' is not recognized`, use the Python path from Step 3.3 instead of `py`, in quotes. Do the
+same in the next step:
+
+```bat
+"C:\Program Files\Python312\python.exe" rfid_sync_agent.py --test
 ```
 
 Expected, three lines:
@@ -278,11 +351,13 @@ Live site OK: logged in as ..., highest source_log_id ...
 Card list OK: Student Map reads iclock_trans_ajim.emp_code (no names)
 ```
 
-- **First two lines say OK:** swipes are fine. Continue.
-- **Third line says "Card list WARNING":** the live site does not have the update yet. Swipes are **not**
-  affected. Finish Part 2, then run this step again.
+| What you see | What to do |
+|---|---|
+| All three lines OK | Continue to Step 3.10 |
+| Third line says **Card list WARNING** | The live site does not have the update yet. Swipes are fine. Do Step 3.11 now, ask the SLCM team to finish Part 2, then run Steps 3.9 and 3.10 later |
+| First or second line says **FAILED** | Do the "Undo the upgrade" steps below and send the screen text to the SLCM team |
 
-### Step 3.7: Send the card list once
+### Step 3.10: Send the card list once
 
 Run:
 
@@ -296,7 +371,7 @@ Expected (the numbers will vary):
 Card list sent: 2858 read from iclock_trans_ajim, 2858 stored on the live site
 ```
 
-### Step 3.8: Resume the scheduled sync (do not skip this)
+### Step 3.11: Resume the scheduled sync (do not skip this)
 
 Run:
 
@@ -304,32 +379,66 @@ Run:
 schtasks /Change /TN "SLCM RFID Sync" /ENABLE
 ```
 
-Expected: `SUCCESS: The parameters of scheduled task "SLCM RFID Sync" have been changed.`
+Expected:
 
-### Step 3.9: Keep the machine awake
+```text
+SUCCESS: The parameters of scheduled task "SLCM RFID Sync" have been changed.
+```
 
-Open **Settings → System → Power** and set **Sleep when plugged in** to **Never**.
+### Step 3.12: Check the task is running again
 
-### Upgrade on Linux instead
+Wait **2 minutes**, then run:
 
-1. Run `sudo crontab -e` and put `#` in front of the agent line, which pauses it.
-2. Replace only **/opt/slcm_rfid_sync/rfid_sync_agent.py**.
-3. Test and send the card list:
+```bat
+powershell -command "Get-Content C:\slcm_rfid_sync\agent.log -Tail 5"
+```
+
+You should see new lines with the current time, such as `Cycle: fetched=... pushed=...`. The paused
+swipes are sent first, so the first run may show a larger number.
+
+### Step 3.13: Keep the laptop awake
+
+1. Open **Settings → System → Power** (on Windows 10: **Power & sleep**).
+2. Set **When plugged in, put my device to sleep after** to **Never**.
+3. Keep the laptop **plugged in**. With the lid closed, set **Control Panel → Power Options → Choose what
+   closing the lid does → When plugged in** to **Do nothing**.
+
+If the laptop sleeps, swipes stop reaching the live site until it wakes up.
+
+### Step 3.14: Tell the SLCM team it is done
+
+Send them the output of Steps 3.9 and 3.10. They will check the live dashboard (Part 4).
+
+### Undo the upgrade (only if needed)
+
+Run these in an Administrator Command Prompt:
+
+```bat
+schtasks /Change /TN "SLCM RFID Sync" /DISABLE
+copy /Y C:\slcm_rfid_sync\rfid_sync_agent.py.old C:\slcm_rfid_sync\rfid_sync_agent.py
+schtasks /Change /TN "SLCM RFID Sync" /ENABLE
+```
+
+This puts the old version back. **config.ini** and **state.json** work with both versions, so swipes carry
+on as before.
+
+### If the agent runs on Linux instead
 
 ```bash
 cd /opt/slcm_rfid_sync
+sudo cp rfid_sync_agent.py rfid_sync_agent.py.old
+```
+
+1. Run `sudo crontab -e` and put `#` in front of the agent line, which pauses it.
+2. Copy the new **rfid_sync_agent.py** into /opt/slcm_rfid_sync/.
+3. Test and send the card list:
+
+```bash
 sudo venv/bin/python rfid_sync_agent.py --test
 sudo venv/bin/python rfid_sync_agent.py --cards
 ```
 
 4. Run `sudo crontab -e` again and remove the `#`, which resumes it.
-
-### Undo the upgrade (only if needed)
-
-1. Put the old **rfid_sync_agent.py** back in the install folder.
-2. Run the command from Step 3.8.
-
-**config.ini** and **state.json** work with both versions.
 
 ---
 
@@ -392,11 +501,11 @@ The Student Map settings were changed on live. Run `py rfid_sync_agent.py --card
 
 ### Live Student Map says "the campus agent has not sent a card list yet"
 
-Run Step 3.7 on the campus machine, then open Student Map again.
+Run Step 3.10 on the campus machine, then open Student Map again.
 
 ### Live Student Map banner is amber ("more than a day old")
 
-The scheduled task is not sending the list. Check that the task is enabled (Step 3.8), that the machine is
+The scheduled task is not sending the list. Check that the task is enabled (Step 3.11), that the machine is
 awake, and read agent.log.
 
 ### Live dashboard says "Campus agent · no recent swipes" during college hours

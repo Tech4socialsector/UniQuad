@@ -479,6 +479,9 @@ def record_payment(
 	"""
 	_check_access()
 	remarks = _require_remarks(remarks)
+	reference_number = (reference_number or "").strip()
+	if not reference_number:
+		frappe.throw(_("Reference / UTR No. is mandatory."))
 
 	allocations = frappe.parse_json(allocations) or []
 	allocations = [a for a in allocations if flt(a.get("amount")) > 0]
