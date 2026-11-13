@@ -172,7 +172,12 @@ function render(wrapper, d) {
 	const s = d.stats || {};
 	const polled_s = d.last_polled_at ? moment(d.server_now).diff(moment(d.last_polled_at), "seconds") : null;
 	const stale = d.enabled && (polled_s === null || polled_s > d.poll_interval_seconds * 3 + 120);
-	const state = !d.enabled ? ["off", __("Stopped")]
+	// Enable off here, but swipes still arrive: the campus RFID Sync Agent pushes them (a cloud-hosted site
+	// cannot reach the campus SQL Server, so it does not pull them itself).
+	const swipe_s = s.last_punch ? moment(d.server_now).diff(moment(s.last_punch), "seconds") : null;
+	const campus_agent = !d.enabled && swipe_s !== null && swipe_s < 7 * 86400;
+	const state = campus_agent ? (swipe_s < 30 * 60 ? ["ok", __("Running · campus agent")] : ["warn", __("Campus agent · no recent swipes")])
+		: !d.enabled ? ["off", __("Stopped")]
 		: stale ? ["bad", __("Not polling")]
 		: d.last_error && moment(d.server_now).diff(moment(d.last_error.creation), "seconds") < d.poll_interval_seconds * 3 + 120
 			? ["warn", __("Connection problems")] : ["ok", __("Running")];
@@ -183,7 +188,12 @@ function render(wrapper, d) {
 			${d.enabled
 				? __("Pulling from <b>{0}</b> every {1}. Last poll {2}, last swipe {3}.",
 					[rf_esc(d.source), format_interval(d.poll_interval_seconds), ago(d.last_polled_at, d.server_now), ago(s.last_punch, d.server_now)])
+				: campus_agent
+				? __("Swipes are sent by the <b>SLCM RFID Sync Agent</b> on the campus machine. Last swipe {0}.", [ago(s.last_punch, d.server_now)])
+					+ (swipe_s >= 30 * 60 ? ` <span class="rf-warn-text">${__("If swipes are expected now, check that the campus machine is on and read its agent.log.")}</span>` : "")
 				: __("The agent is off. Turn on <b>Enable RFID SQL Agent</b> in RFID Agent Settings to start pulling swipes.")}
+			${d.card_list ? `<br>${__("Student Map card list from the campus agent: sent {0} ({1} cards)",
+				[ago(d.card_list.at, d.server_now), rf_num(d.card_list.count)])}` : ""}
 			${d.remote_push ? `<br>${__("Also forwarding each swipe to <b>{0}</b>", [rf_esc(d.remote_site_url)])}${s.remote_pending
 				? ` · <span class="rf-warn-text">${__("{0} not forwarded yet", [rf_num(s.remote_pending)])}</span>` : ""}` : ""}
 			${d.errors_24h ? `<br><button class="rf-link" data-route="List/Error Log">${__("{0} connection error(s) in the last 24 h", [d.errors_24h])}</button>

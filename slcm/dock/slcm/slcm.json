@@ -28,7 +28,15 @@
    "link_to": "Programme Management",
    "link_type": "Sidebar",
    "title": "Programme Management"
-  }
+  },
+  {
+ "added": 0,
+ "hidden": 0,
+ "icon": "wallet",
+ "link_to": "Fee Management",
+ "link_type": "Sidebar",
+ "title": "Fees & Payments"
+}
  ],
  "modified": "2026-10-29 13:00:00.000000",
  "modified_by": "Administrator",
