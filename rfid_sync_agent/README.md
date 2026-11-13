@@ -111,11 +111,24 @@ revoked at any time without affecting anyone's login.
 |---|---|
 | `py rfid_sync_agent.py --test` | Check both connections |
 | `py rfid_sync_agent.py --once` | Sync now |
+| `py rfid_sync_agent.py --cards` | Send the Student Map card list now (see below) |
+| `py rfid_sync_agent.py --cards --dry-run` | Read the card list and show a sample, without sending |
 | `py rfid_sync_agent.py --once --dry-run` | Show what would be sent, without sending anything |
 | `py rfid_sync_agent.py --once --dry-run --from-id 3576600` | Same, but starting after a given SQL ID |
 
 To re-send from an earlier point, stop the task, edit `last_log_id` in `state.json`, and start the
 task again. Already-sent punches are skipped automatically.
+
+## Student Map card list
+
+The live site cannot reach the campus SQL Server, so **Student Map (RFID)** on the live site cannot read
+`etpdb` itself. The agent therefore also sends the card list (card code and name) every
+`cards_every_hours` (6 by default), reading the table and columns set on the live site under
+**RFID SQL Agent Settings → Student Map**. When the live site cannot reach the SQL Server, Student Map
+uses the latest list and shows when it was sent.
+
+After changing the Student Map table or columns, or before a big mapping run, send a fresh list with
+`py rfid_sync_agent.py --cards`.
 
 ## Troubleshooting
 
@@ -125,4 +138,5 @@ task again. Already-sent punches are skipped automatically.
 | `SQL Server FAILED ... SSL / TLS / encryption` (Windows) | Windows has TLS 1.0 turned off. Set `driver = SQL Server` in config.ini, or ask IT to allow TLS 1.0 for this machine |
 | `Live site FAILED ... HTTP 401/403` | The API key/secret is wrong, or the API user lacks permission |
 | `Another copy is already running` | Normal when a sync takes longer than a minute. The next run continues |
+| `Card list not sent ... HTTP 403` | The API user needs permission to create *RFID SQL Punch Log* (the same permission the punches use) |
 | `Stopped early, will retry next cycle` | Temporary network or site issue. Nothing is lost; it retries automatically |
