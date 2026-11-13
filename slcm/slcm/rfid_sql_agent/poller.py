@@ -382,6 +382,17 @@ def reset_watermark(new_id=0):
     return {"success": True, "message": f"Watermark reset to {new_id}"}
 
 
+def _card_list_info():
+    """When the campus RFID Sync Agent last sent the Student Map card list (None if never)."""
+    try:
+        from slcm.slcm.rfid_sql_agent.student_map import _uploaded_records
+
+        up = _uploaded_records()
+        return {"at": up.uploaded_at, "count": len(up.records)} if up else None
+    except Exception:
+        return None
+
+
 @frappe.whitelist()
 def get_dashboard_summary(feed_limit=500):
     """Agent health, today's swipes, terminals, setup gaps and the live feed
@@ -462,6 +473,7 @@ def get_dashboard_summary(feed_limit=500):
             "students_with_card": frappe.db.count("Student Master", {"rfid_uid": ["is", "set"], "student_status": "Active"}),
             "active_students": frappe.db.count("Student Master", {"student_status": "Active"}),
         },
+        "card_list":           _card_list_info(),
         "errors_24h":          len(errors),
         "last_error":          errors[0] if errors else None,
         "recent":              recent,
