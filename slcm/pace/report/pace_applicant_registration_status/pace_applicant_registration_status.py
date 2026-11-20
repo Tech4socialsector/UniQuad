@@ -1,4 +1,5 @@
 import frappe
+from frappe.utils import add_days, getdate
 
 
 def execute(filters=None):
@@ -47,8 +48,10 @@ def build_conditions(filters):
         values["from_date"] = filters["from_date"]
 
     if filters.get("to_date"):
-        conditions.append("u.creation <= %(to_date)s")
-        values["to_date"] = filters["to_date"]
+        # include the whole To Date: everything before the next day's midnight
+        # (comparing with the bare date would stop at the To Date's 00:00:00)
+        conditions.append("u.creation < %(to_date)s")
+        values["to_date"] = add_days(getdate(filters["to_date"]), 1)
 
     if filters.get("user"):
         conditions.append("u.name = %(user)s")

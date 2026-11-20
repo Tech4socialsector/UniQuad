@@ -1,9 +1,9 @@
 <template>
-	<div class="relative mx-auto max-w-[1400px] px-5 pb-10 pt-5 sm:px-8">
+	<div ref="root" class="relative mx-auto max-w-[1400px] px-5 pb-10 pt-5 sm:px-8">
 		<BuildingArt v-if="!programmes" class="pointer-events-none absolute right-8 top-16 h-28 w-60 max-lg:!hidden" />
 
 		<!-- Sidebar toggle and breadcrumbs -->
-		<nav class="relative flex h-8 items-center gap-1.5">
+		<nav class="relative flex h-8 items-center gap-1.5" data-print-hide>
 			<Button
 				v-if="hasDeskSidebar"
 				variant="ghost"
@@ -36,7 +36,18 @@
 				<span class="text-base-medium text-ink-gray-7">Admission Cycle</span>
 				<Select v-model="cycle" class="w-72" :options="cycleOptions" placeholder="Select cycle" />
 				<Button
+					v-if="cycle"
+					data-print-hide
+					label="Export"
+					icon-left="lucide-printer"
+					variant="outline"
+					title="Print this page, or save it as a PDF from the print dialog"
+					:loading="exporting"
+					@click="exportPage"
+				/>
+				<Button
 					v-if="programmes && boot.can_edit_settings"
+					data-print-hide
 					label="Settings"
 					icon-left="lucide-settings"
 					variant="outline"
@@ -44,6 +55,11 @@
 				/>
 			</div>
 		</header>
+
+		<!-- Printed only: what the export shows and when it was taken -->
+		<div data-print-only class="mt-2 text-p-sm text-ink-gray-6">
+			{{ printCaption }}
+		</div>
 
 		<div
 			v-if="!cycle"
@@ -86,7 +102,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { Breadcrumbs, Button, Select } from "frappe-ui";
 import BuildingArt from "./components/BuildingArt.vue";
 import ProgrammeList from "./components/ProgrammeList.vue";
@@ -136,34 +152,99 @@ const breadcrumbs = computed(() => {
 	return items;
 });
 
-// ---- desk sidebar: the page folds it on open (see admission_dashboard.js); this button brings it back.
+// ---- desk sidebar. On every "*-dashboard" page slcm's sidebar_toggle.js hides the sidebar
+// (body.slcm-sidebar-hidden) and puts a show/hide button in desk's page header. This page draws
+// its own header, so its button drives that same toggle through `window.slcm_sidebar`.
+const sidebarApi = () => window.slcm_sidebar;
 const deskSidebar = () => window.frappe?.app?.sidebar;
-const hasDeskSidebar = Boolean(deskSidebar());
-const sidebarOpen = ref(Boolean(deskSidebar()?.sidebar_expanded));
-// Opens/closes the sidebar on screen only. Desk's own toggle_width() would also save it as
-// the setting for every page, and the sidebar is meant to be folded on this page alone.
-function toggleSidebar() {
-	const sidebar = deskSidebar();
-	if (!sidebar?.apply_expanded_state) return;
-	sidebar.sidebar_expanded = !sidebar.sidebar_expanded;
-	sidebar.apply_expanded_state();
-	if (sidebar.sidebar_expanded) sidebar.highlight_active_item?.();
-	sidebarOpen.value = Boolean(sidebar.sidebar_expanded);
+const hasDeskSidebar = Boolean(sidebarApi() || deskSidebar());
+const sidebarOpen = ref(readSidebar());
+function readSidebar() {
+	const api = sidebarApi();
+	return api ? api.is_shown() : Boolean(deskSidebar()?.sidebar_expanded);
 }
-// The rail's own edge/arrow can open it too; keep the icon honest.
-const sync = () => (sidebarOpen.value = Boolean(deskSidebar()?.sidebar_expanded));
-document.addEventListener("click", () => setTimeout(sync, 0), true);
+function toggleSidebar() {
+	const api = sidebarApi();
+	if (api) {
+		api.toggle();
+	} else {
+		// Without slcm's toggle (shouldn't happen): fold / unfold desk's own sidebar, on screen only.
+		const sidebar = deskSidebar();
+		if (!sidebar?.apply_expanded_state) return;
+		sidebar.sidebar_expanded = !sidebar.sidebar_expanded;
+		sidebar.apply_expanded_state();
+	}
+	sidebarOpen.value = readSidebar();
+}
+// The toggle can also change elsewhere (opening this page hides it again): keep the icon honest.
+document.addEventListener("slcm-sidebar-change", (e) => (sidebarOpen.value = Boolean(e.detail?.shown)));
+
+// ---- scroll: the overview opens at the top; going back returns to where the list was.
+const root = ref(null);
+let listScroll = 0;
+// Whatever scrolls the page: desk's own container if it has one, else the document.
+function scroller() {
+	for (let el = root.value?.parentElement; el; el = el.parentElement) {
+		const { overflowY } = getComputedStyle(el);
+		if (/(auto|scroll)/.test(overflowY) && el.scrollHeight > el.clientHeight) return el;
+	}
+	return document.scrollingElement || document.documentElement;
+}
+function scrollToY(top) {
+	nextTick(() => scroller().scrollTo({ top, behavior: "instant" }));
+}
 
 function openProgrammes({ open, all }) {
+	listScroll = scroller().scrollTop;
 	openProgrammeList.value = all;
 	programmes.value = open;
+	scrollToY(0);
 }
 
 function backToList() {
 	// Coming back from a combined view keeps those programmes ticked.
 	if (programmes.value?.length > 1) selected.value = programmes.value.map((p) => p.name);
 	programmes.value = null;
+	scrollToY(listScroll);
 }
+
+// ---- export: the browser's print dialog ("Save as PDF" is one of its printers).
+// The page is first laid out at the printed width (A4 landscape) so the charts, which size
+// themselves to their box, redraw for paper before the dialog takes its snapshot.
+const exporting = ref(false);
+const printCaption = computed(() => {
+	// The period is printed by the page's own date-range box, so it isn't repeated here.
+	const scope = programmes.value ? overviewTitle.value : `${applicantType.value} programmes`;
+	const when = new Date().toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+	return `Admission Cycle ${cycleLabel.value} · ${scope} · exported ${when}`;
+});
+const frame = () => new Promise((resolve) => requestAnimationFrame(() => resolve()));
+async function exportPage() {
+	if (exporting.value) return;
+	exporting.value = true;
+	const html = document.documentElement;
+	html.classList.add("slcm-printing");
+	try {
+		await nextTick();
+		await frame();
+		await frame();
+		await new Promise((resolve) => setTimeout(resolve, 400)); // charts redraw on resize
+		window.print(); // blocks until the dialog closes
+	} finally {
+		html.classList.remove("slcm-printing");
+		exporting.value = false;
+	}
+}
+
+// Ctrl+P on the page gets the same clean layout (the charts just don't get the redraw first).
+// Only while this page is on screen: desk keeps it alive in the background on other pages.
+const onScreen = () => root.value?.offsetParent !== null;
+window.addEventListener("beforeprint", () => {
+	if (onScreen()) document.documentElement.classList.add("slcm-printing");
+});
+window.addEventListener("afterprint", () => {
+	if (!exporting.value) document.documentElement.classList.remove("slcm-printing");
+});
 
 // Another cycle has its own programmes and dates: start over on the list.
 watch(cycle, () => {

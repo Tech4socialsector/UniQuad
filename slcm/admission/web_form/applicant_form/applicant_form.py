@@ -212,6 +212,52 @@ def get_portal_shell_data():
 
 
 # ───────────────────────────────────────────────────────────────────
+#  NLSAT PORTAL ↔ APPLICANT TYPE
+#  A candidate who logged in through the Domestic portal (nlsat_portal cookie, set by
+#  /nlsatadmissions/login) may only apply as Domestic, and the International portal
+#  (/nlsat-international/login) only as International. Checked whenever the applicant
+#  type is newly chosen (new application, or a draft that had none) — existing drafts
+#  are left as they are.
+# ───────────────────────────────────────────────────────────────────
+
+def _portal_applicant_type_error(foriegn_national):
+    """
+    Message refusing `foriegn_national` ("Yes" / "No") for the portal the candidate
+    logged in through, else None. The portal cookie is required; System Users
+    (staff working on the portal) are not restricted.
+    """
+    from slcm.admission.utils.nlsat_portal import DOMESTIC, INTERNATIONAL, get_portal_cookie
+
+    user = frappe.session.user
+    if not user or user == "Guest":
+        return None
+    if frappe.db.get_value("User", user, "user_type") == "System User":
+        return None
+
+    portal = get_portal_cookie()
+    if not portal:
+        return _(
+            "We could not identify your admission portal. Please log in again through the "
+            "Domestic or International Admission Portal to continue your application."
+        )
+
+    fn = (foriegn_national or "").strip().lower()
+    if portal == DOMESTIC and fn in ("yes", "true", "1"):
+        return _(
+            "You are currently on the Domestic Admission Portal (for Indian nationals). "
+            "International applicants must apply through the International Admission Portal. "
+            "You cannot submit an international application from this portal."
+        )
+    if portal == INTERNATIONAL and fn in ("no", "false", "0"):
+        return _(
+            "You are currently on the International Admission Portal. Domestic applicants "
+            "must apply through the Domestic Admission Portal. You cannot submit a domestic "
+            "application from this portal."
+        )
+    return None
+
+
+# ───────────────────────────────────────────────────────────────────
 #  ADMISSION CYCLE ACCESS VALIDATION
 # ───────────────────────────────────────────────────────────────────
 
@@ -268,6 +314,12 @@ def validate_new_application_access(program=None, foriegn_national=None, nationa
                 cycle_data.get("academic_year") or ""
             ),
         }
+
+    # 2b. Applicant type must match the portal the candidate logged in through
+    if foriegn_national:
+        portal_error = _portal_applicant_type_error(foriegn_national)
+        if portal_error:
+            return {"allowed": False, "reason": "portal", "message": portal_error}
 
     # 3. Optional: validate specific program is listed and active in cycle
     resolved_program = program
@@ -504,6 +556,9 @@ def save_applicant_draft(data, ignore_mandatory=True):
         doc = frappe.new_doc("Applicant")
         doc.email = email
 
+    # Applicant type before this save — the portal rule below applies only when it is newly chosen
+    _fn_before = "" if doc.is_new() else (getattr(doc, "foriegn_national", "") or "").strip()
+
     # Determine which fields are safe to write
     try:
         meta = frappe.get_meta("Applicant")
@@ -582,6 +637,15 @@ def save_applicant_draft(data, ignore_mandatory=True):
                 except Exception:
                     frappe.log_error(frappe.get_traceback(), f"save_applicant_draft — could not append row to {ct_field}")
 
+    # Domestic / International must match the portal the candidate logged in through.
+    # New applications, or a draft whose applicant type is being set / changed now;
+    # drafts saved before this rule keep their applicant type untouched.
+    _fn_now = (getattr(doc, "foriegn_national", "") or "").strip()
+    if doc.is_new() or _fn_now != _fn_before:
+        portal_error = _portal_applicant_type_error(_fn_now) if (_fn_now or doc.is_new()) else None
+        if portal_error:
+            return {"status": "error", "reason": "portal", "message": portal_error}
+
     # Set Admission Year and Academic Year from current active admission cycle if missing
     if not doc.admission_year or not doc.academic_year:
         # Use admission_cycle on doc if present, else find the currently Active one
@@ -659,6 +723,17 @@ def save_applicant_draft(data, ignore_mandatory=True):
                 "status": "error",
                 "message": format_missing_mandatory_message(missing),
                 "missing_fields": missing,
+            }
+
+        # Applicant.validate only re-checks this when the values change, so a draft saved
+        # earlier with International + India would otherwise reach payment.
+        if (
+            (getattr(doc, "foriegn_national", "") or "").strip() == "Yes"
+            and (getattr(doc, "nationality", "") or "").strip().lower() == "india"
+        ):
+            return {
+                "status": "error",
+                "message": _("For International applications, Nationality cannot be India."),
             }
 
     doc.flags.ignore_mandatory  = ignore_mandatory

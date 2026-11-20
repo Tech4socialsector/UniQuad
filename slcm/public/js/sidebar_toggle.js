@@ -18,6 +18,7 @@
 	};
 
 	function apply(show) {
+		const changed = shown !== show;
 		shown = show;
 		document.body.classList.toggle("slcm-sidebar-hidden", !show);
 		document.querySelectorAll(".slcm-sb-toggle").forEach((b) => {
@@ -25,7 +26,20 @@
 			b.title = show ? __("Hide sidebar") : __("Show sidebar");
 			b.setAttribute("aria-label", b.title);
 		});
+		if (changed) document.dispatchEvent(new CustomEvent("slcm-sidebar-change", { detail: { shown: show } }));
 	}
+
+	function toggle() {
+		apply(!shown);
+		if (shown && frappe.app && frappe.app.sidebar && !frappe.app.sidebar.sidebar_expanded) {
+			frappe.app.sidebar.open();
+		}
+	}
+
+	// For pages that draw their own header (and so their own toggle button) instead of desk's
+	// .page-head, e.g. the Vue admission dashboard: same state, same behaviour as the button here.
+	// "slcm-sidebar-change" on document reports every change ({ detail: { shown } }).
+	window.slcm_sidebar = { is_shown: () => shown, toggle };
 
 	// one button per page header; pages keep their DOM, so this only adds to new ones
 	function add_buttons() {
@@ -54,10 +68,7 @@
 
 	$(document).on("click", ".slcm-sb-toggle", (e) => {
 		e.preventDefault();
-		apply(!shown);
-		if (shown && frappe.app && frappe.app.sidebar && !frappe.app.sidebar.sidebar_expanded) {
-			frappe.app.sidebar.open();
-		}
+		toggle();
 	});
 
 	$(document).on("page-change", on_route);

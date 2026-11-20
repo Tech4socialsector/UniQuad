@@ -20,6 +20,9 @@ function scopeSelector(selector) {
 	const s = selector.trim();
 
 	if (s.includes(SCOPE)) return s;
+	// The dashboard's export (print) rules have to reach desk's own page boxes, and only apply
+	// while App.vue has put `slcm-printing` on <html>, so they are left page-wide on purpose.
+	if (/^html\.slcm-printing\b/.test(s)) return s;
 	if (s === ":root" || s === "html" || s === "body" || s === ":host") return SCOPE;
 
 	const dark = s.match(DARK);

@@ -883,7 +883,8 @@
    "in_standard_filter": 1,
    "label": "Admission Cycle",
    "options": "Admission Cycle",
-   "reqd": 1
+   "reqd": 1,
+   "search_index": 1
   },
   {
    "depends_on": "eval:doc.class_xii_status == \"Completed\"",
@@ -1344,7 +1345,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-16 11:01:25.441304",
+ "modified": "2026-11-18 16:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

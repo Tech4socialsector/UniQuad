@@ -47,7 +47,7 @@ web_include_js = ["/assets/slcm/js/fle_theme.js"]
 app_include_js = [
     "/assets/slcm/js/student_workspace_redirect.js",
     "/assets/slcm/js/bulk_email_dialog.js",
-    "/assets/slcm/js/sidebar_toggle.js?v=6",
+    "/assets/slcm/js/sidebar_toggle.js?v=7",
     "/assets/slcm/js/sidebar_fallback.js?v=1",
     # Company > View > Cost Centers / Chart of Accounts: open the tree of that company, not the cached one
     "/assets/slcm/js/tree_route_filters.js?v=1"

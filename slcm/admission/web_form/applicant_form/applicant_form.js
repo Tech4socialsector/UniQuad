@@ -164,7 +164,7 @@ function _injectCSS() {
 		'#slcm-fee-modal{position:fixed;inset:0;z-index:99998;display:none;align-items:center;justify-content:center;padding:16px;}',
 		'#slcm-fee-modal.open{display:flex;}',
 		'#slcm-fee-backdrop{position:absolute;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(4px);}',
-		'#slcm-fee-box{position:relative;background:#fff;border-radius:14px;width:100%;max-width:500px;' +
+		'#slcm-fee-box{position:relative;background:#fff;border-radius:14px;width:100%;max-width:660px;' +
 			'max-height:calc(100vh - 32px);overflow-y:auto;padding:28px 26px 26px;text-align:center;font-family:inherit;' +
 			'box-shadow:0 24px 64px rgba(15,23,42,.28);animation:slcm-slide-up .3s ease-out;}',
 		'#slcm-fee-box .slcm-fee-ms{font-family:"Material Symbols Outlined";font-weight:normal;font-style:normal;' +
@@ -175,52 +175,72 @@ function _injectCSS() {
 		'#slcm-fee-close:hover{background:#e2e8f0;}',
 		'#slcm-fee-close .slcm-fee-ms{font-size:22px;}',
 		/* Rupee hero icon with decorative bubbles */
-		'.slcm-fee-hero{position:relative;width:120px;height:84px;margin:4px auto 12px;}',
-		'.slcm-fee-hero-circle{position:absolute;left:50%;top:0;transform:translateX(-50%);width:84px;height:84px;border-radius:50%;' +
+		'.slcm-fee-hero{position:relative;width:96px;height:64px;margin:0 auto 8px;}',
+		'.slcm-fee-hero-circle{position:absolute;left:50%;top:0;transform:translateX(-50%);width:64px;height:64px;border-radius:50%;' +
 			'background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 10%,#fff);' +
 			'color:var(--slcm-primary,#920C24);display:flex;align-items:center;justify-content:center;}',
-		'.slcm-fee-hero-circle .slcm-fee-ms{font-size:46px;font-weight:600;}',
+		'.slcm-fee-hero-circle .slcm-fee-ms{font-size:34px;font-weight:600;}',
 		'.slcm-fee-bubble{position:absolute;border-radius:50%;}',
 		'.slcm-fee-bubble.b1{width:22px;height:22px;left:0;bottom:4px;background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 12%,#fff);}',
 		'.slcm-fee-bubble.b2{width:10px;height:10px;left:-4px;bottom:22px;border:2px solid #f5c9d1;border-color:color-mix(in srgb,var(--slcm-primary,#920C24) 22%,#fff);background:#fff;}',
 		'.slcm-fee-bubble.b3{width:14px;height:14px;right:-2px;top:22px;border:2.5px solid #f5c9d1;border-color:color-mix(in srgb,var(--slcm-primary,#920C24) 22%,#fff);background:#fff;}',
-		'.slcm-fee-title{margin:0 0 16px;font-size:22px;font-weight:700;color:#1e293b;line-height:1.25;}',
+		'.slcm-fee-title{margin:0 0 12px;font-size:20px;font-weight:700;color:#1e293b;line-height:1.25;}',
 		/* Amount panel */
 		'.slcm-fee-amount-box{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;' +
-			'padding:16px 14px;margin:0 12px 12px;border-radius:10px;' +
+			'padding:10px 14px;margin:0 0 12px;border-radius:10px;' +
 			'background:#fdf2f4;background:color-mix(in srgb,var(--slcm-primary,#920C24) 6%,#fff);}',
-		'#slcm-fee-amount{font-size:30px;font-weight:700;color:var(--slcm-primary,#920C24);line-height:1.1;margin:0;}',
+		'#slcm-fee-amount{font-size:26px;font-weight:700;color:var(--slcm-primary,#920C24);line-height:1.1;margin:0;}',
 		'.slcm-fee-secured{display:inline-flex;align-items:center;gap:5px;padding:5px 10px;border-radius:6px;' +
 			'background:#dcfce7;color:#166534;font-size:13px;font-weight:500;}',
 		'.slcm-fee-secured .slcm-fee-ms{font-size:17px;color:#15803d;font-variation-settings:"FILL" 1;}',
 		/* Info + note callouts */
-		'.slcm-fee-callout{display:flex;align-items:stretch;text-align:left;border-radius:10px;margin:0 0 12px;overflow:hidden;' +
-			'font-size:13.5px;line-height:1.55;}',
-		'.slcm-fee-callout-icon{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:0 14px;}',
-		'.slcm-fee-callout-text{flex:1;padding:12px 14px 12px 4px;}',
+		'.slcm-fee-callout{display:flex;align-items:stretch;text-align:left;border-radius:8px;margin:0 0 8px;overflow:hidden;' +
+			'font-size:12px;line-height:1.45;}',
+		'.slcm-fee-callout-icon{flex:0 0 auto;display:flex;align-items:center;justify-content:center;padding:0 10px;}',
+		'.slcm-fee-callout-text{flex:1;padding:7px 12px 7px 2px;}',
 		'.slcm-fee-info{background:#fdf2f4;background:color-mix(in srgb,var(--slcm-primary,#920C24) 5%,#fff);color:#64748b;}',
 		'.slcm-fee-info .slcm-fee-callout-icon{background:#fbe9ec;background:color-mix(in srgb,var(--slcm-primary,#920C24) 8%,#fff);' +
-			'color:var(--slcm-primary,#920C24);padding:0 16px;}',
-		'.slcm-fee-info .slcm-fee-callout-text{padding-left:14px;}',
-		'.slcm-fee-info .slcm-fee-ms{font-size:24px;}',
+			'color:var(--slcm-primary,#920C24);padding:0 10px;}',
+		'.slcm-fee-info .slcm-fee-callout-text{padding-left:10px;}',
+		'.slcm-fee-info .slcm-fee-ms{font-size:18px;}',
 		'.slcm-fee-note{background:#fff8eb;color:#5b3a12;}',
-		'.slcm-fee-note .slcm-fee-callout-icon{color:#ea8a0c;align-items:flex-start;padding-top:12px;}',
-		'.slcm-fee-note .slcm-fee-ms{font-size:24px;}',
+		'.slcm-fee-note .slcm-fee-callout-icon{color:#ea8a0c;align-items:flex-start;padding-top:7px;}',
+		'.slcm-fee-note .slcm-fee-ms{font-size:18px;}',
 		'.slcm-fee-note strong{color:#3f2a0e;font-weight:700;}',
+		/* Review details (checked by the candidate before payment) */
+		'.slcm-fee-review{text-align:left;margin:0 0 12px;}',
+		'.slcm-fee-review-intro{font-size:13px;color:#64748b;margin:0 0 8px;}',
+		// 1px gap on a light background draws the cell borders
+		'.slcm-fee-review-list{margin:0;border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;' +
+			'display:grid;grid-template-columns:1fr 1fr;gap:1px;background:#f1f5f9;}',
+		'.slcm-fee-review-row{display:flex;align-items:baseline;gap:12px;padding:8px 14px;font-size:13px;' +
+			'background:#fff;min-width:0;}',
+		// Long values (Candidate Name, Programme e.g. "Ph.D (…)") get a full-width row
+		'.slcm-fee-review-row.slcm-fee-review-wide{grid-column:1 / -1;}',
+		'.slcm-fee-review-row dt{flex:0 0 112px;color:#64748b;font-weight:500;margin:0;white-space:nowrap;}',
+		'.slcm-fee-review-row dd{flex:1;min-width:0;color:#0f172a;font-weight:600;margin:0;overflow-wrap:anywhere;}',
+		'.slcm-fee-confirm{display:flex;gap:8px;align-items:flex-start;margin:0;padding:7px 12px;border-radius:8px;text-align:left;' +
+			'background:#f8fafc;border:1px solid #e2e8f0;font-size:12px;line-height:1.45;color:#1e293b;cursor:pointer;}',
+		'.slcm-fee-confirm input{margin-top:2px;flex:0 0 auto;width:14px;height:14px;accent-color:var(--slcm-primary,#920C24);cursor:pointer;}',
+		// Phones: details in one column, buttons stacked again
+		'@media (max-width:640px){ .slcm-fee-review-list{grid-template-columns:1fr;}' +
+			'.slcm-fee-actions{flex-direction:column;}}',
+		'@media (max-width:480px){ .slcm-fee-review-row{flex-direction:column;gap:2px;}.slcm-fee-review-row dt{flex:none;}}',
 		/* Actions */
-		'.slcm-fee-actions{display:flex;flex-direction:column;gap:12px;margin-top:16px;}',
-		'#slcm-fee-pay-btn{position:relative;width:100%;padding:13px 44px;border-radius:8px;border:none;cursor:pointer;' +
-			'background:var(--slcm-primary,#920C24);color:#fff;font-family:inherit;font-size:16px;font-weight:600;' +
-			'display:flex;align-items:center;justify-content:center;gap:10px;transition:filter .15s;}',
-		'#slcm-fee-pay-btn .slcm-fee-ms{font-size:22px;}',
+		'.slcm-fee-actions{display:flex;flex-direction:row;gap:10px;margin-top:12px;}',
+		'.slcm-fee-actions > button{flex:1 1 0;min-width:0;}',
+		'#slcm-fee-pay-btn{position:relative;width:100%;padding:9px 36px;border-radius:8px;border:none;cursor:pointer;' +
+			'background:var(--slcm-primary,#920C24);color:#fff;font-family:inherit;font-size:14px;font-weight:600;' +
+			'display:flex;align-items:center;justify-content:center;gap:8px;transition:filter .15s;}',
+		'#slcm-fee-pay-btn .slcm-fee-ms{font-size:18px;}',
 		'#slcm-fee-pay-btn .slcm-fee-pay-arrow{position:absolute;right:16px;top:50%;transform:translateY(-50%);}',
 		'#slcm-fee-pay-btn:hover:not(:disabled){filter:brightness(1.08);}',
 		'#slcm-fee-pay-btn:disabled{opacity:.6;cursor:not-allowed;}',
-		'#slcm-fee-later-btn{width:100%;padding:12px 16px;border-radius:8px;cursor:pointer;' +
-			'background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-family:inherit;font-size:16px;font-weight:600;' +
-			'display:flex;align-items:center;justify-content:center;gap:10px;transition:background .15s,border-color .15s;}',
+		'#slcm-fee-later-btn{width:100%;padding:8px 14px;border-radius:8px;cursor:pointer;' +
+			'background:#fff;color:#1e293b;border:1.5px solid #cbd5e1;font-family:inherit;font-size:14px;font-weight:600;' +
+			'display:flex;align-items:center;justify-content:center;gap:8px;transition:background .15s,border-color .15s;}',
 		'#slcm-fee-later-btn:hover{background:#f8fafc;border-color:#94a3b8;}',
-		'#slcm-fee-later-btn .slcm-fee-ms{font-size:22px;}',
+		'#slcm-fee-later-btn .slcm-fee-ms{font-size:18px;}',
 		// NOTE: keep the space after the opening brace below. This file is rendered through Jinja,
 		// and an opening brace directly followed by a hash starts a Jinja comment.
 		'@media (max-width:480px){ #slcm-fee-box{padding:24px 18px 20px;}.slcm-fee-amount-box{margin:0 0 12px;}' +
@@ -958,6 +978,77 @@ function _esc(s) {
 // NLSAT portal the candidate came from (cookie set by the login page, see nlsat_portal.py)
 function _nlsatPortalBase() {
 	return /(?:^|;\s*)nlsat_portal=International/.test(document.cookie) ? '/nlsat-international' : '/nlsatadmissions';
+}
+
+/** 'Domestic' / 'International' from the nlsat_portal cookie, '' when not set (same rule as nlsat_portal.normalize_portal_type). */
+function _slcmPortalType() {
+	var m = /(?:^|;\s*)nlsat_portal=([^;]*)/.exec(document.cookie || '');
+	var v = m ? decodeURIComponent(m[1] || '').trim() : '';
+	if (!v) return '';
+	return v.toLowerCase() === 'international' ? 'International' : 'Domestic';
+}
+
+/** Staff (System Users) working on the portal are not held to the portal ↔ applicant type rule. */
+function _slcmIsSystemUser() {
+	return /(?:^|;\s*)system_user=yes/.test(document.cookie || '');
+}
+
+/** foriegn_national value ("Yes" / "No") the candidate's portal does NOT allow; '' when no rule applies. */
+function _slcmPortalBlockedForeignNational() {
+	if (_slcmIsSystemUser()) return '';
+	var p = _slcmPortalType();
+	if (p === 'Domestic') return 'Yes';
+	if (p === 'International') return 'No';
+	return '';
+}
+
+/** Note shown under the Applicant Type option the portal does not allow. */
+function _slcmPortalBlockedNote() {
+	return _slcmPortalType() === 'International'
+		? __('You are currently on the International Admission Portal. Domestic applicants must apply through the Domestic Admission Portal.')
+		: __('You are currently on the Domestic Admission Portal (for Indian nationals). International applicants must apply through the International Admission Portal.');
+}
+
+/**
+ * New application without the nlsat_portal cookie (set only by the portal login pages):
+ * the portal — and so the allowed applicant type — is unknown. Lock the form and ask the
+ * candidate to log in again through a portal login page.
+ */
+function _slcmShowPortalMissingModal() {
+	if (document.getElementById('slcm-portal-missing-overlay')) return;
+	try {
+		$('.web-form input, .web-form select, .web-form textarea').attr('disabled', 'disabled');
+		$('#slcm-save-draft-btn, .submit-btn, .btn-submit-web-form, .btn-next, .discard-btn').hide();
+	} catch (e) { }
+
+	var primary = SLCM_PRIMARY_CSS;
+	var overlay = document.createElement('div');
+	overlay.id = 'slcm-portal-missing-overlay';
+	overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:rgba(15,23,42,0.6);backdrop-filter:blur(4px);';
+	overlay.innerHTML =
+		'<div role="alertdialog" aria-modal="true" aria-labelledby="slcm-portal-missing-title" style="background:#fff;border-radius:20px;width:min(460px,92vw);max-height:92vh;overflow:auto;padding:36px 32px;box-shadow:0 24px 60px rgba(0,0,0,0.22);text-align:center">' +
+			'<div style="width:60px;height:60px;border-radius:50%;background:linear-gradient(135deg,' + primary + ',color-mix(in srgb,' + primary + ' 70%,#000));display:flex;align-items:center;justify-content:center;margin:0 auto 20px;box-shadow:0 8px 20px rgba(0,0,0,0.15)">' +
+				'<span class="material-symbols-outlined" style="font-size:30px;color:#fff;font-family:\'Material Symbols Outlined\'!important">lock_clock</span>' +
+			'</div>' +
+			'<h2 id="slcm-portal-missing-title" style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 10px">' + _esc(__('Session Expired')) + '</h2>' +
+			'<p style="font-size:14px;color:#64748b;margin:0 0 24px;line-height:1.6">' +
+				_esc(__('We could not identify your admission portal. Please log in again through the Domestic or International Admission Portal to continue your application.')) +
+			'</p>' +
+			'<button id="slcm-portal-missing-btn" type="button" style="width:100%;padding:11px;border-radius:10px;border:none;background:' + primary + ';color:#fff;font-size:14px;font-weight:600;cursor:pointer">' + _esc(__('Log in again')) + '</button>' +
+		'</div>';
+	document.body.appendChild(overlay);
+
+	document.getElementById('slcm-portal-missing-btn').addEventListener('click', function () {
+		var btn = this;
+		btn.disabled = true;
+		btn.style.opacity = '0.6';
+		var back = window.location.pathname + window.location.search;
+		var target = '/nlsatadmissions/login?redirect-to=' + encodeURIComponent(back);
+		function go() { window.location.href = target; }
+		try {
+			frappe.call({ method: 'logout', callback: go, error: go });
+		} catch (e) { go(); }
+	});
 }
 
 // ───────────────────────────────────────────────────────────────────
@@ -2654,6 +2745,58 @@ function _feePayBtnSetLoading(payBtn, loading, label) {
 	}
 }
 
+/**
+ * Fee card: application details for the candidate to check before paying.
+ * Draft → also a confirmation checkbox; "Pay Now" stays disabled until it is ticked.
+ * Already submitted ("Pay Application Fee") → details only, Pay Now works as before.
+ * No `review` in the fee details (older server) → nothing shown, flow unchanged.
+ */
+function _slcmRenderFeeReview(review, isDraft, payBtnEl) {
+	var box = document.getElementById('slcm-fee-review');
+	if (!box) return;
+	if (!review || typeof review !== 'object') {
+		box.style.display = 'none';
+		box.innerHTML = '';
+		var oldConfirm = document.getElementById('slcm-fee-confirm-wrap');
+		if (oldConfirm) oldConfirm.innerHTML = '';
+		return;
+	}
+	// [label, value, full-width row]: names and programme titles can be long, the rest pair up
+	var rows = [
+		[__('Candidate Name'), review.candidate_name, true],
+		[__('Programme'), review.program, true],
+		[__('Email'), review.email],
+		[__('Nationality'), review.nationality],
+		[__('Applicant Type'), review.applicant_type],
+		[__('Category'), review.category]
+	];
+	box.innerHTML =
+		'<p class="slcm-fee-review-intro">' + _esc(__('Please check these details before payment.')) + '</p>' +
+		'<dl class="slcm-fee-review-list">' +
+			rows.map(function (r) {
+				return '<div class="slcm-fee-review-row' + (r[2] ? ' slcm-fee-review-wide' : '') + '"><dt>' + _esc(r[0]) + '</dt><dd>' + _esc(r[1] || '—') + '</dd></div>';
+			}).join('') +
+		'</dl>';
+	box.style.display = '';
+
+	// Confirmation checkbox sits just above the buttons (below the info / note boxes)
+	var confirmWrap = document.getElementById('slcm-fee-confirm-wrap');
+	if (confirmWrap) {
+		confirmWrap.innerHTML = isDraft
+			? '<label class="slcm-fee-confirm"><input type="checkbox" id="slcm-fee-confirm-chk">' +
+				'<span>' + _esc(__('I confirm that the details above are correct. I understand that the Applicant Type and Programme cannot be changed after payment.')) + '</span></label>'
+			: '';
+	}
+
+	if (isDraft && payBtnEl) {
+		var chk = document.getElementById('slcm-fee-confirm-chk');
+		payBtnEl.disabled = true;
+		chk.addEventListener('change', function () {
+			payBtnEl.disabled = !chk.checked;
+		});
+	}
+}
+
 /** Fee payment modal */
 function _showFeeModal(feeDetails, onPaid) {
 	var modal = document.getElementById('slcm-fee-modal');
@@ -2675,14 +2818,12 @@ function _showFeeModal(feeDetails, onPaid) {
 					'<div id="slcm-fee-amount"></div>' +
 					'<span class="slcm-fee-secured"><span class="slcm-fee-ms">verified_user</span>Secured</span>' +
 				'</div>' +
-				'<div class="slcm-fee-callout slcm-fee-info">' +
-					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">info</span></div>' +
-					'<div class="slcm-fee-callout-text">You are about to complete your application. Please pay the application fee.</div>' +
-				'</div>' +
+				'<div class="slcm-fee-review" id="slcm-fee-review" style="display:none"></div>' +
 				'<div class="slcm-fee-callout slcm-fee-note">' +
 					'<div class="slcm-fee-callout-icon"><span class="slcm-fee-ms">warning</span></div>' +
 					'<div class="slcm-fee-callout-text"><strong>Note:</strong> Once the application form is submitted and the application fee is paid, no further modifications will be permitted during subsequent stages of the admission process.</div>' +
 				'</div>' +
+				'<div id="slcm-fee-confirm-wrap"></div>' +
 				'<div class="slcm-fee-actions">' +
 					'<button type="button" id="slcm-fee-pay-btn"></button>' +
 					'<button type="button" id="slcm-fee-later-btn"><span class="slcm-fee-ms">schedule</span><span>Submit &amp; Pay Later</span></button>' +
@@ -2703,11 +2844,13 @@ function _showFeeModal(feeDetails, onPaid) {
 	}
 	// "Submit & Pay Later" only makes sense for a Draft — once the application is
 	// submitted (e.g. opened via "Pay Application Fee"), the only option is to pay.
+	var curStatus = (resolveField('status') || '').trim();
+	var isDraft = !curStatus || curStatus === 'Draft';
 	var laterBtnEl = document.getElementById('slcm-fee-later-btn');
 	if (laterBtnEl) {
-		var curStatus = (resolveField('status') || '').trim();
-		laterBtnEl.style.display = (!curStatus || curStatus === 'Draft') ? '' : 'none';
+		laterBtnEl.style.display = isDraft ? '' : 'none';
 	}
+	_slcmRenderFeeReview(feeDetails.review, isDraft, payBtnEl);
 	modal.classList.add('open');
 
 	function closeModal() { modal.classList.remove('open'); }
@@ -3151,15 +3294,112 @@ function runSubmitFlow() {
 		});
 }
 
-/** List every mandatory field the server says is still empty (shown before eligibility / payment). */
+/**
+ * Where each web form field lives: fieldname → { page, label } and label (lower case) → fieldname.
+ * Pages follow the Page Breaks (same numbering as WebForm.current_section / the stepper).
+ */
+function _slcmWebFormFieldIndex(wf) {
+	var byName = {}, byLabel = {}, pages = [__('Personal Information')];
+	var page = 0;
+	(wf && wf.fields || []).forEach(function (f) {
+		if (!f || !f.fieldname) return;
+		if (f.fieldtype === 'Page Break') {
+			page++;
+			pages[page] = f.label || __('Step {0}', [page + 1]);
+			return;
+		}
+		if (f.fieldtype === 'Section Break' || f.fieldtype === 'Column Break') return;
+		byName[f.fieldname] = { page: page, label: f.label || f.fieldname };
+		var key = String(f.label || '').trim().toLowerCase();
+		if (key && !byLabel[key]) byLabel[key] = f.fieldname;
+	});
+	return { byName: byName, byLabel: byLabel, pages: pages };
+}
+
+/** Field for a server label: "Label" or "Table Label — Row N: Column" (child rows jump to the table). */
+function _slcmMissingLabelToField(idx, label) {
+	var s = String(label || '').trim();
+	var rowAt = s.indexOf(' — Row ');
+	if (rowAt > 0) s = s.slice(0, rowAt);
+	return idx.byLabel[s.toLowerCase()] || '';
+}
+
+/** Show the step holding `fieldname`, scroll to the field and highlight it briefly. */
+function _slcmJumpToField(fieldname, page) {
+	var wf = window.frappe && frappe.web_form;
+	if (!wf) return;
+	try {
+		if (typeof page === 'number' && typeof wf.toggle_section === 'function' && wf.current_section !== page) {
+			wf.current_section = page;
+			wf.toggle_section();
+		}
+	} catch (e) { }
+	setTimeout(function () {
+		var ctrl = wf.fields_dict && wf.fields_dict[fieldname];
+		var el = (ctrl && ctrl.$wrapper && ctrl.$wrapper[0]) ||
+			document.querySelector('.web-form [data-fieldname="' + fieldname + '"]');
+		if (!el) return;
+		el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+		var prev = el.style.boxShadow;
+		el.style.transition = 'box-shadow .3s';
+		el.style.boxShadow = '0 0 0 3px rgba(220,38,38,.45)';
+		el.style.borderRadius = el.style.borderRadius || '8px';
+		setTimeout(function () { el.style.boxShadow = prev; }, 2500);
+		var input = el.querySelector('input:not([type=hidden]):not([disabled]), select:not([disabled]), textarea:not([disabled])');
+		if (input) { try { input.focus({ preventScroll: true }); } catch (e) { } }
+	}, 250);
+}
+
+/**
+ * List every mandatory field the server says is still empty (shown before eligibility / payment),
+ * grouped by form step, each with a link that opens that step at the field.
+ * Labels that cannot be matched to a field are listed under "Other" without a link.
+ */
 function _slcmShowMissingFieldsDialog(missing, intro) {
-	frappe.msgprint({
+	var wf = window.frappe && frappe.web_form;
+	var idx = _slcmWebFormFieldIndex(wf);
+	var groups = {}, order = [], other = [];
+
+	(missing || []).forEach(function (m) {
+		var fn = _slcmMissingLabelToField(idx, m);
+		var info = fn && idx.byName[fn];
+		if (!info) { other.push(m); return; }
+		if (!groups[info.page]) { groups[info.page] = []; order.push(info.page); }
+		groups[info.page].push({ label: m, fieldname: fn, page: info.page });
+	});
+	order.sort(function (a, b) { return a - b; });
+
+	var html = '<p style="margin:0 0 6px">' + _slcmEscapeHtml(intro || __('Please complete the following before payment:')) + '</p>';
+	order.forEach(function (p) {
+		html += '<div style="margin-top:12px;font-weight:600;color:#0f172a">' + _slcmEscapeHtml(idx.pages[p] || '') + '</div>' +
+			'<ul style="margin:6px 0 0 18px;">' +
+			groups[p].map(function (it) {
+				return '<li style="margin:3px 0">' + _slcmEscapeHtml(it.label) +
+					' <a href="#" class="slcm-mf-jump" data-field="' + _slcmEscapeHtml(it.fieldname) + '" data-page="' + it.page + '"' +
+					' style="margin-left:6px;font-size:12px;font-weight:600;white-space:nowrap">→ ' + _slcmEscapeHtml(__('Go to field')) + '</a></li>';
+			}).join('') +
+			'</ul>';
+	});
+	if (other.length) {
+		html += (order.length ? '<div style="margin-top:12px;font-weight:600;color:#0f172a">' + _slcmEscapeHtml(__('Other')) + '</div>' : '') +
+			'<ul style="margin:6px 0 0 18px;">' +
+			other.map(function (m) { return '<li style="margin:3px 0">' + _slcmEscapeHtml(m) + '</li>'; }).join('') +
+			'</ul>';
+	}
+
+	var dlg = frappe.msgprint({
 		title: __('Mandatory Fields Missing'),
 		indicator: 'red',
-		message: (intro || __('Please fill the following before submitting. No payment has been taken.')) +
-			'<ul style="margin:10px 0 0 18px;">' +
-			missing.map(function (m) { return '<li>' + _slcmEscapeHtml(m) + '</li>'; }).join('') +
-			'</ul>',
+		message: html,
+	});
+
+	var $body = (dlg && dlg.$wrapper) ? dlg.$wrapper : $(document.body);
+	$body.off('click.slcmMfJump').on('click.slcmMfJump', '.slcm-mf-jump', function (e) {
+		e.preventDefault();
+		var fieldname = this.getAttribute('data-field');
+		var page = parseInt(this.getAttribute('data-page'), 10);
+		try { if (dlg && dlg.hide) dlg.hide(); } catch (err) { }
+		_slcmJumpToField(fieldname, isNaN(page) ? null : page);
 	});
 }
 
@@ -4380,6 +4620,11 @@ function _slcmApplyForeignNational(wf, value) {
  */
 function _slcmEnsureForeignNational(wf, program, done) {
 	var current = _slcmCurrentForeignNational(wf);
+	// New application: a value (e.g. ?foriegn_national= in the link) the candidate's portal
+	// does not allow is ignored, so the picker asks again with that option disabled.
+	if (current && isNewApplicantWebForm() && current === _slcmPortalBlockedForeignNational()) {
+		current = '';
+	}
 	if (current) {
 		var fieldVal = '';
 		try { fieldVal = wf.get_value('foriegn_national') || ''; } catch (e) { }
@@ -4403,7 +4648,22 @@ function _slcmOpenForeignNationalModal(wf, program, onConfirm) {
 		{ value: 'No', title: __('Domestic applicant'), desc: __('I am not a foreign national.') },
 		{ value: 'Yes', title: __('International applicant'), desc: __('I am a foreign national with a valid passport of a country other than India.') }
 	];
+	// The option the candidate's portal (nlsat_portal cookie) does not allow is shown disabled
+	var blockedValue = _slcmPortalBlockedForeignNational();
 	var optionsHtml = OPTIONS.map(function (o) {
+		if (o.value === blockedValue) {
+			return '<div class="slcm-fn-opt slcm-fn-opt-disabled" data-value="' + o.value + '" aria-disabled="true" style="padding:14px 16px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f1f5f9;cursor:not-allowed;margin-bottom:10px">' +
+				'<div style="display:flex;gap:12px;align-items:flex-start;opacity:0.55">' +
+					'<input type="radio" disabled tabindex="-1" style="margin-top:3px">' +
+					'<span><span style="display:block;font-size:14px;font-weight:600;color:#0f172a">' + _esc(o.title) + '</span>' +
+					'<span style="display:block;font-size:13px;color:#64748b;line-height:1.5;margin-top:2px">' + _esc(o.desc) + '</span></span>' +
+				'</div>' +
+				'<div style="display:flex;gap:8px;align-items:flex-start;margin-top:10px;padding:10px 12px;border-radius:8px;background:#fff8eb;border:1px solid #fde4b8;font-size:12.5px;line-height:1.5;color:#5b3a12">' +
+					'<span class="material-symbols-outlined" aria-hidden="true" style="font-size:18px;color:#ea8a0c;font-family:\'Material Symbols Outlined\'!important">info</span>' +
+					'<span>' + _esc(_slcmPortalBlockedNote()) + '</span>' +
+				'</div>' +
+			'</div>';
+		}
 		return '<label class="slcm-fn-opt" data-value="' + o.value + '" style="display:flex;gap:12px;align-items:flex-start;padding:14px 16px;border:1.5px solid #e2e8f0;border-radius:12px;background:#f8fafc;cursor:pointer;margin-bottom:10px">' +
 			'<input type="radio" name="slcm-fn-choice" value="' + o.value + '" style="margin-top:3px;accent-color:' + primary + '">' +
 			'<span><span style="display:block;font-size:14px;font-weight:600;color:#0f172a">' + _esc(o.title) + '</span>' +
@@ -4449,7 +4709,7 @@ function _slcmOpenForeignNationalModal(wf, program, onConfirm) {
 	overlay.addEventListener('change', function (e) {
 		if (!e.target || e.target.name !== 'slcm-fn-choice') return;
 		errBox.style.display = 'none';
-		overlay.querySelectorAll('.slcm-fn-opt').forEach(function (el) {
+		overlay.querySelectorAll('.slcm-fn-opt:not(.slcm-fn-opt-disabled)').forEach(function (el) {
 			var on = el.getAttribute('data-value') === e.target.value;
 			el.style.borderColor = on ? primary : '#e2e8f0';
 			el.style.background = on ? '#fff' : '#f8fafc';
@@ -4460,10 +4720,12 @@ function _slcmOpenForeignNationalModal(wf, program, onConfirm) {
 	confirmBtn.addEventListener('click', function () {
 		var value = chosen();
 		if (!value || busy) return;
+		if (value === blockedValue) return;
 		function accept() {
 			overlay.remove();
 			onConfirm(value);
 		}
+		// No programme yet: the portal rule is still checked on the server (validate_new_application_access)
 		if (!program) { accept(); return; }
 		// Programme already known: refuse a choice the programme is not open for, keep the modal open.
 		busy = true;
@@ -4478,7 +4740,7 @@ function _slcmOpenForeignNationalModal(wf, program, onConfirm) {
 			callback: function (r) {
 				busy = false;
 				var res = r && r.message;
-				if (res && !res.allowed && res.reason === 'scope') {
+				if (res && !res.allowed && (res.reason === 'scope' || res.reason === 'portal')) {
 					errBox.textContent = res.message || '';
 					errBox.style.display = 'block';
 					setReady(true);
@@ -4580,7 +4842,21 @@ function isNewApplicantWebForm() {
 
 function applyQueryStringPrefill() {
 	var params = new URLSearchParams(window.location.search);
-	
+
+	// New application: the portal (nlsat_portal cookie) decides which applicant type is
+	// allowed, so it must be known before anything else. Saved drafts are not affected.
+	if (isNewApplicantWebForm() && !_slcmPortalType() && !_slcmIsSystemUser()) {
+		var _pmTries = 0;
+		var _pmT = setInterval(function () {
+			var wf = window.frappe && frappe.web_form;
+			if ((wf && typeof wf.set_value === 'function') || ++_pmTries > 100) {
+				clearInterval(_pmT);
+				_slcmShowPortalMissingModal();
+			}
+		}, 100);
+		return;
+	}
+
 	if (isNewApplicantWebForm() && !params.get('program')) {
 		// Wait for web form to be ready before showing picker
 		var _pickerTries = 0;

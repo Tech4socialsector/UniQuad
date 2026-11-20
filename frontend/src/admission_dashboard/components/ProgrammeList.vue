@@ -19,26 +19,22 @@
 					@click="setType(t.value)"
 				/>
 			</div>
-			<DateRange :model-value="range" :today="today" @update:model-value="emit('update:range', $event)" />
+			<div class="flex flex-wrap items-center gap-2">
+				<DateRange :model-value="range" :today="today" @update:model-value="emit('update:range', $event)" />
+				<Button
+					data-print-hide
+					icon="lucide-rotate-cw"
+					variant="outline"
+					title="Refresh: fetch the latest figures (they are otherwise kept for up to 5 minutes)"
+					aria-label="Refresh"
+					:loading="anyLoading"
+					@click="reloadAll(true)"
+				/>
+			</div>
 		</div>
 
-		<ErrorMessage v-if="overview.error" class="mt-6" :message="overview.error" />
-
-		<!-- Portal registrations -->
-		<SectionTitle
-			title="Portal registrations"
-			hint="All applicant accounts, by registration date. Not split by programme or Domestic / International."
-		/>
-		<div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-			<StatCard
-				v-for="card in registrationCards"
-				:key="card.key"
-				v-bind="card"
-				:loading="loading"
-				hint="Open the Applicant Registration Status report"
-				@open="openRegistrations(card.case)"
-			/>
-		</div>
+		<LoadProgress :steps="steps" label="Dashboard loaded" />
+		<LoadError :error="error" :retrying="anyLoading" @retry="reloadAll(false)" />
 
 		<!-- Applications and NLSAT fee -->
 		<SectionTitle
@@ -60,7 +56,7 @@
 				title="Application Fee Paid"
 				:value="hasPayments ? totals.paid_count : null"
 				:caption="`${formatINR(totals.collected)} collected`"
-				:loading="loading"
+				:loading="feesLoading"
 				hint="Open the NLSAT Fee Collection Report"
 				@open="openFeeReport({ status: 'Paid' })"
 			/>
@@ -70,7 +66,7 @@
 				:caption="`${formatNumber(totals.settled_count)} payments settled`"
 				:progress="percent(totals.settled_amount, totals.collected)"
 				tone="success"
-				:loading="loading"
+				:loading="feesLoading"
 				hint="Open the NLSAT Fee Collection Report"
 				@open="openFeeReport({ status: 'Paid', settlement_status: 'Settled', date_based_on: 'Settlement Date' })"
 			/>
@@ -79,7 +75,7 @@
 				:value="hasPayments ? formatINR(totals.awaiting_amount) : null"
 				:caption="totals.awaiting_count ? `${formatNumber(totals.awaiting_count)} paid, not settled yet` : 'Everything paid is settled'"
 				:tone="totals.awaiting_count ? 'warning' : ''"
-				:loading="loading"
+				:loading="feesLoading"
 				hint="Open the NLSAT Fee Collection Report"
 				@open="openFeeReport({ status: 'Paid', settlement_status: 'Not settled yet' })"
 			/>
@@ -108,6 +104,23 @@
 				</template>
 			</div>
 		</SectionTitle>
+
+		<!-- Applicants no programme card counts: their programme isn't one of the cycle's, or is blank -->
+		<div
+			v-if="unlisted.count"
+			class="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-outline-amber-3 bg-surface-amber-2 px-4 py-2.5 text-p-sm text-ink-gray-8"
+			role="status"
+		>
+			<span class="lucide-triangle-alert size-4 shrink-0 text-ink-amber-5" />
+			<span class="min-w-0 flex-1">
+				<b>{{ formatNumber(unlisted.count) }}</b>
+				{{ applicantType.toLowerCase() }} {{ unlisted.count === 1 ? "applicant is" : "applicants are" }} in this cycle
+				under a programme that isn't on its programme list, so the cards and charts don't count
+				{{ unlisted.count === 1 ? "it" : "them" }}:
+				{{ unlisted.programmes.map((p) => `${p.label} (${p.count})`).join(", ") }}.
+			</span>
+			<Button label="View applicants" variant="ghost" icon-right="lucide-arrow-right" @click="openUnlisted" />
+		</div>
 
 		<div v-if="loading" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
 			<div v-for="i in 3" :key="i" class="h-[300px] animate-pulse rounded-[10px] bg-surface-gray-2" />
@@ -170,7 +183,11 @@
 					<div class="grid grid-cols-4 gap-3">
 						<Stat label="Total" :value="count(p.stats.total)" />
 						<Stat label="Draft" :value="count(p.stats.draft)" />
-						<Stat label="Submitted" :value="count(p.stats.submitted)" />
+						<Stat
+							label="Submitted"
+							:value="count(p.stats.submitted)"
+							title="Applications that reached Submitted, including ones later rejected, offered or withdrawn"
+						/>
 						<Stat label="Enrolled" :value="count(p.stats.enrolled)" />
 					</div>
 				</div>
@@ -179,12 +196,12 @@
 				<div class="mt-3 border-t border-outline-gray-1 pt-3">
 					<h4 class="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-gray-5">Application fee</h4>
 					<div class="grid grid-cols-4 gap-3">
-						<Stat label="Paid" :value="count(p.stats.paid_count)" />
-						<Stat label="Collected" :value="money(p.stats.collected)" />
-						<Stat label="Settled" :value="money(p.stats.settled_amount)" />
+						<Stat label="Paid" :value="fee(p.stats.paid_count, count)" />
+						<Stat label="Collected" :value="fee(p.stats.collected, money)" />
+						<Stat label="Settled" :value="fee(p.stats.settled_amount, money)" />
 						<Stat
 							label="Awaiting"
-							:value="money(p.stats.awaiting_amount)"
+							:value="fee(p.stats.awaiting_amount, money)"
 							:tone="p.stats.awaiting_count ? 'warning' : ''"
 							:title="p.stats.awaiting_count ? `${p.stats.awaiting_count} paid, not settled yet` : ''"
 						/>
@@ -243,6 +260,13 @@
 					{ name: 'collected_count', label: 'Payments collected' },
 					{ name: 'settled_count', label: 'Payments settled' },
 				]"
+				:loading="feesLoading"
+			/>
+			<SourceChart
+				card-class="lg:col-span-2"
+				:rows="apps.data?.source || []"
+				:series="SOURCE_SERIES"
+				:subtitle="`Number of applications by answer · Domestic and International · ${rangeLabel}`"
 				:loading="loading"
 			/>
 		</div>
@@ -251,10 +275,13 @@
 
 <script setup>
 import { computed, h, watch } from "vue";
-import { Button, ErrorMessage, createResource } from "frappe-ui";
+import { Button, createResource } from "frappe-ui";
 import { BarChart } from "frappe-ui/charts";
 import DashChart from "./DashChart.vue";
 import DateRange from "./DateRange.vue";
+import LoadError from "./LoadError.vue";
+import LoadProgress from "./LoadProgress.vue";
+import SourceChart from "./SourceChart.vue";
 import StatCard from "./StatCard.vue";
 import { programmeIcon } from "../icons";
 import { formatDate, formatINR, formatNumber, percent } from "../format";
@@ -304,23 +331,55 @@ const types = [
 	{ value: "International", label: "International", icon: "lucide-globe" },
 ];
 
-const overview = createResource({
-	url: `${props.api}.get_cycle_overview`,
-	makeParams: () => ({
-		admission_cycle: props.cycle,
-		applicant_type: props.applicantType,
-		from_date: props.range[0] || null,
-		to_date: props.range[1] || null,
-	}),
-	auto: true,
-});
+// The page loads in three parallel requests, so each section fills in as soon as its own data
+// arrives and the progress bar can show a real percentage. The server keeps the figures for a
+// few minutes; `fresh` (the Refresh button) asks it to recompute them.
+let fresh = false;
+const part = (name) =>
+	createResource({
+		url: `${props.api}.get_cycle_overview`,
+		makeParams: () => ({
+			admission_cycle: props.cycle,
+			applicant_type: props.applicantType,
+			from_date: props.range[0] || null,
+			to_date: props.range[1] || null,
+			part: name,
+			refresh: fresh ? 1 : 0,
+		}),
+		auto: true,
+	});
+const apps = part("applications");
+const fees = part("fees");
+const parts = [apps, fees];
+// Retry only re-asks for the parts that failed; Refresh reloads everything from the database.
+function reloadAll(refresh) {
+	fresh = refresh;
+	parts.filter((r) => refresh || r.error || !r.data).forEach((r) => r.reload());
+	fresh = false;
+}
 watch(
 	() => [props.cycle, props.applicantType, props.range.join()],
-	() => overview.reload()
+	() => parts.forEach((r) => r.reload())
 );
+const anyLoading = computed(() => parts.some((r) => r.loading));
 
-const loading = computed(() => overview.loading && !overview.data);
-const programmes = computed(() => overview.data?.programmes || []);
+const isDone = (r) => !r.loading && (r.data != null || r.error != null);
+const steps = computed(() => [
+	{ label: "Applications", done: isDone(apps) },
+	{ label: "Application fees", done: isDone(fees) },
+]);
+const error = computed(() => parts.map((r) => r.error).find(Boolean));
+const firstLoad = (r) => r.loading && !r.data;
+const loading = computed(() => firstLoad(apps));
+const feesLoading = computed(() => firstLoad(fees));
+
+const EMPTY_FEES = { paid_count: 0, collected: 0, settled_count: 0, settled_amount: 0, awaiting_count: 0, awaiting_amount: 0 };
+const programmes = computed(() =>
+	(apps.data?.programmes || []).map((p) => ({
+		...p,
+		stats: { ...EMPTY_FEES, ...p.stats, ...(fees.data?.fee_stats?.[p.name] || {}) },
+	}))
+);
 const rangeLabel = computed(() =>
 	props.range.length === 2 ? `${formatDate(props.range[0])} – ${formatDate(props.range[1])}` : "entire cycle"
 );
@@ -332,36 +391,21 @@ const totals = computed(() => {
 });
 const hasPayments = computed(() => Boolean(totals.value.paid_count || totals.value.settled_count));
 
-// With nobody registered in the period every card shows the empty state.
-const registrationCards = computed(() => {
-	const r = overview.data?.registrations || {};
-	const v = (n) => (r.total ? n || 0 : null);
-	return [
-		{ key: "total", title: "Total Registered", value: v(r.total), case: "All", caption: rangeLabel.value },
-		{
-			key: "applied",
-			title: "Registered & Applied",
-			value: v(r.applied),
-			case: "With Application",
-			progress: percent(r.applied, r.total),
-			tone: "success",
-			caption: `${percent(r.applied, r.total)}% of registered`,
-		},
-		{
-			key: "not_applied",
-			title: "Registered & Not Applied",
-			value: v(r.not_applied),
-			case: "Without Application",
-			progress: percent(r.not_applied, r.total),
-			tone: r.not_applied ? "warning" : "",
-			caption: `${percent(r.not_applied, r.total)}% of registered`,
-		},
-		{ key: "enrolled", title: "Enrolled", value: v(r.enrolled), case: "Enrolled", caption: "With an enrolled application" },
-	];
-});
+const byProgramme = computed(() => apps.data?.by_programme || []);
+const unlisted = computed(() => apps.data?.unlisted || { count: 0, programmes: [], listed: [] });
+// Both shapes on the list page, whichever tab is open (the overview draws only its own type).
+const SOURCE_SERIES = [
+	{ key: "domestic", label: "Domestic" },
+	{ key: "international", label: "International" },
+];
 
-const byProgramme = computed(() => overview.data?.by_programme || []);
-const feeDaily = computed(() => overview.data?.fee_daily || []);
+function openUnlisted() {
+	const listed = unlisted.value.listed;
+	openApplicants(scope([]), listed.length ? { program: ["not in", listed] } : {});
+}
+const feeDaily = computed(() => fees.data?.fee_daily || []);
+// A fee figure on a programme card while the fees are still on their way.
+const fee = (n, fmt) => (feesLoading.value ? "…" : fmt(n));
 
 // ---- selection
 const isSelected = (p) => props.selected.includes(p.name);
@@ -392,15 +436,6 @@ const scope = (programs) => ({
 	programs,
 	range: props.range,
 });
-
-function openRegistrations(caseName) {
-	const r = overview.data?.registrations || {};
-	openReport("Applicant Registration Status", {
-		from_date: r.from_date || "",
-		to_date: r.to_date || "",
-		case: caseName,
-	});
-}
 
 function openFeeReport(extra) {
 	// "" clears the report's month-to-date default when the dashboard shows the entire cycle.

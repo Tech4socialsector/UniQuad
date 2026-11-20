@@ -25,6 +25,79 @@
 	--adm-brand-hover: #b83446;
 }
 
+/* ---- Export (print / Save as PDF) ----
+   App.vue adds `slcm-printing` to <html> just before window.print(). The dashboard is laid
+   out at the A4-landscape width first, so the charts redraw for paper; everything of desk
+   around it is hidden. */
+[data-print-only] {
+	display: none;
+}
+html.slcm-printing .slcm-admission-dashboard {
+	width: 1040px;
+	max-width: 1040px;
+}
+@media print {
+	@page {
+		size: A4 landscape;
+		margin: 10mm;
+	}
+	html.slcm-printing,
+	html.slcm-printing body {
+		background: #fff !important;
+		height: auto !important;
+		overflow: visible !important;
+	}
+	/* Desk puts the page inside fixed-height scrolling boxes, so only the part on screen would
+	   print. Every box around the dashboard grows to its full length and stops scrolling. */
+	html.slcm-printing body *:has(.slcm-admission-dashboard) {
+		position: static !important;
+		height: auto !important;
+		min-height: 0 !important;
+		max-height: none !important;
+		overflow: visible !important;
+		contain: none !important;
+		transform: none !important;
+	}
+	html.slcm-printing body * {
+		visibility: hidden;
+	}
+	html.slcm-printing .slcm-admission-dashboard,
+	html.slcm-printing .slcm-admission-dashboard * {
+		visibility: visible;
+	}
+	html.slcm-printing .slcm-admission-dashboard {
+		position: absolute;
+		top: 0;
+		left: 0;
+		-webkit-print-color-adjust: exact;
+		print-color-adjust: exact;
+	}
+	html.slcm-printing .slcm-admission-dashboard [data-print-hide],
+	html.slcm-printing .slcm-admission-dashboard [role="status"].sticky,
+	html.slcm-printing .slcm-fui-portal {
+		display: none !important;
+	}
+	html.slcm-printing .slcm-admission-dashboard [data-print-only] {
+		display: block;
+	}
+	/* Paper is a little under desk's `lg` breakpoint, which would drop every chart to one per
+	   row while the plots were drawn for two. Keep the on-screen two-column layout. */
+	html.slcm-printing .slcm-admission-dashboard .lg\:grid-cols-2 {
+		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+	html.slcm-printing .slcm-admission-dashboard .lg\:col-span-2 {
+		grid-column: span 2 / span 2;
+	}
+	/* Keep each card and chart on one page. */
+	html.slcm-printing .slcm-admission-dashboard .grid > * {
+		break-inside: avoid;
+		page-break-inside: avoid;
+	}
+	html.slcm-printing .slcm-admission-dashboard h2 {
+		break-after: avoid;
+	}
+}
+
 /* Desk adds its own margins/padding around page bodies; let the app own the spacing. */
 .slcm-admission-dashboard-page .layout-main-section {
 	padding: 0;

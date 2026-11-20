@@ -25,22 +25,23 @@
 			/>
 		</div>
 
-		<!-- Filters -->
+		<!-- Period (category, gender and fee status each have their own chart below) -->
 		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<span class="w-20 text-p-sm text-ink-gray-5">Filters</span>
+			<span class="w-20 text-p-sm text-ink-gray-5">Period</span>
 			<DateRange v-model="range" :today="today" />
-			<Select
-				v-if="applicantType === 'Domestic'"
-				v-model="category"
-				class="w-44"
-				:options="withAll('All categories', CATEGORIES)"
+			<Button
+				data-print-hide
+				icon="lucide-rotate-cw"
+				variant="outline"
+				title="Refresh: fetch the latest figures (they are otherwise kept for up to 5 minutes)"
+				aria-label="Refresh"
+				:loading="overview.loading"
+				@click="reload(true)"
 			/>
-			<Select v-model="gender" class="w-44" :options="withAll('All genders', GENDERS)" />
-			<Select v-model="feeStatus" class="w-44" :options="withAll('Any fee status', FEE_STATUSES)" />
-			<Button v-if="hasFilters" label="Clear filters" icon-left="lucide-x" variant="ghost" @click="clearFilters" />
 		</div>
 
-		<ErrorMessage v-if="overview.error" class="mt-6" :message="overview.error" />
+		<LoadProgress :loading="overview.loading" label="Loading programme data" />
+		<LoadError v-if="overview.error" :error="overview.error" :retrying="overview.loading" @retry="reload(false)" />
 
 		<template v-else>
 			<!-- Number cards (order and visibility from Dashboard Settings) -->
@@ -199,6 +200,8 @@
 						category="label"
 						value="count"
 						order="rows"
+						variant="half"
+						show-data-labels
 						center-label="Applications"
 						:format="formatNumber"
 						:loading="loading"
@@ -259,6 +262,15 @@
 						:loading="loading"
 						@select="(e) => drill({ [e.row.field]: e.name === 'yes' ? 'Yes' : ['!=', 'Yes'] })"
 					/>
+
+					<SourceChart
+						v-else-if="chart.key === 'source'"
+						:card-class="span(chart.key)"
+						:rows="rows('source').map((r) => ({ label: r.label, applications: r.count }))"
+						:series="[{ key: 'applications', label: applicantType, colorIndex: applicantType === 'International' ? 1 : 0 }]"
+						:subtitle="`Number of ${applicantType.toLowerCase()} applications by answer`"
+						:loading="loading"
+					/>
 				</template>
 			</div>
 		</template>
@@ -267,10 +279,13 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
-import { Badge, Button, ErrorMessage, Select, Skeleton, TabButtons, createResource } from "frappe-ui";
+import { Badge, Button, Skeleton, TabButtons, createResource } from "frappe-ui";
 import { AreaChart, BarChart, ChartCard, DonutChart, FunnelChart, OTHERS_KEY, PercentageBarChart } from "frappe-ui/charts";
 import DashChart from "./DashChart.vue";
 import DateRange from "./DateRange.vue";
+import LoadError from "./LoadError.vue";
+import LoadProgress from "./LoadProgress.vue";
+import SourceChart from "./SourceChart.vue";
 import StatCard from "./StatCard.vue";
 import { formatDate, formatINR, formatNumber, percent } from "../format";
 import { openApplicants, statusIn } from "../navigate";
@@ -287,9 +302,6 @@ const props = defineProps({
 });
 const emit = defineEmits(["update:programmes"]);
 
-const CATEGORIES = ["General", "OBC-NCL", "SC", "ST", "EWS", "Not set"];
-const GENDERS = ["Female", "Male", "Others", "Prefer not to say", "Not set"];
-const FEE_STATUSES = ["Paid", "Waived", "Requested", "Pending"];
 const FEE_COLORS = {
 	Paid: "var(--chart-categorical-3)",
 	Waived: "var(--chart-categorical-1)",
@@ -327,36 +339,31 @@ const HALF = "340px"; // every half-width chart, so the two in a row line up
 const dash = (n) => (n ? formatNumber(n) : "—");
 const STAGES = ["Started", "Submitted", "Fee Paid", "Under Evaluation", "Selected / Offered", "Offer Accepted", "Enrolled"];
 
-// ---- filters
+// ---- period
 const range = ref([]);
-const category = ref("");
-const gender = ref("");
-const feeStatus = ref("");
 const trendMode = ref("daily");
 
-const withAll = (label, values) => [{ label, value: "" }, ...values.map((v) => ({ label: v, value: v }))];
-const hasFilters = computed(() => range.value.length || category.value || gender.value || feeStatus.value);
-function clearFilters() {
-	range.value = [];
-	category.value = gender.value = feeStatus.value = "";
+// The server keeps the figures for a few minutes; `fresh` (the Refresh button) asks it to recompute.
+let fresh = false;
+function reload(refresh) {
+	fresh = refresh;
+	overview.reload();
+	fresh = false;
 }
-
 const overview = createResource({
 	url: `${props.api}.get_programme_overview`,
 	makeParams: () => ({
+		refresh: fresh ? 1 : 0,
 		admission_cycle: props.cycle,
 		programs: JSON.stringify(props.programmes.map((p) => p.name)),
 		applicant_type: props.applicantType,
 		from_date: range.value[0] || null,
 		to_date: range.value[1] || null,
-		category: props.applicantType === "Domestic" ? category.value || null : null,
-		gender: gender.value || null,
-		fee_status: feeStatus.value || null,
 	}),
 	auto: true,
 });
 watch(
-	() => [props.cycle, props.applicantType, props.programmes.map((p) => p.name).join(), range.value.join(), category.value, gender.value, feeStatus.value],
+	() => [props.cycle, props.applicantType, props.programmes.map((p) => p.name).join(), range.value.join()],
 	() => overview.reload()
 );
 
@@ -382,9 +389,6 @@ const scope = computed(() => ({
 	applicantType: props.applicantType,
 	programs: props.programmes.map((p) => p.name),
 	range: range.value,
-	category: props.applicantType === "Domestic" ? category.value : "",
-	gender: gender.value,
-	feeStatus: feeStatus.value,
 }));
 const drill = (extra = {}) => openApplicants(scope.value, extra);
 const notSetOr = (value) => (value === "Not set" ? ["is", "not set"] : value);
@@ -445,7 +449,7 @@ function rows(path) {
 }
 
 // ---- charts: Settings order; the wide ones span both columns, and so does a half-width chart left alone on its row.
-const WIDE = new Set(["compare", "funnel", "trend", "kapwd"]);
+const WIDE = new Set(["compare", "funnel", "trend", "kapwd", "source"]);
 const charts = computed(() =>
 	props.settings.charts.filter((item) => {
 		if (!item.enabled) return false;

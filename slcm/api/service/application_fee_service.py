@@ -498,4 +498,18 @@ def get_application_fee_details(applicant_name):
 		"can_submit": status in ("Paid", "Waived"),
 		"online_payment_enabled": True,
 		"payment_gateway": payment_gateway,
+		# Shown on the portal fee card so the candidate can check the details before paying
+		"review": {
+			"candidate_name": applicant.get("candidate_name") or "",
+			"email": applicant.get("email") or "",
+			"program": (
+				frappe.db.get_value("Programme", applicant.program, "program_name") or applicant.program or ""
+			)
+			if applicant.program
+			else "",
+			"applicant_type": "International" if is_foreign else "Domestic",
+			"category": applicant.get("whether_scstobc_ncl") or "",
+			"nationality": applicant.get("nationality") or "",
+			"status": applicant.get("status") or "",
+		},
 	}
