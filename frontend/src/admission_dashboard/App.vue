@@ -26,15 +26,17 @@
 			<Breadcrumbs :items="breadcrumbs" />
 		</nav>
 
-		<!-- Header: title, Admission Cycle, Settings -->
+		<!-- Header: title, Admission Cycle, period (overview only), Export, Settings -->
 		<header class="relative mt-3 flex flex-wrap items-center justify-between gap-4">
-			<h1 class="min-w-0 truncate text-2xl-semibold text-ink-gray-9">
-				{{ programmes ? `${overviewTitle} · Admission Overview` : "Admission Dashboard" }}
+			<h1 class="min-w-0 truncate text-2xl-semibold text-ink-gray-9" :title="pageTitle">
+				{{ pageTitle }}
 			</h1>
 
 			<div class="flex flex-wrap items-center gap-3">
 				<span class="text-base-medium text-ink-gray-7">Admission Cycle</span>
-				<Select v-model="cycle" class="w-72" :options="cycleOptions" placeholder="Select cycle" />
+				<Select v-model="cycle" :class="programmes ? 'w-64' : 'w-72'":options="cycleOptions" placeholder="Select cycle" />
+				<!-- The overview puts its Period box and Refresh button here -->
+				<div v-show="programmes" ref="periodSlot" class="flex items-center gap-2" />
 				<Button
 					v-if="cycle"
 					data-print-hide
@@ -89,6 +91,7 @@
 			:all-programmes="openProgrammeList"
 			:settings="settings"
 			:today="boot.today"
+			:period-target="periodSlot"
 		/>
 
 		<SettingsDialog
@@ -122,6 +125,7 @@ const programmes = ref(null); // programmes open in the overview (null = list vi
 const openProgrammeList = ref([]); // every programme of the current tab, for the overview chips
 const settings = ref(props.boot.settings);
 const settingsOpen = ref(false);
+const periodSlot = ref(null); // header spot for the overview's Period box
 
 const cycleInfo = computed(() => props.boot.cycles.options.find((c) => c.value === cycle.value) || {});
 const cycleLabel = computed(() => cycleInfo.value.label || cycle.value);
@@ -138,6 +142,9 @@ const overviewTitle = computed(() => {
 	if (list.length === 2) return `${list[0].label} + ${list[1].label}`;
 	return `${list.length} programmes`;
 });
+const pageTitle = computed(() =>
+	programmes.value ? `${overviewTitle.value} · Admission Overview` : "Admission Dashboard"
+);
 
 // ---- breadcrumbs: (home icon) / Admission Dashboard / <programme(s)>
 // A plain click routes inside desk; a ctrl/cmd/middle click opens /desk the usual way.

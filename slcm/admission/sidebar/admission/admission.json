@@ -16,9 +16,10 @@
    "is_default_module": 0,
    "keep_closed": 0,
    "label": "Dashboard",
-   "link_to": "Admission",
-   "link_type": "Dashboard",
+   "link_to": "admission-dashboard",
+   "link_type": "Page",
    "open_in_new_tab": 1,
+   "route": "admission-dashboard",
    "show_arrow": 0,
    "type": "Link"
   },
@@ -1211,7 +1212,7 @@
   }
  ],
  "merged_from": "[\"Eligibility\", \"Settings\", \"Offer Letters\", \"Scholarship\", \"INM\", \"Test\", \"Interview\", \"Merit\", \"Reports\", \"Admission Eligibility\", \"MSA\"]",
- "modified": "2026-11-11 13:00:00.000000",
+ "modified": "2026-11-25 15:36:19.629445",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Admission",

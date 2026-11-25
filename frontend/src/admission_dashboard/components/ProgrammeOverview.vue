@@ -25,10 +25,9 @@
 			/>
 		</div>
 
-		<!-- Period (category, gender and fee status each have their own chart below) -->
-		<div class="mt-3 flex flex-wrap items-center gap-2">
-			<span class="w-20 text-p-sm text-ink-gray-5">Period</span>
-			<DateRange v-model="range" :today="today" />
+		<!-- Period: shown in the page header, next to the Admission Cycle -->
+		<Teleport v-if="periodTarget" :to="periodTarget">
+			<DateRange v-model="range" class="!w-56" :today="today" />
 			<Button
 				data-print-hide
 				icon="lucide-rotate-cw"
@@ -38,7 +37,7 @@
 				:loading="overview.loading"
 				@click="reload(true)"
 			/>
-		</div>
+		</Teleport>
 
 		<LoadProgress :loading="overview.loading" label="Loading programme data" />
 		<LoadError v-if="overview.error" :error="overview.error" :retrying="overview.loading" @retry="reload(false)" />
@@ -299,6 +298,7 @@ const props = defineProps({
 	allProgrammes: { type: Array, default: () => [] },
 	settings: { type: Object, required: true },
 	today: { type: String, required: true },
+	periodTarget: { type: Object, default: null }, // header element the Period box is moved into
 });
 const emit = defineEmits(["update:programmes"]);
 
