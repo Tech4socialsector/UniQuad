@@ -94,7 +94,8 @@ def get_nlsat_navbar_context(portal_config=None, current_path="", nlsat_login_ur
 		user=user,
 		prefix=prefix,
 		is_guest=is_guest,
-		first_letter=(user[0].upper() if user and not is_guest else "U"),
+		# Avatar letter: first letter of the name (falls back to the email), like the Profile page
+		first_letter=((full_name or user).strip()[:1].upper() or "U") if user and not is_guest else "U",
 		full_name=full_name,
 		user_image=user_image,
 		has_applicant=has_applicant,

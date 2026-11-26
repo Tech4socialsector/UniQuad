@@ -565,7 +565,6 @@ doc_events = {
     "User": {
         "before_insert": "slcm.api.user_events.user_before_insert",
         "validate": "slcm.api.user_events.grant_helpdesk_customer_role",
-        "after_insert": "slcm.api.user_events.send_signup_email",
         "on_update": [
             "slcm.slcm.utils.academics_desktop.sync_user_layout",
             "slcm.api.helpdesk_views.sync_user_ticket_views",

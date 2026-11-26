@@ -91,10 +91,12 @@
                     <span id="adm-avatar-init">{{ _first_letter }}</span>
                     {% endif %}
                 </button>
-                <span style="color:white; font-size:13px; font-weight:600; opacity:0.95; cursor:pointer;"
-                    class="nav-hide-mobile" onclick="toggleAvatarMenu(event)">
-                    {{ _full_name }}
-                </span>
+                <!-- Long names are cut with "…" at 180px (same as the mobile drawer); hover shows the full name -->
+                <span style="color:white; font-size:13px; font-weight:600; opacity:0.95; cursor:pointer;
+                             display:inline-block; max-width:180px; white-space:nowrap; overflow:hidden;
+                             text-overflow:ellipsis; vertical-align:middle;"
+                    class="nav-hide-mobile adm-nav-username" title="{{ _full_name }}"
+                    onclick="toggleAvatarMenu(event)">{{ _full_name }}</span>
 
                 <!-- Dropdown menu -->
                 <div id="adm-avatar-menu" style="display:none;position:absolute;right:0;top:calc(100% + 8px);
@@ -220,7 +222,7 @@
                     {% endif %}
                 </div>
                 <div style="display:flex;flex-direction:column;max-width:180px;">
-                    <span
+                    <span title="{{ nav.full_name }}"
                         style="font-size:14px;font-weight:700;color:#1e293b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
                         {{ nav.full_name }}
                     </span>

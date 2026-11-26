@@ -1,7 +1,5 @@
 <template>
 	<div ref="root" class="relative mx-auto max-w-[1400px] px-5 pb-10 pt-5 sm:px-8">
-		<BuildingArt v-if="!programmes" class="pointer-events-none absolute right-8 top-16 h-28 w-60 max-lg:!hidden" />
-
 		<!-- Sidebar toggle and breadcrumbs -->
 		<nav class="relative flex h-8 items-center gap-1.5" data-print-hide>
 			<Button
@@ -26,10 +24,10 @@
 			<Breadcrumbs :items="breadcrumbs" />
 		</nav>
 
-		<!-- Header: title, Admission Cycle, Settings -->
+		<!-- Header: title, Admission Cycle, Export, Settings. The period sits with each view's filters. -->
 		<header class="relative mt-3 flex flex-wrap items-center justify-between gap-4">
-			<h1 class="min-w-0 truncate text-2xl-semibold text-ink-gray-9">
-				{{ programmes ? `${overviewTitle} · Admission Overview` : "Admission Dashboard" }}
+			<h1 class="min-w-0 truncate text-2xl-semibold text-ink-gray-9" :title="pageTitle">
+				{{ pageTitle }}
 			</h1>
 
 			<div class="flex flex-wrap items-center gap-3">
@@ -84,7 +82,6 @@
 			v-model:programmes="programmes"
 			:api="api"
 			:cycle="cycle"
-			:cycle-info="cycleInfo"
 			:applicant-type="applicantType"
 			:all-programmes="openProgrammeList"
 			:settings="settings"
@@ -104,7 +101,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from "vue";
 import { Breadcrumbs, Button, Select } from "frappe-ui";
-import BuildingArt from "./components/BuildingArt.vue";
 import ProgrammeList from "./components/ProgrammeList.vue";
 import ProgrammeOverview from "./components/ProgrammeOverview.vue";
 import SettingsDialog from "./components/SettingsDialog.vue";
@@ -138,6 +134,9 @@ const overviewTitle = computed(() => {
 	if (list.length === 2) return `${list[0].label} + ${list[1].label}`;
 	return `${list.length} programmes`;
 });
+const pageTitle = computed(() =>
+	programmes.value ? `${overviewTitle.value} · Admission Overview` : "Admission Dashboard"
+);
 
 // ---- breadcrumbs: (home icon) / Admission Dashboard / <programme(s)>
 // A plain click routes inside desk; a ctrl/cmd/middle click opens /desk the usual way.
