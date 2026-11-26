@@ -280,27 +280,67 @@ def _years_in_text(text):
 	return cint(value) if value.isdigit() else DURATION_WORDS.index(value) + 1
 
 
+def _office_duration(name):
+	"""Course length from the office's Education Loan fee-structure list: BA LLB Hons 5,
+	LLB Hons 3, LLM 1, MPP 2, BA Hons 4 years; 0 when the name matches none (e.g. Ph.D)."""
+	import re
+
+	text = (name or "").lower()
+	letters = re.sub(r"[^a-z]", "", text)
+	if not letters or "phd" in letters:
+		return 0
+	if "llm" in letters:
+		return 1
+	if "publicpolicy" in letters or letters.startswith("mpp"):
+		return 2
+	if "ballb" in letters:
+		return 5
+	if "llb" in letters:
+		return 3
+	if re.search(r"\bb\.?\s*a\b.*hons", text):
+		return 4
+	return 0
+
+
 def _programme_duration(student):
-	"""Programme length in years: Programme Master "Programme duration (in years)"
-	("5" or "Five"), else Programme.program_duration, else the years in the programme's
-	name ("5-Year B.A., LL.B. (Hons.)"), since the duration fields are often left blank."""
+	"""Programme length in years. The office's Education Loan list (_office_duration:
+	BA LLB 5, LLB 3, LLM 1, MPP 2, BA Hons 4) comes first, because the recorded durations
+	disagree on live data (e.g. "5-Year LL.B. (Hons.)" is 3 on Programme but 5 on
+	Programme Master). Then Programme.program_duration, Programme Master "Programme
+	duration (in years)" ("5" or "Five"), and last the years in the name ("Two Year")."""
 	master, programme_years, name = student.master_programme, 0, None
 	if student.programme_of_study:
 		name, programme_years = frappe.db.get_value(
 			"Programme", student.programme_of_study, ["program_name", "program_duration"]
 		) or (None, 0)
 		master = master or name
-	if master:
-		years = _years_in_text(frappe.db.get_value("Programme Master", master, "programme_duration_in_years"))
+	texts = (name, master, student.programme_of_study)
+	for text in texts:
+		years = _office_duration(text)
 		if years:
 			return years
 	if cint(programme_years):
 		return cint(programme_years)
-	for text in (master, name, student.programme_of_study):
+	if master:
+		years = _years_in_text(frappe.db.get_value("Programme Master", master, "programme_duration_in_years"))
+		if years:
+			return years
+	for text in texts:
 		years = _years_in_text(text)
 		if years:
 			return years
 	return 0
+
+
+def _programme_title(programme, duration):
+	"""The programme as printed with its length: "5-Year LL.B. (Hons.)", "4-Year BA (Hons)"
+	(any "N-Year" already in the name is replaced by the duration)."""
+	import re
+
+	name = re.sub(r"^\s*\d+\s*-?\s*years?\s*", "", programme or "", flags=re.I).strip()
+	if not duration or not name or re.search(r"\byears?\b", name, re.I) or name.lower().startswith("master"):
+		return programme or ""
+	return f"{duration}-Year {name}"
 
 
 def _year_offset(student, academic_year_doc):
@@ -591,6 +631,8 @@ def get_fee_certificate_context(request_name):
 	for row in unique_rows:
 		totals = _component_totals(student, row.academic_year)
 		amounts, waiver = _year_amounts(totals, certificate_type, request.has_scholarship)
+		# Scholarship per component, so a waiver stays with the fee it was given on.
+		component_waivers = {c: flt(a["waiver"]) for c, a in totals.items() if flt(a["waiver"])}
 		ay = frappe.get_doc("Academic Year", row.academic_year) if row.academic_year else None
 		programme_year = cint(row.get("programme_year"))
 		if not programme_year and ay:
@@ -605,6 +647,7 @@ def get_fee_certificate_context(request_name):
 				"start_year": getdate(ay.year_start_date).year if ay and ay.year_start_date else cint((row.year_label or "")[:4]),
 				"amounts": amounts,
 				"waiver": waiver,
+				"component_waivers": component_waivers,
 				"outstanding": sum(a["outstanding"] for a in totals.values()),
 				"paid": sum(a["paid"] for a in totals.values()),
 				"has_demands": bool(totals),
@@ -627,7 +670,7 @@ def get_fee_certificate_context(request_name):
 		current_ay = get_current_academic_year()
 		current_start = frappe.db.get_value("Academic Year", current_ay, "year_start_date") if current_ay else None
 		current_start = getdate(current_start).year if current_start else None
-		reference, reference_waiver = {}, 0
+		reference, reference_waivers = {}, {}
 		for y in years:
 			if current_start and y["start_year"] > current_start:
 				break
@@ -637,19 +680,33 @@ def get_fee_certificate_context(request_name):
 				groups = {group(c) for c in per_annum}
 				reference = {c: a for c, a in reference.items() if group(c) not in groups}
 				reference.update(per_annum)
-			if y["waiver"]:
-				reference_waiver = y["waiver"]
+				reference_waivers = {c: w for c, w in reference_waivers.items() if group(c) not in groups}
+				reference_waivers.update({c: y["component_waivers"].get(c, 0) for c in per_annum})
 		for y in years:
 			y["amounts"] = {c: a for c, a in y["amounts"].items() if group(c) not in PER_ANNUM_LABELS}
 			y["amounts"].update(reference)
-			if request.has_scholarship:
-				y["waiver"] = reference_waiver
+			y["component_waivers"] = {
+				**{c: w for c, w in y["component_waivers"].items() if group(c) not in PER_ANNUM_LABELS},
+				**reference_waivers,
+			}
 	if certificate_type != SINGLE_YEAR_RECEIPT:
 		# Admission Fee belongs to the first year only (programme_year 0 = unknown: keep as is).
 		for y in years:
 			if y["programme_year"] > 1:
 				for t in [c for c in y["amounts"] if group(c) == ADMISSION]:
 					y["amounts"].pop(t)
+	if certificate_type == MULTI_YEAR and request.has_scholarship:
+		# Each column's scholarship = the waivers on the fees it actually shows.
+		for y in years:
+			y["waiver"] = sum(flt(y["component_waivers"].get(c)) for c in y["amounts"])
+
+	if certificate_type == MULTI_YEAR and years:
+		# Show the remaining course only: from the current Academic Year to the final
+		# programme year (the chosen year only when no Academic Year is marked current).
+		chosen_start = frappe.db.get_value("Academic Year", certificate_ay, "year_start_date")
+		from_year = current_start or (getdate(chosen_start).year if chosen_start else 0)
+		first = next((i for i, y in enumerate(years) if y["start_year"] >= from_year), len(years) - 1)
+		years, unique_rows = years[first:], unique_rows[first:]
 
 	first_ay = frappe.get_doc("Academic Year", certificate_ay)
 	current_ay_doc = (
@@ -674,7 +731,12 @@ def get_fee_certificate_context(request_name):
 
 	# First year from the certificate's year onward that still has fee to pay
 	# (the "now required to pay the course fee for III year i.e. AY 2027-28" year).
-	cert_index = next((i for i, r in enumerate(unique_rows) if r.academic_year == first_ay.name), 0)
+	# (Multi-year columns already start at the current Academic Year.)
+	cert_index = (
+		0
+		if certificate_type == MULTI_YEAR
+		else next((i for i, r in enumerate(unique_rows) if r.academic_year == first_ay.name), 0)
+	)
 	due = next(
 		(
 			y
@@ -694,6 +756,7 @@ def get_fee_certificate_context(request_name):
 		"registration_id": student.registration_id or student.name,
 		"student_id": student.registration_id or student.name,
 		"programme": programme,
+		"programme_title": _programme_title(programme, _programme_duration(student)),
 		"programme_duration": _duration_words(_programme_duration(student)),
 		"academic_year": _short_ay_label(first_ay),
 		# Year of study in the requested Academic Year, and now (the current Academic Year),
