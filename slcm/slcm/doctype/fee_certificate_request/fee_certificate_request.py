@@ -662,33 +662,24 @@ def get_fee_certificate_context(request_name):
 	def one_time(component):
 		return group(component) in ONE_TIME_GROUPS or component_types.get(component) in ONE_TIME_TYPES
 
+	current_ay = get_current_academic_year()
+	current_start = frappe.db.get_value("Academic Year", current_ay, "year_start_date") if current_ay else None
+	current_start = getdate(current_start).year if current_start else None
 	if certificate_type == MULTI_YEAR:
-		# Fee structure: every column shows the same per-annum fees (Tuition, Housing,
-		# Mess) and scholarship, taken from the current Academic Year's demands (or the
-		# latest year before it that has them). One-time and other fees show only in the
-		# year they were charged. Amount paid / Balance payable stay each year's own.
-		current_ay = get_current_academic_year()
-		current_start = frappe.db.get_value("Academic Year", current_ay, "year_start_date") if current_ay else None
-		current_start = getdate(current_start).year if current_start else None
-		reference, reference_waivers = {}, {}
+		# Fee structure for every programme year: a year with dues shows its actual dues;
+		# a year with no dues yet (a future year) repeats the per-annum fees (Tuition,
+		# Housing, Mess) and their scholarship of the latest year that has dues. One-time
+		# fees stay in the year they were charged.
+		last_amounts, last_waivers = {}, {}
 		for y in years:
-			if current_start and y["start_year"] > current_start:
-				break
-			per_annum = {c: a for c, a in y["amounts"].items() if group(c) in PER_ANNUM_LABELS and a}
-			if per_annum:
-				# Replace by group, so a renamed component doesn't appear twice.
-				groups = {group(c) for c in per_annum}
-				reference = {c: a for c, a in reference.items() if group(c) not in groups}
-				reference.update(per_annum)
-				reference_waivers = {c: w for c, w in reference_waivers.items() if group(c) not in groups}
-				reference_waivers.update({c: y["component_waivers"].get(c, 0) for c in per_annum})
-		for y in years:
-			y["amounts"] = {c: a for c, a in y["amounts"].items() if group(c) not in PER_ANNUM_LABELS}
-			y["amounts"].update(reference)
-			y["component_waivers"] = {
-				**{c: w for c, w in y["component_waivers"].items() if group(c) not in PER_ANNUM_LABELS},
-				**reference_waivers,
-			}
+			if y["amounts"]:
+				per_annum = {c: a for c, a in y["amounts"].items() if group(c) in PER_ANNUM_LABELS and a}
+				if per_annum:
+					last_amounts = per_annum
+					last_waivers = {c: y["component_waivers"].get(c, 0) for c in per_annum}
+			elif last_amounts:
+				y["amounts"] = dict(last_amounts)
+				y["component_waivers"] = dict(last_waivers)
 	if certificate_type != SINGLE_YEAR_RECEIPT:
 		# Admission Fee belongs to the first year only (programme_year 0 = unknown: keep as is).
 		for y in years:
@@ -700,13 +691,6 @@ def get_fee_certificate_context(request_name):
 		for y in years:
 			y["waiver"] = sum(flt(y["component_waivers"].get(c)) for c in y["amounts"])
 
-	if certificate_type == MULTI_YEAR and years:
-		# Show the remaining course only: from the current Academic Year to the final
-		# programme year (the chosen year only when no Academic Year is marked current).
-		chosen_start = frappe.db.get_value("Academic Year", certificate_ay, "year_start_date")
-		from_year = current_start or (getdate(chosen_start).year if chosen_start else 0)
-		first = next((i for i, y in enumerate(years) if y["start_year"] >= from_year), len(years) - 1)
-		years, unique_rows = years[first:], unique_rows[first:]
 
 	first_ay = frappe.get_doc("Academic Year", certificate_ay)
 	current_ay_doc = (
@@ -731,9 +715,9 @@ def get_fee_certificate_context(request_name):
 
 	# First year from the certificate's year onward that still has fee to pay
 	# (the "now required to pay the course fee for III year i.e. AY 2027-28" year).
-	# (Multi-year columns already start at the current Academic Year.)
+	# (Multi-year: counted from the current Academic Year's column.)
 	cert_index = (
-		0
+		next((i for i, y in enumerate(years) if y["start_year"] >= (current_start or 0)), 0)
 		if certificate_type == MULTI_YEAR
 		else next((i for i, r in enumerate(unique_rows) if r.academic_year == first_ay.name), 0)
 	)

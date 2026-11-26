@@ -2,7 +2,14 @@ import frappe
 
 from slcm.slcm.doctype.fee_certificate_settings.fee_certificate_settings import _LOAN_BODY, MULTI_YEAR
 
-PREVIOUS = _LOAN_BODY.replace("{{ programme_title }}", "{{ programme }}")
+# The default before this patch (kept literal: _LOAN_BODY has changed since).
+PREVIOUS = (
+	"<p>This is to certify that <strong>{{ student_name }} (student ID – {{ student_id }})</strong> is studying in "
+	"{{ studying_year }} year {{ programme }} programme during the Academic Year (AY) {{ current_academic_year }} "
+	"in this University and is now required to pay the course fee for {{ due_year }} year i.e. "
+	"AY {{ due_academic_year }}.</p>"
+	"<p>Year wise fee structure for {{ programme }} programme shown below.</p>"
+)
 
 
 def execute():
