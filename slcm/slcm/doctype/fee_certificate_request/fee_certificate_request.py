@@ -280,10 +280,32 @@ def _years_in_text(text):
 	return cint(value) if value.isdigit() else DURATION_WORDS.index(value) + 1
 
 
+def _office_duration(name):
+	"""Course length from the office's Education Loan fee-structure list: BA LLB Hons 5,
+	LLB Hons 3, LLM 1, MPP 2, BA Hons 4 years; 0 when the name matches none (e.g. Ph.D)."""
+	import re
+
+	text = (name or "").lower()
+	letters = re.sub(r"[^a-z]", "", text)
+	if not letters or "phd" in letters:
+		return 0
+	if "llm" in letters:
+		return 1
+	if "publicpolicy" in letters or letters.startswith("mpp"):
+		return 2
+	if "ballb" in letters:
+		return 5
+	if "llb" in letters:
+		return 3
+	if re.search(r"\bb\.?\s*a\b.*hons", text):
+		return 4
+	return 0
+
+
 def _programme_duration(student):
 	"""Programme length in years: Programme Master "Programme duration (in years)"
-	("5" or "Five"), else Programme.program_duration, else the years in the programme's
-	name ("5-Year B.A., LL.B. (Hons.)"), since the duration fields are often left blank."""
+	("5" or "Five"), else Programme.program_duration, else the office's Education Loan
+	list (_office_duration), else the years in the programme's name ("Two Year")."""
 	master, programme_years, name = student.master_programme, 0, None
 	if student.programme_of_study:
 		name, programme_years = frappe.db.get_value(
@@ -296,11 +318,23 @@ def _programme_duration(student):
 			return years
 	if cint(programme_years):
 		return cint(programme_years)
-	for text in (master, name, student.programme_of_study):
-		years = _years_in_text(text)
-		if years:
-			return years
+	for finder in (_office_duration, _years_in_text):
+		for text in (master, name, student.programme_of_study):
+			years = finder(text)
+			if years:
+				return years
 	return 0
+
+
+def _programme_title(programme, duration):
+	"""The programme as printed with its length: "5-Year LL.B. (Hons.)", "4-Year BA (Hons)"
+	(any "N-Year" already in the name is replaced by the duration)."""
+	import re
+
+	name = re.sub(r"^\s*\d+\s*-?\s*years?\s*", "", programme or "", flags=re.I).strip()
+	if not duration or not name or re.search(r"\byears?\b", name, re.I) or name.lower().startswith("master"):
+		return programme or ""
+	return f"{duration}-Year {name}"
 
 
 def _year_offset(student, academic_year_doc):
@@ -651,6 +685,14 @@ def get_fee_certificate_context(request_name):
 				for t in [c for c in y["amounts"] if group(c) == ADMISSION]:
 					y["amounts"].pop(t)
 
+	if certificate_type == MULTI_YEAR and years:
+		# Show the remaining course only: from the current Academic Year (or the chosen
+		# year, if later) to the final programme year.
+		chosen_start = frappe.db.get_value("Academic Year", certificate_ay, "year_start_date")
+		from_year = max(current_start or 0, getdate(chosen_start).year if chosen_start else 0)
+		first = next((i for i, y in enumerate(years) if y["start_year"] >= from_year), len(years) - 1)
+		years, unique_rows = years[first:], unique_rows[first:]
+
 	first_ay = frappe.get_doc("Academic Year", certificate_ay)
 	current_ay_doc = (
 		frappe.get_doc("Academic Year", get_current_academic_year()) if get_current_academic_year() else first_ay
@@ -694,6 +736,7 @@ def get_fee_certificate_context(request_name):
 		"registration_id": student.registration_id or student.name,
 		"student_id": student.registration_id or student.name,
 		"programme": programme,
+		"programme_title": _programme_title(programme, _programme_duration(student)),
 		"programme_duration": _duration_words(_programme_duration(student)),
 		"academic_year": _short_ay_label(first_ay),
 		# Year of study in the requested Academic Year, and now (the current Academic Year),

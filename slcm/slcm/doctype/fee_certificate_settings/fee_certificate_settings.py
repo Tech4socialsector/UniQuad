@@ -34,10 +34,10 @@ _BANK_DETAILS = (
 # Education Loan certificate (all programme years), per the office's "FEE CERTIFICATE" sample.
 _LOAN_BODY = (
 	"<p>This is to certify that <strong>{{ student_name }} (student ID – {{ student_id }})</strong> is studying in "
-	"{{ studying_year }} year {{ programme }} programme during the Academic Year (AY) {{ current_academic_year }} "
+	"{{ studying_year }} year {{ programme_title }} programme during the Academic Year (AY) {{ current_academic_year }} "
 	"in this University and is now required to pay the course fee for {{ due_year }} year i.e. "
 	"AY {{ due_academic_year }}.</p>"
-	"<p>Year wise fee structure for {{ programme }} programme shown below.</p>"
+	"<p>Year wise fee structure for {{ programme_title }} programme shown below.</p>"
 )
 _LOAN_NOTE = (
 	"<p>Note: The fees / charges are provisional and subject to ratification &amp; revision by the "
