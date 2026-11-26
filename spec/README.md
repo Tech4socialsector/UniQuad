@@ -33,6 +33,53 @@ All module specs, guides, test plans and diagnostics for the `slcm` app, grouped
 ## Portal
 - [Student Portal — Design System Guidelines](portal/portal_theme.md)
 
+## Student Registration
+- [Student Registration: User Guide](student_registration/student_registration_guide.md)
+
+## Faculty Management
+- [Faculty Management: User Guide](faculty_management/faculty_management_guide.md)
+
+## Fee Management
+- [Fee Management: User Guide](fee_management/fee_management_guide.md)
+- [Fee Management: QA Test Checklist](fee_management/fee_management_test_checklist.md)
+
+## Scholarship
+- [Scholarship and University Financial Aid: User Guide](scholarship/scholarship_financial_aid_guide.md)
+
+## Examination
+- [Examination: User Guide](examination/examination_guide.md)
+- [Examination: Test Checklist](examination/examination_test_checklist.md)
+
+## Transcript
+- [Transcript: User Guide](transcript/transcript_guide.md)
+
+## Promotion
+- [Promotion: User Guide](promotion/promotion_guide.md)
+
+## PACE
+- [PACE: User Guide](pace/pace_guide.md)
+
+## FLE
+- [FLE (Foundations for a Legal Education): User Guide](fle/fle_guide.md)
+
+## Hostel
+- [Hostel Management: User Guide](hostel/hostel_management_guide.md)
+
+## Placement
+- [Placement: User Guide](placement/placement_guide.md)
+
+## Venue Bookings
+- [Venue Bookings: User Guide](venue_bookings/venue_bookings_guide.md)
+
+## Campus & Support
+- [Campus & Support: Helpdesk and IT Team Guide](campus_support/helpdesk_guide.md)
+
+## Platform
+- [Uniquad Platform: Cross-cutting Guide](platform/platform_guide.md)
+
+## User Manuals
+- [Uniquad User Manual](../docs/manuals/README.md) — end-user manual, one file per module (in `docs/manuals/`)
+
 ## Other READMEs (kept in place)
 - [App README](../README.md) — used by `pyproject.toml`
 - [Frontend (Vue / frappe-ui) README](../frontend/README.md) — referenced by `frontend/vite.config.js`
