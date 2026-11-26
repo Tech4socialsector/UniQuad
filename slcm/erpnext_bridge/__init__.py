@@ -2,7 +2,7 @@
 
 Everything here is inert unless ERPNext is installed on the site AND "Enable SLCM Fee Posting" is ticked on an
 ERPNext Company. All configuration lives in ERPNext records (Company, Mode of Payment, Bank Account, Account);
-see config.py and docs/erpnext_fee_bridge_test_checklist.md.
+see config.py and spec/erpnext_bridge/erpnext_fee_bridge_test_checklist.md.
 """
 
 import frappe

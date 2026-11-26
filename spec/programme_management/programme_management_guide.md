@@ -333,4 +333,4 @@ Two ways to promote:
 | Sidebar / workspace | `slcm/workspace_sidebar/programme_management.json`, `slcm/slcm/workspace/programme_management/` **and** `fixtures/workspace.json` (the fixture copy is imported last and wins) |
 
 - Read a student's current position with `get_current_log()` / `get_current_logs()`, or in SQL with `current_log_join()` / `year_log_exists()`. Never read `academic_year` / `year_no` from Student Enrollment: those columns were removed (stale columns may still exist in the database).
-- Removed old-flow DocTypes (Term Configuration, Class Configuration, Course List, Curriculum, …) are listed in `docs/old_flow_doctype_removal_audit.md`.
+- Removed old-flow DocTypes (Term Configuration, Class Configuration, Course List, Curriculum, …) are listed in `spec/programme_management/old_flow_doctype_removal_audit.md`.

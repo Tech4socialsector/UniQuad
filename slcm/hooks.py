@@ -850,7 +850,7 @@ role_home_page = {
 
 # Websitex
 website_route_rules = [
-    # Admission portals (see docs/admission_portal_restructure.md):
+    # Admission portals (see spec/admission/admission_portal_restructure.md):
     #   www/nlsatadmissions     — NLSAT Indian Nationals
     #   www/nlsat-international — NLSAT International
     #   www/nlsat               — shared by both NLSAT portals (folder routes /nlsat/...)
