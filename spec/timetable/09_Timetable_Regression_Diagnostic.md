@@ -1,7 +1,7 @@
 # Timetable Regression Diagnostic
 
 **App:** slcm (slcm-bench-v16)
-**Location:** `/home/n_l_s_i_u/frappe-bench/apps/slcm/slcm/System Check/09_Timetable_Regression_Diagnostic.md`
+**Location:** `/home/n_l_s_i_u/frappe-bench/apps/slcm/spec/timetable/09_Timetable_Regression_Diagnostic.md`
 
 ## 1. Server Error Logs
 While direct CLI `bench` access was blocked by WSL escaping rules, a review of the code architecture reveals exactly how the error is handled. The entire view logic inside `timetable.py` is wrapped in a massive `try...except` block (Lines 317-319):

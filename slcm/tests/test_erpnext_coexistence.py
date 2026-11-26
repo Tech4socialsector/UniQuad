@@ -7,7 +7,7 @@ Run:  bench --site <site> run-tests --module slcm.tests.test_erpnext_coexistence
 
 Uses unittest.TestCase (not IntegrationTestCase) so Frappe doesn't build ERPNext's sample test
 records, whose Fiscal Years overlap a real site's. Every test that writes rolls back in tearDown,
-so the site is unchanged afterwards. Checklist: docs/erpnext_coexistence_test_checklist.md
+so the site is unchanged afterwards. Checklist: spec/erpnext_bridge/erpnext_coexistence_test_checklist.md
 """
 
 import importlib
