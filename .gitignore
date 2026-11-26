@@ -9,3 +9,4 @@ __pycache__
 docs
 # Vite output of frontend/ (built by `bench build --app slcm`)
 slcm/public/frontend
+semgrep-rules/
