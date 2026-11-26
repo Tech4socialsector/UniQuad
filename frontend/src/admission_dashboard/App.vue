@@ -1,7 +1,5 @@
 <template>
 	<div ref="root" class="relative mx-auto max-w-[1400px] px-5 pb-10 pt-5 sm:px-8">
-		<BuildingArt v-if="!programmes" class="pointer-events-none absolute right-8 top-16 h-28 w-60 max-lg:!hidden" />
-
 		<!-- Sidebar toggle and breadcrumbs -->
 		<nav class="relative flex h-8 items-center gap-1.5" data-print-hide>
 			<Button
@@ -26,7 +24,7 @@
 			<Breadcrumbs :items="breadcrumbs" />
 		</nav>
 
-		<!-- Header: title, Admission Cycle, period (overview only), Export, Settings -->
+		<!-- Header: title, Admission Cycle, Export, Settings. The period sits with each view's filters. -->
 		<header class="relative mt-3 flex flex-wrap items-center justify-between gap-4">
 			<h1 class="min-w-0 truncate text-2xl-semibold text-ink-gray-9" :title="pageTitle">
 				{{ pageTitle }}
@@ -34,9 +32,7 @@
 
 			<div class="flex flex-wrap items-center gap-3">
 				<span class="text-base-medium text-ink-gray-7">Admission Cycle</span>
-				<Select v-model="cycle" :class="programmes ? 'w-64' : 'w-72'":options="cycleOptions" placeholder="Select cycle" />
-				<!-- The overview puts its Period box and Refresh button here -->
-				<div v-show="programmes" ref="periodSlot" class="flex items-center gap-2" />
+				<Select v-model="cycle" class="w-72" :options="cycleOptions" placeholder="Select cycle" />
 				<Button
 					v-if="cycle"
 					data-print-hide
@@ -86,12 +82,10 @@
 			v-model:programmes="programmes"
 			:api="api"
 			:cycle="cycle"
-			:cycle-info="cycleInfo"
 			:applicant-type="applicantType"
 			:all-programmes="openProgrammeList"
 			:settings="settings"
 			:today="boot.today"
-			:period-target="periodSlot"
 		/>
 
 		<SettingsDialog
@@ -107,7 +101,6 @@
 <script setup>
 import { computed, nextTick, ref, watch } from "vue";
 import { Breadcrumbs, Button, Select } from "frappe-ui";
-import BuildingArt from "./components/BuildingArt.vue";
 import ProgrammeList from "./components/ProgrammeList.vue";
 import ProgrammeOverview from "./components/ProgrammeOverview.vue";
 import SettingsDialog from "./components/SettingsDialog.vue";
@@ -125,7 +118,6 @@ const programmes = ref(null); // programmes open in the overview (null = list vi
 const openProgrammeList = ref([]); // every programme of the current tab, for the overview chips
 const settings = ref(props.boot.settings);
 const settingsOpen = ref(false);
-const periodSlot = ref(null); // header spot for the overview's Period box
 
 const cycleInfo = computed(() => props.boot.cycles.options.find((c) => c.value === cycle.value) || {});
 const cycleLabel = computed(() => cycleInfo.value.label || cycle.value);

@@ -33,6 +33,7 @@ DOMESTIC = "Domestic"
 INTERNATIONAL = "International"
 APPLICANT_TYPES = (DOMESTIC, INTERNATIONAL)
 
+PAGE_NAME = "admission-dashboard"
 SETTINGS_DOCTYPE = "Admission Dashboard Settings"
 # Bumped when the card/chart set changes shape; an older saved layout is ignored.
 LAYOUT_VERSION = 3
@@ -270,7 +271,12 @@ def _cached(method, params, refresh, compute):
 
 @frappe.whitelist()
 def get_cycle_overview(
-	admission_cycle, applicant_type=DOMESTIC, from_date=None, to_date=None, part=None, refresh=0
+	admission_cycle: str,
+	applicant_type: str = DOMESTIC,
+	from_date: str | None = None,
+	to_date: str | None = None,
+	part: str | None = None,
+	refresh: int = 0,
 ):
 	"""Summary cards, programme cards with their numbers, and the two cross-programme charts.
 
@@ -520,12 +526,12 @@ OVERVIEW_FIELDS = (
 
 @frappe.whitelist()
 def get_programme_overview(
-	admission_cycle,
-	programs,
-	applicant_type=DOMESTIC,
-	from_date=None,
-	to_date=None,
-	refresh=0,
+	admission_cycle: str,
+	programs: str | list,
+	applicant_type: str = DOMESTIC,
+	from_date: str | None = None,
+	to_date: str | None = None,
+	refresh: int = 0,
 ):
 	"""Cards and charts for one or more programmes of a cycle.
 
@@ -697,7 +703,7 @@ def get_settings():
 
 
 @frappe.whitelist(methods=["POST"])
-def save_settings(layout):
+def save_settings(layout: str | dict):
 	"""Store the layout for everyone. Only System Manager / Admission Admin may do this."""
 	if not _can_edit_settings():
 		frappe.throw(_("Not permitted to change the Admission Dashboard settings."), frappe.PermissionError)
@@ -884,7 +890,11 @@ def _as_list(value):
 
 
 def _check_access():
-	if not frappe.has_permission("Applicant", "read"):
+	"""Only the roles of the desk page may read its figures.
+
+	Not `has_permission("Applicant", "read")`: candidates hold that too (their own record
+	only), and these figures cover every applicant."""
+	if frappe.session.user == "Guest" or not frappe.get_cached_doc("Page", PAGE_NAME).is_permitted():
 		frappe.throw(_("Not permitted to view the Admission Dashboard."), frappe.PermissionError)
 
 
