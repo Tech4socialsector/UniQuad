@@ -4,5 +4,9 @@
 import frappe
 from frappe.model.document import Document
 
+
 class ApplicantPortalConfig(Document):
-    pass
+    def validate(self):
+        from slcm.admission.utils.auth_emails import validate_portal_templates
+
+        validate_portal_templates(self)

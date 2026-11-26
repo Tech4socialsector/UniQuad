@@ -118,3 +118,4 @@ slcm.patches.v2_0.fee_certificate_opening_current_year
 slcm.patches.v2_0.create_user_nlsat_portal_field #2026-11-24 make editable
 slcm.patches.v2_0.nlsat_portal_registration_cleanup
 slcm.patches.v2_0.fee_certificate_education_loan_format
+slcm.patches.v2_0.seed_portal_account_email_templates

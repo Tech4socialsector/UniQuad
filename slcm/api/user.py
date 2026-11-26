@@ -63,110 +63,21 @@ def get_reset_password_link(user_doc, send_email=False):
         return link
 
 
-def _site_url_of(link):
-    """'https://host' of an absolute link, else the site URL."""
-    from urllib.parse import urlparse
+def send_welcome_or_custom_signup_email(
+    user_doc, correct_link, template=None, login_url=None, portal=None, system_fallback=True
+):
+    """The one registration email of a portal sign-up (see slcm.admission.utils.auth_emails).
 
-    parsed = urlparse(link or "")
-    if parsed.scheme and parsed.netloc:
-        return f"{parsed.scheme}://{parsed.netloc}"
-    return frappe.utils.get_url()
+    Call it after the new user is committed: sending commits the open transaction.
+    portal: DOMESTIC / INTERNATIONAL / PACE, or None for System Settings' welcome template.
+    template: email file used when no Email Template is configured (Frappe's new_user by default).
+    system_fallback: False to skip System Settings' welcome template (FLE has its own email)."""
+    from slcm.admission.utils.auth_emails import REGISTER, send_auth_email
 
-
-def send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user", login_url=None):
-    institution = frappe.get_single("Institution Settings")
-    enable_custom = getattr(institution, "enable_signup_email", 0)
-    has_custom_template = frappe.db.exists("Email Template", "Applicant Registration Email")
-    
-    if enable_custom or has_custom_template:
-        full_name = user_doc.full_name or user_doc.first_name or user_doc.email
-        
-        # Context for rendering
-        context = {
-            "institution_name": getattr(institution, "institution_name", "") or "National Law School of India University",
-            "logo": getattr(institution, "logo", ""),
-            "full_name": full_name,
-            "candidate_name": full_name,
-            "applicant_name": full_name,
-            "first_name": user_doc.first_name or full_name,
-            "set_password_link": correct_link,
-            "link": correct_link,
-            "reset_password_link": correct_link,
-            "login_url": login_url or getattr(institution, "login_url", "") or frappe.utils.get_url(get_portal_login_url()),
-            "support_email": getattr(institution, "support_email", ""),
-            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
-            "doc": user_doc,
-        }
-
-        # Check if standard Email Template 'Applicant Registration Email' exists
-        subject = None
-        message = None
-        sender = None
-
-        if frappe.db.exists("Email Template", "Applicant Registration Email"):
-            try:
-                tmpl = frappe.get_doc("Email Template", "Applicant Registration Email")
-                tmpl.flags.ignore_permissions = True
-                subject = tmpl.get_formatted_subject(context)
-                message = tmpl.get_formatted_response(context)
-                if tmpl.email_account:
-                    sender = frappe.db.get_value("Email Account", tmpl.email_account, "email_id") or tmpl.email_account
-            except Exception as e:
-                frappe.log_error(title="SLCM Email Template Render Error", message=frappe.get_traceback())
-
-        if not message:
-            # Fallback to Institution Settings fields
-            subject_template = getattr(institution, "signup_email_subject", "")
-            if not subject_template:
-                subject_template = "Welcome to {{ institution_name }}"
-                
-            try:
-                subject = frappe.render_template(subject_template, context)
-            except Exception:
-                subject = "Welcome to " + (getattr(institution, "institution_name", "") or "National Law School of India University")
-
-            message_template = getattr(institution, "signup_email_template", "")
-            if message_template:
-                try:
-                    message = frappe.render_template(message_template, context)
-                except Exception as e:
-                    frappe.log_error(title="SLCM Custom Signup Email Render Error", message=frappe.get_traceback())
-
-        if message:
-            frappe.sendmail(
-                recipients=[user_doc.email],
-                sender=sender,
-                subject=subject,
-                message=message,
-                now=True
-            )
-            user_doc.flags.email_sent = 1
-            return True
-                
-    # Fallback to standard welcome email
-    site_name = (
-        frappe.db.get_default("site_name")
-        or (frappe.get_conf().get("site_name") if frappe.get_conf() else None)
-        or "Admissions Portal"
+    send_auth_email(
+        user_doc, REGISTER, correct_link, portal=portal, login_url=login_url,
+        default_template=template, system_fallback=system_fallback,
     )
-    subject = f"Welcome to {site_name} — Set your password"
-    welcome_email_template = frappe.db.get_system_setting("welcome_email_template")
-    user_doc.send_login_mail(
-        subject,
-        template,
-        dict(
-            link=correct_link,
-            site_url=_site_url_of(correct_link),
-            doc=user_doc,
-            candidate_name=user_doc.full_name or user_doc.first_name,
-            full_name=user_doc.full_name or user_doc.first_name,
-            first_name=user_doc.first_name,
-            set_password_link=correct_link,
-            reset_password_link=correct_link,
-        ),
-        custom_template=welcome_email_template,
-    )
-    return False
 
 
 @frappe.whitelist(allow_guest=True)
@@ -222,7 +133,8 @@ def register_fle_user(email, mobile_number=None):
     correct_link = get_url(f"/fle/update_password.html?{parsed.query}")
     
     # Prepare and send the welcome email
-    send_welcome_or_custom_signup_email(user, correct_link, template="fle_new_user")
+    # FLE always sends its own email, not the desk's System Settings welcome template
+    send_welcome_or_custom_signup_email(user, correct_link, template="fle_new_user", system_fallback=False)
 
     # default_role = frappe.get_single_value("Portal Settings", "default_role")
     # if default_role:
@@ -923,7 +835,7 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None, portal=No
 
     user_created = False
     try:
-        from frappe.utils import random_string, get_url, add_days, now_datetime
+        from frappe.utils import random_string
         import urllib.parse
 
         user_dict = {
@@ -941,6 +853,8 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None, portal=No
         user_doc = frappe.get_doc(user_dict)
         user_doc.flags.ignore_permissions = True
         user_doc.flags.ignore_password_policy = True
+        # The portal's register email below is the only email: never Frappe's welcome mail
+        user_doc.flags.no_welcome_mail = True
         user_doc.insert()
         user_created = True
 
@@ -958,9 +872,9 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None, portal=No
         if "Applicant" not in [r.role for r in user_doc.roles]:
             user_doc.add_roles("Applicant")
 
-        # Generate a password-reset link so they can set their password
+        # Generate a password-reset link so they can set their password; it expires
+        # like every reset link (System Settings > Reset Password Link Expiry Duration)
         frappe_link = get_reset_password_link(user_doc, send_email=False)
-        user_doc.db_set("last_reset_password_key_generated_on", add_days(now_datetime(), 30))
 
         parsed = urllib.parse.urlparse(frappe_link)
         from slcm.security.access import safe_redirect_path
@@ -983,10 +897,15 @@ def custom_sign_up(email, full_name, mobile_no=None, redirect_to=None, portal=No
         # Cache redirect for post-password-set
         frappe.cache().hset("redirect_after_login", user_doc.name, base_redir)
 
-        # Send welcome email with set-password link
-        send_welcome_or_custom_signup_email(user_doc, correct_link, template="new_user", login_url=login_url)
-
+        # Commit the complete account first: sending the email commits, and no
+        # candidate may get a link for an account that is later rolled back.
         frappe.db.commit()
+
+        # The register email of this portal (Applicant Portal Config), with the set-password link
+        from slcm.admission.utils.nlsat_portal import DOMESTIC
+        send_welcome_or_custom_signup_email(
+            user_doc, correct_link, login_url=login_url, portal=portal_type or DOMESTIC
+        )
         return [1, "Account created! Check your email to set your password and activate your account."]
 
     except frappe.exceptions.DuplicateEntryError:
@@ -1083,9 +1002,6 @@ def reset_password(user: str, redirect_to: str = None, portal: str = None):
         link = get_reset_password_link(user_doc, send_email=False)
         
         # Determine redirect for portal users
-        from frappe.utils import get_url
-        from frappe.utils.user import get_user_fullname
-
         from slcm.admission.utils.nlsat_portal import (
             get_applicant_portal_type, get_portal_url, get_request_portal_type,
         )
@@ -1117,59 +1033,16 @@ def reset_password(user: str, redirect_to: str = None, portal: str = None):
         login_path = get_portal_login_url(portal_type) if portal_type else "/admission/login"
         login_url = get_portal_url(login_path, portal_type, use_request_host=True)
 
-        subject = _("Password Reset")
-        created_by = get_user_fullname(frappe.session["user"]) if frappe.session.get("user") else "Administrator"
-        if created_by == "Guest":
-            created_by = "Administrator"
-
-        institution = frappe.get_single("Institution Settings")
-        institution_name = getattr(institution, "institution_name", "") or "National Law School of India University"
-        full_name = user_doc.full_name or user_doc.first_name or user_doc.last_name or "Candidate"
-
-        args = {
-            "first_name": user_doc.first_name or user_doc.last_name or "Candidate",
-            "full_name": full_name,
-            "candidate_name": full_name,
-            "applicant_name": full_name,
-            "user": user_doc.name,
-            "email": user_doc.email or user_doc.name,
-            "title": subject,
-            "login_url": login_url if portal_type else (getattr(institution, "login_url", "") or login_url),
-            "created_by": created_by,
-            "link": link,
-            "reset_password_link": link,
-            "set_password_link": link,
-            "institution_name": institution_name,
-            "support_email": getattr(institution, "support_email", ""),
-            "link_expiry_hours": getattr(institution, "link_expiry_hours", 24) or 24,
-            "logo": getattr(institution, "logo", ""),
-            "doc": user_doc,
-        }
-        
-        reset_password_template = frappe.db.get_system_setting("reset_password_template") or "Reset Password Template"
-        content = None
-        template = "slcm_password_reset"
-        sender = None
-        
-        if reset_password_template and frappe.db.exists("Email Template", reset_password_template):
-            tmpl = frappe.get_doc("Email Template", reset_password_template)
-            tmpl.flags.ignore_permissions = True
-            subject = tmpl.get_formatted_subject(args) or subject
-            content = tmpl.get_formatted_response(args)
-            
-            # Resolve sender from the template
-            if tmpl.email_account:
-                sender = frappe.db.get_value("Email Account", tmpl.email_account, "email_id") or tmpl.email_account
-
-        frappe.sendmail(
-            recipients=user_doc.email,
-            sender=sender,
-            subject=subject,
-            template=template if not (reset_password_template and content) else None,
-            content=content if (reset_password_template and content) else None,
-            args=args,
-            now=True
+        # The template follows the account: NLSAT (the portal asked from, else their
+        # own) / PACE applicants get their portal's, everyone else System Settings'.
+        from slcm.admission.utils.auth_emails import (
+            DOMESTIC, INTERNATIONAL, RESET, get_user_portal, send_auth_email,
         )
+        email_portal = get_user_portal(user_doc.name)
+        if email_portal in (DOMESTIC, INTERNATIONAL) and portal_type:
+            email_portal = portal_type
+
+        send_auth_email(user_doc, RESET, link, portal=email_portal, login_url=login_url)
 
         return {
             "status": "ok",
@@ -1273,10 +1146,17 @@ def custom_update_password(new_password, logout_all_sessions=0, key=None, old_pa
     
     return result
 
-@frappe.whitelist(allow_guest=True)
-def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=None):
+@frappe.whitelist(allow_guest=True, methods=["POST"])
+# Per IP, as custom_sign_up: enough for cyber cafes and college labs.
+@rate_limit(limit=20, seconds=60 * 60)
+def register_pace_user(
+    email: str, full_name: str | None = None, mobile_number: str | None = None, redirect_to: str | None = None
+):
+    from slcm.security.access import safe_redirect_path
+
     email = (email or "").strip().lower()
     full_name = (full_name or "").strip()
+    redirect_to = safe_redirect_path(redirect_to, None) if redirect_to else None
 
     if not email:
         return {"status": "error", "message": "Email is required."}
@@ -1286,9 +1166,9 @@ def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=No
 
     user_created = False
     try:
-        from frappe.utils import random_string, get_url, add_days, now_datetime
+        from frappe.utils import random_string, get_url
         import urllib.parse
-        
+
         user_dict = {
             "doctype": "User",
             "email": email,
@@ -1305,6 +1185,8 @@ def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=No
         user = frappe.get_doc(user_dict)
         user.flags.ignore_permissions = True
         user.flags.ignore_password_policy = True
+        # The PACE register email below is the only email: never Frappe's welcome mail
+        user.flags.no_welcome_mail = True
         user.insert()
         user_created = True
 
@@ -1317,21 +1199,14 @@ def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=No
         # Track that this user is a new signup to suppress Security Alert email during first password setup
         frappe.cache().hset("newly_signup_user", user.name, 1)
 
-        # Generate the password reset link silently
+        # Generate the password reset link silently; it expires like every reset
+        # link (System Settings > Reset Password Link Expiry Duration)
         frappe_link = get_reset_password_link(user, send_email=False)
-        
-        from frappe.utils import add_days, now_datetime
-        user.db_set("last_reset_password_key_generated_on", add_days(now_datetime(), 3650))
-        
-        import urllib.parse
+
         parsed = urllib.parse.urlparse(frappe_link)
-        
-        from frappe.utils import get_url
         correct_link = get_url(f"/update-password?{parsed.query}")
         if redirect_to:
             correct_link += f"&redirect_to={urllib.parse.quote(redirect_to)}"
-        
-        send_welcome_or_custom_signup_email(user, correct_link, template="new_user")
 
         # Assign "PACE Applicant" role
         user.flags.ignore_permissions = True
@@ -1341,8 +1216,15 @@ def register_pace_user(email, full_name=None, mobile_number=None, redirect_to=No
             frappe.cache().hset("redirect_after_login", user.name, redirect_to)
         else:
             frappe.cache().hset("redirect_after_login", user.name, "/pace/my-profile")
-            
+
+        # Commit the complete account first: sending the email commits, and no
+        # candidate may get a link for an account that is later rolled back.
         frappe.db.commit()
+
+        from slcm.admission.utils.auth_emails import PACE
+        send_welcome_or_custom_signup_email(
+            user, correct_link, login_url=get_url("/paceadmissions/login"), portal=PACE
+        )
         return {"status": "success", "message": "Check your email to set your password and activate your account!"}
 
     except Exception as e:
@@ -1386,8 +1268,9 @@ def login_pace_user(usr, pwd):
 
 
 @frappe.whitelist(allow_guest=True, methods=["POST"])
-def reset_password_pace(user: str, redirect_to=None):
-    """PACE forgot-password: points to /paceadmissions/update_password.html"""
+@rate_limit(key="user", limit=get_password_reset_limit, seconds=60 * 60)
+def reset_password_pace(user: str, redirect_to: str | None = None):
+    """PACE forgot-password: the PACE Password Reset Email Template (Applicant Portal Config)."""
     try:
         user_doc = frappe.get_doc("User", user)
         if user_doc.name == "Administrator":
@@ -1397,31 +1280,28 @@ def reset_password_pace(user: str, redirect_to=None):
 
         user_doc.validate_reset_password()
         frappe_link = get_reset_password_link(user_doc, send_email=False)
-        
+
         import urllib.parse
-        parsed = urllib.parse.urlparse(frappe_link)
-        
         from frappe.utils import get_url
+        from slcm.security.access import safe_redirect_path
+
+        parsed = urllib.parse.urlparse(frappe_link)
         correct_link = get_url(f"/update-password?{parsed.query}")
+        redirect_to = safe_redirect_path(redirect_to, None) if redirect_to else None
         if redirect_to:
             correct_link += f"&redirect_to={urllib.parse.quote(redirect_to)}"
-        
-        try:
-            logo_path = os.path.abspath(frappe.get_site_path("public", "files", "nlsiu-logo.jpg"))
-            with open(logo_path, "rb") as f:
-                logo_b64 = base64.b64encode(f.read()).decode("utf-8")
-            logo_src = f"data:image/jpeg;base64,{logo_b64}"
-        except Exception:
-            logo_src = ""
 
-        base_url = get_url()
-
-        user_doc.send_login_mail(
-            _("Password Reset"),
-            "pace_password_reset",
-            {"link": correct_link, "site_url": base_url, "logo_src": logo_src},
-            now=True,
-        )
+        # The template follows the account, as on /login: PACE applicants get PACE's,
+        # NLSAT applicants their portal's, everyone else System Settings'.
+        from slcm.admission.utils.auth_emails import PACE, RESET, get_user_portal, send_auth_email
+        email_portal = get_user_portal(user_doc.name)
+        if email_portal == PACE:
+            login_url = get_url("/paceadmissions/login")
+        elif email_portal:
+            login_url = get_url(get_portal_login_url(email_portal))
+        else:
+            login_url = get_url("/login")
+        send_auth_email(user_doc, RESET, correct_link, portal=email_portal, login_url=login_url)
 
         return {
             "status": "ok",
