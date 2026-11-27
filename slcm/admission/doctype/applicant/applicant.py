@@ -8,6 +8,7 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 from slcm.admission.utils.nlsat_portal import get_applicant_login_link, get_applicant_portal_url
+from slcm.admission.utils.submitted_device import record_submitted_device
 from frappe.model.naming import getseries
 from frappe.utils import validate_email_address, getdate, now, flt, nowdate, cint, cstr, strip_html
 from slcm.admission.portal_application_web_form import (
@@ -268,6 +269,7 @@ class Applicant(Document):
             if self.status == "Submitted":
                 self.status = _get_submission_status(self)
 
+        record_submitted_device(self)
         self.update_applicant_stage_flags()
 
     def validate_dynamic_conditions(self):

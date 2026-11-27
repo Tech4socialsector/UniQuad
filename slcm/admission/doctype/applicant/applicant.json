@@ -176,6 +176,8 @@
   "current_stage",
   "merit_score",
   "portal_last_login",
+  "submitted_device",
+  "submitted_user_agent",
   "intake_type",
   "entrance_test",
   "intereview",
@@ -1066,6 +1068,22 @@
    "read_only": 1
   },
   {
+   "description": "Device the applicant used to submit the application, read from the browser when they submitted.",
+   "fieldname": "submitted_device",
+   "fieldtype": "Select",
+   "label": "Submitted From Device",
+   "no_copy": 1,
+   "options": "\nMobile\nTablet\nDesktop",
+   "read_only": 1
+  },
+  {
+   "fieldname": "submitted_user_agent",
+   "fieldtype": "Small Text",
+   "label": "Submitted Browser (User Agent)",
+   "no_copy": 1,
+   "read_only": 1
+  },
+  {
    "depends_on": "eval:doc.program_level == \"Research Course\"",
    "fieldname": "section_break_vmys",
    "fieldtype": "Section Break",
@@ -1345,7 +1363,7 @@
   }
  ],
  "make_attachments_public": 1,
- "modified": "2026-11-18 16:00:00.000000",
+ "modified": "2026-11-28 10:00:00.000000",
  "modified_by": "Administrator",
  "module": "Admission",
  "name": "Applicant",

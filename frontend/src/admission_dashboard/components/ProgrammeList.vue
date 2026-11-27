@@ -179,6 +179,16 @@
 				:subtitle="`Domestic and International · ${rangeLabel}`"
 				:loading="loading"
 			/>
+			<SourceChart
+				card-class="lg:col-span-2"
+				title="Device used to submit"
+				:rows="apps.data?.device || []"
+				:series="SOURCE_SERIES"
+				:subtitle="`Submitted applications · Domestic and International · ${rangeLabel}`"
+				empty-message="No submitted applications for this selection"
+				:keep-last="['Not recorded']"
+				:loading="loading"
+			/>
 		</div>
 	</section>
 </template>

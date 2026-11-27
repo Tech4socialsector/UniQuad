@@ -27,6 +27,7 @@ from frappe.query_builder.functions import Coalesce, Count
 from pypika.terms import Case
 from frappe.utils import add_days, cint, flt, get_datetime, getdate, nowdate
 
+from slcm.admission.utils.submitted_device import DEVICES
 from slcm.utils.vite_assets import get_entry_assets
 
 DOMESTIC = "Domestic"
@@ -43,6 +44,7 @@ BUNDLE_ENTRY = "src/admission_dashboard/main.js"  # key in slcm/public/frontend/
 SETTLED_STATES = ("Settled", "processed")  # some records carry Razorpay's raw "processed"
 REGISTRATION_REPORT = "Applicant Registration Status"
 NOT_SET = "Not set"
+NOT_RECORDED = "Not recorded"
 
 # --------------------------------------------------------------------------- #
 # Admission pipeline
@@ -284,7 +286,7 @@ def get_cycle_overview(
 	"""Summary cards, programme cards with their numbers, and the two cross-programme charts.
 
 	`part` returns one slice, so the page can load them in parallel and show real progress:
-	  applications  -> programmes (application counts), by_programme, source, unlisted
+	  applications  -> programmes (application counts), by_programme, source, device, unlisted
 	  fees          -> fee_stats (per programme), fee_daily
 	  registrations -> registrations (candidate accounts and whether they applied)
 	Without `part` everything comes back in one response, with the fee figures inside each programme.
@@ -367,6 +369,7 @@ def _cycle_applications(cycle, applicant_type, window):
 	return {
 		"programmes": programmes,
 		"source": _source_counts(cycle.name, window, list(labels)),
+		"device": _device_counts(cycle.name, window, list(labels)),
 		"unlisted": {
 			"count": sum(unlisted.values()),
 			"programmes": [{"label": k, "count": v} for k, v in unlisted.most_common()],
@@ -386,29 +389,51 @@ def _cycle_applications(cycle, applicant_type, window):
 
 
 def _source_counts(cycle, window, programs):
-	"""'Where did you hear about the programme?' for the list page's radar: one row per answer
+	"""'Where did you hear about the programme?' for the list page's bars: one row per answer
 	with the Domestic and International counts, over all of the cycle's programmes."""
+	counts = _counts_by_type(cycle, window, programs, "source_of_information", NOT_SET)
+	return _type_rows(counts, _source_answers(counts[DOMESTIC] + counts[INTERNATIONAL]))
+
+
+def _device_counts(cycle, window, programs):
+	"""Device used to submit, for the list page's bars: submitted applications only (a draft has
+	no device yet). Applications submitted before the device was recorded are "Not recorded"."""
+	counts = _counts_by_type(cycle, window, programs, "submitted_device", NOT_RECORDED, submitted_only=True)
+	present = counts[DOMESTIC] + counts[INTERNATIONAL]
+	return _type_rows(counts, [d for d in (*DEVICES, NOT_RECORDED) if present[d]])
+
+
+def _counts_by_type(cycle, window, programs, field, blank, submitted_only=False):
+	"""Applications per value of `field`, split Domestic / International, over `programs`."""
 	counts = {DOMESTIC: Counter(), INTERNATIONAL: Counter()}
-	if programs:
-		A = DocType("Applicant")
-		is_international = Case().when(A.foriegn_national == "Yes", 1).else_(0)
-		query = (
-			frappe.qb.from_(A)
-			.select(A.source_of_information.as_("label"), is_international.as_("international"), Count("*").as_("n"))
-			.where(A.admission_cycle == cycle)
-			.where(A.program.isin(programs))
-			.groupby(A.source_of_information, is_international)
-		)
-		if window.start:
-			query = query.where(A.creation >= window.start)
-		if window.end:
-			query = query.where(A.creation < window.end)
-		for row in query.run(as_dict=True):
-			row_type = INTERNATIONAL if cint(row.international) else DOMESTIC
-			counts[row_type][(row.label or "").strip() or NOT_SET] += cint(row.n)
+	if not programs:
+		return counts
+	A = DocType("Applicant")
+	column = getattr(A, field)  # a DocType table reads any attribute as that column
+	is_international = Case().when(A.foriegn_national == "Yes", 1).else_(0)
+	query = (
+		frappe.qb.from_(A)
+		.select(column.as_("label"), is_international.as_("international"), Count("*").as_("n"))
+		.where(A.admission_cycle == cycle)
+		.where(A.program.isin(programs))
+		.groupby(column, is_international)
+	)
+	if submitted_only:
+		query = query.where(Coalesce(A.status, "Draft") != "Draft")
+	if window.start:
+		query = query.where(A.creation >= window.start)
+	if window.end:
+		query = query.where(A.creation < window.end)
+	for row in query.run(as_dict=True):
+		row_type = INTERNATIONAL if cint(row.international) else DOMESTIC
+		counts[row_type][(row.label or "").strip() or blank] += cint(row.n)
+	return counts
+
+
+def _type_rows(counts, labels):
 	return [
-		{"label": answer, "domestic": counts[DOMESTIC][answer], "international": counts[INTERNATIONAL][answer]}
-		for answer in _source_answers(counts[DOMESTIC] + counts[INTERNATIONAL])
+		{"label": label, "domestic": counts[DOMESTIC][label], "international": counts[INTERNATIONAL][label]}
+		for label in labels
 	]
 
 

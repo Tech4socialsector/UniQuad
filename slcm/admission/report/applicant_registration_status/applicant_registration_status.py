@@ -1,12 +1,18 @@
 import frappe
+from frappe import _
 from frappe.query_builder.functions import IfNull
 from frappe.utils import add_days, getdate
+from pypika.terms import ValueWrapper
 
 DOMESTIC = "Domestic"
 INTERNATIONAL = "International"
 APPLIED = "Applied"
 ENROLLED = "Enrolled"
 NOT_APPLIED = "Not Applied"
+DRAFT = "Draft"
+# Device column: submitted before the device was recorded / only drafts so far
+NOT_RECORDED = "Not recorded"
+NOT_SUBMITTED = "Not submitted"
 
 
 def execute(filters=None):
@@ -48,6 +54,13 @@ def get_columns():
             "fieldname": "application_status",
             "fieldtype": "Data",
             "width": 150,
+        },
+        {
+            # Device used to submit; empty for users who have not applied
+            "label": _("Device"),
+            "fieldname": "device",
+            "fieldtype": "Data",
+            "width": 130,
         },
     ]
 
@@ -118,33 +131,44 @@ def get_registered_users(filters, sort=True):
     if not users:
         return []
 
-    applied, enrolled = _application_keys(filters.get("admission_cycle"))
+    applied, enrolled, devices = _application_keys(filters.get("admission_cycle"))
     for u in users:
         keys = {u.email, u.name}
         u.application_status = (
             ENROLLED if keys & enrolled else APPLIED if keys & applied else NOT_APPLIED
         )
+        u.device = _device_of(u, devices) if u.application_status != NOT_APPLIED else ""
     return users
 
 
 def _application_keys(admission_cycle=None):
-    """Emails and user ids found on Applicants (all, and Enrolled ones), optionally of one cycle."""
+    """Emails and user ids found on Applicants (all, and Enrolled ones), optionally of one cycle,
+    and the device each key last submitted an application from."""
     A = frappe.qb.DocType("Applicant")
+    has_device = frappe.db.has_column("Applicant", "submitted_device")
     query = (
         frappe.qb.from_(A)
-        .select(A.email, A.user_id, A.status)
+        .select(A.email, A.user_id, A.status, A.submitted_device if has_device else ValueWrapper(None))
         .where((IfNull(A.email, "") != "") | (IfNull(A.user_id, "") != ""))
+        .orderby(A.creation)
     )
     if admission_cycle:
         query = query.where(A.admission_cycle == admission_cycle)
 
-    applied, enrolled = set(), set()
-    for email, user_id, status in query.run():
+    applied, enrolled, devices = set(), set(), {}
+    for email, user_id, status, device in query.run():
         keys = {k for k in (email, user_id) if k}
         applied |= keys
         if status == ENROLLED:
             enrolled |= keys
-    return applied, enrolled
+        if (status or DRAFT) != DRAFT:  # ordered by creation: the latest submitted application wins
+            devices.update(dict.fromkeys(keys, device or NOT_RECORDED))
+    return applied, enrolled, devices
+
+
+def _device_of(user, devices):
+    """Device of the user's latest submitted application; "Not submitted" when all are drafts."""
+    return devices.get(user.email) or devices.get(user.name) or NOT_SUBMITTED
 
 
 def get_data(filters):
@@ -156,6 +180,7 @@ def get_data(filters):
             portal=u.portal or "Not set",
             created_on=u.creation,
             application_status=u.application_status,
+            device=u.device,
         )
         for u in get_registered_users(filters)
     ]
