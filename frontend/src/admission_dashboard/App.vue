@@ -75,6 +75,7 @@
 			:cycle="cycle"
 			:cycle-label="cycleLabel"
 			:today="boot.today"
+			:can-open-registrations="Boolean(boot.can_open_registration_report)"
 			@open="openProgrammes"
 		/>
 		<ProgrammeOverview

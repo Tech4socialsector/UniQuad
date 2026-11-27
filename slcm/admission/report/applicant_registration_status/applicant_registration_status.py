@@ -1,5 +1,12 @@
 import frappe
+from frappe.query_builder.functions import IfNull
 from frappe.utils import add_days, getdate
+
+DOMESTIC = "Domestic"
+INTERNATIONAL = "International"
+APPLIED = "Applied"
+ENROLLED = "Enrolled"
+NOT_APPLIED = "Not Applied"
 
 
 def execute(filters=None):
@@ -23,6 +30,12 @@ def get_columns():
             "fieldname": "full_name",
             "fieldtype": "Data",
             "width": 200,
+        },
+        {
+            "label": "Portal",
+            "fieldname": "portal",
+            "fieldtype": "Data",
+            "width": 120,
         },
         {
             "label": "Created On",
@@ -64,22 +77,34 @@ def build_conditions(filters):
         conditions.append("u.name = %(user)s")
         values["user"] = filters["user"]
 
+    # The portal the candidate signed up on. A blank portal counts as Domestic, the same
+    # default the NLSAT pages use for an account that has not applied yet.
+    portal = filters.get("nlsat_portal")
+    if portal in (DOMESTIC, INTERNATIONAL) and frappe.db.has_column("User", "nlsat_portal"):
+        conditions.append(
+            "u.nlsat_portal = %(portal)s" if portal == INTERNATIONAL else "IFNULL(u.nlsat_portal, '') != %(portal)s"
+        )
+        values["portal"] = INTERNATIONAL
+
     return " AND ".join(conditions), values
 
 
 def get_registered_users(filters, sort=True):
     """Applicant-role users with their application status (Enrolled / Applied / Not Applied).
 
-    A user "has applied" when any Applicant carries their email or their user id. That used to
+    A user "has applied" when any Applicant carries their email or their user id; with an
+    `admission_cycle` filter, only that cycle's applications count. That used to
     be a correlated `EXISTS (... email = u.email OR user_id = u.name)` per user, which the OR
     keeps off any index: users x applicants full scans, and a 504 on a real site. Instead the
     Applicant table is read once and matched in Python.
     """
     condition_str, values = build_conditions(filters)
+    # User.nlsat_portal is a custom field a site may not have yet
+    portal_column = "u.nlsat_portal" if frappe.db.has_column("User", "nlsat_portal") else "NULL"
 
     users = frappe.db.sql(
         f"""
-        SELECT u.name, u.email, u.full_name, u.creation
+        SELECT u.name, u.email, u.full_name, u.creation, {portal_column} AS portal
         FROM `tabUser` u
         INNER JOIN `tabHas Role` hr
             ON hr.parent = u.name AND hr.role = 'Applicant' AND hr.parenttype = 'User'
@@ -93,21 +118,33 @@ def get_registered_users(filters, sort=True):
     if not users:
         return []
 
-    applied, enrolled = set(), set()
-    for email, user_id, status in frappe.db.sql(
-        "SELECT email, user_id, status FROM `tabApplicant` WHERE IFNULL(email, '') != '' OR IFNULL(user_id, '') != ''"
-    ):
-        keys = {k for k in (email, user_id) if k}
-        applied |= keys
-        if status == "Enrolled":
-            enrolled |= keys
-
+    applied, enrolled = _application_keys(filters.get("admission_cycle"))
     for u in users:
         keys = {u.email, u.name}
         u.application_status = (
-            "Enrolled" if keys & enrolled else "Applied" if keys & applied else "Not Applied"
+            ENROLLED if keys & enrolled else APPLIED if keys & applied else NOT_APPLIED
         )
     return users
+
+
+def _application_keys(admission_cycle=None):
+    """Emails and user ids found on Applicants (all, and Enrolled ones), optionally of one cycle."""
+    A = frappe.qb.DocType("Applicant")
+    query = (
+        frappe.qb.from_(A)
+        .select(A.email, A.user_id, A.status)
+        .where((IfNull(A.email, "") != "") | (IfNull(A.user_id, "") != ""))
+    )
+    if admission_cycle:
+        query = query.where(A.admission_cycle == admission_cycle)
+
+    applied, enrolled = set(), set()
+    for email, user_id, status in query.run():
+        keys = {k for k in (email, user_id) if k}
+        applied |= keys
+        if status == ENROLLED:
+            enrolled |= keys
+    return applied, enrolled
 
 
 def get_data(filters):
@@ -115,6 +152,8 @@ def get_data(filters):
         frappe._dict(
             user_id=u.email,
             full_name=u.full_name,
+            # The NLSAT Portal filter counts a blank portal as Domestic
+            portal=u.portal or "Not set",
             created_on=u.creation,
             application_status=u.application_status,
         )
@@ -123,17 +162,19 @@ def get_data(filters):
 
     case = filters.get("case")
     if case == "With Application":
-        rows = [r for r in rows if r.application_status == "Applied"]
+        rows = [r for r in rows if r.application_status == APPLIED]
     elif case == "Without Application":
-        rows = [r for r in rows if r.application_status == "Not Applied"]
+        rows = [r for r in rows if r.application_status == NOT_APPLIED]
     elif case == "Enrolled":
-        rows = [r for r in rows if r.application_status == "Enrolled"]
+        rows = [r for r in rows if r.application_status == ENROLLED]
+    elif case == "Any Application":
+        rows = [r for r in rows if r.application_status != NOT_APPLIED]
 
     return rows
 
 
 def get_report_summary(filters):
-    counts = get_registration_counts(filters.get("from_date"), filters.get("to_date"))
+    counts = get_registration_counts(filters)
     return [
         {"value": counts["total"], "label": "Total Registered (Applicant)", "datatype": "Int", "indicator": "blue"},
         {"value": counts["applied"], "label": "Registered & Applied", "datatype": "Int", "indicator": "green"},
@@ -142,17 +183,15 @@ def get_report_summary(filters):
     ]
 
 
-def get_registration_counts(from_date=None, to_date=None):
-    """Applicant accounts registered in the period, by what they did next.
-
-    Also used by the Admission Dashboard, so its cards match this report.
-    """
+def get_registration_counts(filters):
+    """Applicant accounts registered in the period, by what they did next."""
+    keys = ("from_date", "to_date", "admission_cycle", "nlsat_portal")
     # Only counted, so skip sorting every user by name.
-    rows = get_registered_users({"from_date": from_date, "to_date": to_date}, sort=False)
+    rows = get_registered_users({k: filters.get(k) for k in keys}, sort=False)
 
     total = len(rows)
-    enrolled = len([r for r in rows if r.application_status == "Enrolled"])
-    applied = len([r for r in rows if r.application_status == "Applied"])
-    not_applied = len([r for r in rows if r.application_status == "Not Applied"])
+    enrolled = len([r for r in rows if r.application_status == ENROLLED])
+    applied = len([r for r in rows if r.application_status == APPLIED])
+    not_applied = len([r for r in rows if r.application_status == NOT_APPLIED])
 
     return {"total": total, "applied": applied, "enrolled": enrolled, "not_applied": not_applied}

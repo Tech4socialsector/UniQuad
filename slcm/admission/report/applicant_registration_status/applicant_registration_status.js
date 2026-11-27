@@ -17,10 +17,24 @@ frappe.query_reports["Applicant Registration Status"] = {
             options: "User",
         },
         {
+            // Set: only applications in this cycle count as "applied"
+            fieldname: "admission_cycle",
+            label: "Admission Cycle",
+            fieldtype: "Link",
+            options: "Admission Cycle",
+        },
+        {
+            // Domestic also includes accounts with no NLSAT Portal set
+            fieldname: "nlsat_portal",
+            label: "NLSAT Portal",
+            fieldtype: "Select",
+            options: ["", "Domestic", "International"],
+        },
+        {
             fieldname: "case",
             label: "Case",
             fieldtype: "Select",
-            options: ["All", "With Application", "Without Application", "Enrolled"],
+            options: ["All", "Any Application", "With Application", "Without Application", "Enrolled"],
             default: "All",
         },
     ],

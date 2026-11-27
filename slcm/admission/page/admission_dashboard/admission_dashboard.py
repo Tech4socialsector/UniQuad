@@ -41,6 +41,7 @@ SETTINGS_EDITOR_ROLES = ("System Manager", "Admission Admin")
 BUNDLE_ENTRY = "src/admission_dashboard/main.js"  # key in slcm/public/frontend/manifest.json
 
 SETTLED_STATES = ("Settled", "processed")  # some records carry Razorpay's raw "processed"
+REGISTRATION_REPORT = "Applicant Registration Status"
 NOT_SET = "Not set"
 
 # --------------------------------------------------------------------------- #
@@ -200,6 +201,8 @@ def get_bootstrap():
 		"cycles": get_admission_cycles(),
 		"settings": get_settings(),
 		"can_edit_settings": _can_edit_settings(),
+		# The registration cards open this report, which fewer roles than the page may open.
+		"can_open_registration_report": frappe.get_cached_doc("Report", REGISTRATION_REPORT).is_permitted(),
 		"today": nowdate(),
 	}
 
@@ -243,7 +246,7 @@ def get_admission_cycles():
 # --------------------------------------------------------------------------- #
 
 
-CYCLE_PARTS = ("applications", "fees")
+CYCLE_PARTS = ("applications", "fees", "registrations")
 
 # Dashboard figures are kept in Redis for this long, so several people opening the page (or one
 # person switching tabs back and forth) don't each re-run the queries. The page's Refresh button
@@ -280,9 +283,10 @@ def get_cycle_overview(
 ):
 	"""Summary cards, programme cards with their numbers, and the two cross-programme charts.
 
-	`part` returns one slice, so the page can load both in parallel and show real progress:
+	`part` returns one slice, so the page can load them in parallel and show real progress:
 	  applications  -> programmes (application counts), by_programme, source, unlisted
 	  fees          -> fee_stats (per programme), fee_daily
+	  registrations -> registrations (candidate accounts and whether they applied)
 	Without `part` everything comes back in one response, with the fee figures inside each programme.
 	"""
 	_check_access()
@@ -304,6 +308,8 @@ def _cycle_overview(cycle, applicant_type, window, part):
 		out.update(_cycle_applications(cycle, applicant_type, window))
 	if part in (None, "fees"):
 		out.update(_cycle_fees(cycle, applicant_type, window))
+	if part in (None, "registrations"):
+		out["registrations"] = _cycle_registrations(cycle, applicant_type, window)
 	if part is None:
 		for p in out["programmes"]:
 			p["stats"].update(out["fee_stats"].get(p["name"], _empty_fee_stats()))
@@ -451,6 +457,43 @@ def _cycle_fees(cycle, applicant_type, window):
 	return {
 		"fee_stats": stats,
 		"fee_daily": _fill_days(fee_daily, window, ("collected", "collected_count", "settled", "settled_count")),
+	}
+
+
+def _cycle_registrations(cycle, applicant_type, window):
+	"""Candidate accounts (role Applicant) that signed up on this tab's NLSAT portal, and whether
+	they applied in this cycle, counted by the Applicant Registration Status report's own rules
+	so a card and the report it opens show the same users.
+
+	"Entire cycle" means sign-ups from the cycle's start date to its end date. `filters` are the
+	report filters for the cards' drill-down.
+	"""
+	from slcm.admission.report.applicant_registration_status.applicant_registration_status import (
+		NOT_APPLIED,
+		get_registered_users,
+	)
+
+	dates = _Window(
+		window.from_date or _iso(cycle.cycle_start_date), window.to_date or _iso(cycle.cycle_end_date)
+	)
+	filters = {
+		"from_date": dates.from_date,
+		"to_date": dates.to_date,
+		"admission_cycle": cycle.name,
+		"nlsat_portal": applicant_type,
+	}
+	daily = {}
+	for user in get_registered_users(filters, sort=False):
+		day = daily.setdefault(getdate(user.creation).isoformat(), {"total": 0, "applied": 0, "not_applied": 0})
+		day["total"] += 1
+		day["not_applied" if user.application_status == NOT_APPLIED else "applied"] += 1
+
+	return {
+		"filters": filters,
+		"total": sum(d["total"] for d in daily.values()),
+		"applied": sum(d["applied"] for d in daily.values()),
+		"not_applied": sum(d["not_applied"] for d in daily.values()),
+		"daily": _fill_days(daily, dates, ("total", "applied", "not_applied")),
 	}
 
 
@@ -873,14 +916,17 @@ def _get_cycle(name):
 	return frappe.db.get_value(
 		"Admission Cycle",
 		name,
-		["name", "application_start_date", "cycle_start_date"],
+		["name", "application_start_date", "cycle_start_date", "cycle_end_date"],
 		as_dict=True,
 	)
 
 
 def _cycle_start(cycle):
-	start = cycle.application_start_date or cycle.cycle_start_date
-	return getdate(start).isoformat() if start else None
+	return _iso(cycle.application_start_date or cycle.cycle_start_date)
+
+
+def _iso(date):
+	return getdate(date).isoformat() if date else None
 
 
 def _as_list(value):

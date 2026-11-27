@@ -27,6 +27,14 @@
 		<LoadProgress :steps="steps" label="Dashboard loaded" />
 		<LoadError :error="error" :retrying="anyLoading" @retry="reloadAll(false)" />
 
+		<RegistrationCards
+			:data="regs.data?.registrations"
+			:applicant-type="applicantType"
+			:custom-range="range.length === 2"
+			:loading="regsLoading"
+			:clickable="canOpenRegistrations"
+		/>
+
 		<!-- Applications and NLSAT fee -->
 		<SectionTitle
 			:title="`${applicantType} applications and NLSAT fee`"
@@ -184,6 +192,7 @@ import LoadError from "./LoadError.vue";
 import LoadProgress from "./LoadProgress.vue";
 import PeriodPicker from "./PeriodPicker.vue";
 import ProgrammeCard from "./ProgrammeCard.vue";
+import RegistrationCards from "./RegistrationCards.vue";
 import SectionTitle from "./SectionTitle.vue";
 import SourceChart from "./SourceChart.vue";
 import StatCard from "./StatCard.vue";
@@ -199,6 +208,7 @@ const props = defineProps({
 	range: { type: Array, default: () => [] },
 	selected: { type: Array, default: () => [] },
 	today: { type: String, required: true },
+	canOpenRegistrations: { type: Boolean, default: false },
 });
 const emit = defineEmits(["open", "update:applicantType", "update:range", "update:selected"]);
 
@@ -214,7 +224,7 @@ const SOURCE_SERIES = [
 ];
 const EMPTY_FEES = { paid_count: 0, collected: 0, settled_count: 0, settled_amount: 0, awaiting_count: 0, awaiting_amount: 0 };
 
-// The page loads in two parallel requests, so each section fills in as soon as its own data
+// The page loads in parallel requests, so each section fills in as soon as its own data
 // arrives and the progress bar shows real steps. The server keeps the figures for a few
 // minutes; `fresh` (the Refresh button) asks it to recompute them.
 let fresh = false;
@@ -233,7 +243,8 @@ const part = (name) =>
 	});
 const apps = part("applications");
 const fees = part("fees");
-const parts = [apps, fees];
+const regs = part("registrations");
+const parts = [apps, fees, regs];
 // Retry only re-asks for the parts that failed; Refresh reloads everything from the database.
 function reloadAll(refresh) {
 	fresh = refresh;
@@ -250,11 +261,13 @@ const isDone = (r) => !r.loading && (r.data != null || r.error != null);
 const steps = computed(() => [
 	{ label: "Applications", done: isDone(apps) },
 	{ label: "Application fees", done: isDone(fees) },
+	{ label: "Registrations", done: isDone(regs) },
 ]);
 const error = computed(() => parts.map((r) => r.error).find(Boolean));
 const firstLoad = (r) => r.loading && !r.data;
 const loading = computed(() => firstLoad(apps));
 const feesLoading = computed(() => firstLoad(fees));
+const regsLoading = computed(() => firstLoad(regs));
 
 const programmes = computed(() =>
 	(apps.data?.programmes || []).map((p) => ({
