@@ -180,6 +180,15 @@ def _payment_already_recorded(payment_id):
 	))
 
 
+def _finalize_paid_applicant(applicant_name):
+	"""Retry the move to Submitted and Paid for a payment that is already recorded."""
+	from slcm.admission.web_form.applicant_form.applicant_form import finalize_paid_application
+
+	# finalize_paid_application rolls back on a failed check; keep the recorded payment safe
+	frappe.db.commit()  # nosemgrep
+	finalize_paid_application(applicant_name, from_payment=True)
+
+
 def complete_admission_payment_from_gateway(
 	ref_doctype, ref_name, pr_name, order_id, payment_id, payment, gateway=None
 ):
@@ -196,6 +205,8 @@ def complete_admission_payment_from_gateway(
 		return False
 
 	if _payment_already_recorded(payment_id):
+		if ref_doctype == "Applicant":
+			_finalize_paid_applicant(ref_name)
 		return True
 
 	pr_amount = frappe.db.get_value("SLCM Payment Request", pr_name, "amount")
@@ -255,6 +266,7 @@ def complete_admission_payment_from_gateway(
 		applicant = frappe.get_doc("Applicant", ref_name, check_permission=False)
 		applicant.reload()
 		if applicant.application_fee_status == "Paid":
+			_finalize_paid_applicant(ref_name)
 			return True
 		currency = (
 			getattr(applicant, "currency", None)

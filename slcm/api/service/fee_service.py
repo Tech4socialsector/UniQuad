@@ -1452,8 +1452,14 @@ class FeeService:
             "SELECT name FROM `tabApplicant` WHERE name = %s FOR UPDATE",
             applicant_doc.name,
         )
+        from slcm.admission.web_form.applicant_form.applicant_form import finalize_paid_application
+
         if frappe.db.get_value("Applicant", applicant_doc.name, "application_fee_status") == "Paid":
             FeeService._generate_application_fee_receipt(applicant_doc, razorpay_payment_id, "Online")
+            # finalize_paid_application rolls back on a failed check; keep the receipt safe
+            frappe.db.commit()  # nosemgrep
+            # An earlier attempt may have recorded the payment but not moved the status on
+            finalize_paid_application(applicant_doc.name, from_payment=True)
             return
 
         FeeService._update_payment_request_for_applicant(
@@ -1470,14 +1476,10 @@ class FeeService:
         if assignment_name:
             frappe.db.set_value("Applicant Fee Assignment", assignment_name, "transaction_id", razorpay_payment_id)
 
+        # Keep the payment records even if the status change below fails its checks and rolls back
+        frappe.db.commit()  # nosemgrep
+        finalize_paid_application(applicant_doc.name, from_payment=True)
         applicant_doc.reload()
-        if applicant_doc.status == "Submitted":
-            from slcm.admission.web_form.applicant_form.applicant_form import submit_applicant
-            submit_applicant(applicant_doc.name, "Submitted and Paid")
-
-        frappe.db.commit()
-
-        frappe.db.commit()
 
     @staticmethod
     def verify_application_fee_payment(razorpay_payment_id, razorpay_order_id, razorpay_signature, applicant_name):

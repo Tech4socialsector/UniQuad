@@ -360,6 +360,62 @@ def sync_application_fee_assignment_for_applicant(applicant_name):
 	return assignment.name
 
 
+def get_paid_application_fee_payment_request(applicant_name):
+	"""Latest submitted SLCM Payment Request with status Paid for the applicant's application fee."""
+	return frappe.db.get_value(
+		"SLCM Payment Request",
+		{"reference_doctype": "Applicant", "reference_name": applicant_name, "docstatus": 1, "status": "Paid"},
+		"name",
+		order_by="modified desc",
+	)
+
+
+def get_application_fee_payment_problems(applicant_name):
+	"""Why the application fee payment is not fully recorded.
+
+	Empty when the Applicant fee status, a submitted SLCM Payment Request and the submitted
+	Application Fee Assignment all show Paid.
+	"""
+	problems = []
+	fee_status = frappe.db.get_value("Applicant", applicant_name, "application_fee_status")
+	if (fee_status or "").strip() != "Paid":
+		problems.append(_("Applicant application fee status is {0}, not Paid.").format(fee_status or _("empty")))
+	if not get_paid_application_fee_payment_request(applicant_name):
+		problems.append(_("No submitted SLCM Payment Request with status Paid."))
+	if not frappe.db.exists(
+		"Applicant Fee Assignment",
+		{"applicant": applicant_name, "fee_type": "Application Fee", "docstatus": 1, "status": "Paid"},
+	):
+		problems.append(_("No submitted Application Fee Assignment with status Paid."))
+	return problems
+
+
+def repair_application_fee_records(applicant_name):
+	"""Bring the Applicant fee status, receipt and Fee Assignment in line with a Paid Payment Request.
+
+	The Payment Request is the proof that money was received, so it is never changed here.
+	Does nothing when there is no Paid Payment Request.
+	"""
+	pr_name = get_paid_application_fee_payment_request(applicant_name)
+	if not pr_name:
+		return
+
+	if (frappe.db.get_value("Applicant", applicant_name, "application_fee_status") or "").strip() != "Paid":
+		frappe.db.set_value("Applicant", applicant_name, "application_fee_status", "Paid")
+
+	from slcm.api.service.fee_service import FeeService
+
+	pr = frappe.db.get_value(
+		"SLCM Payment Request", pr_name, ["razorpay_payment_id", "transaction_id"], as_dict=True
+	)
+	FeeService._generate_application_fee_receipt(
+		frappe.get_doc("Applicant", applicant_name),
+		pr.razorpay_payment_id or pr.transaction_id or pr_name,
+		"Online",
+	)
+	sync_application_fee_assignment_for_applicant(applicant_name)
+
+
 @frappe.whitelist()
 def desk_resync_application_fee_assignment(afa_name):
 	"""Desk: rebuild Application Fee grid from Applicant + policy; then commit."""

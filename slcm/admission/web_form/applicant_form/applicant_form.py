@@ -792,6 +792,178 @@ def submit_applicant(applicant_name, target_status=None):
     if doc.owner != user and (doc.email or "").lower() != (email or "").lower():
         return {"status": "error", "message": _("No permission to submit this application.")}
 
+    if _is_paid_fee_completion(doc, target_status):
+        return finalize_paid_application(doc.name, from_payment=True)
+    return _submit_applicant(doc, target_status)
+
+
+FINALIZE_ERROR_TITLE = "Paid application not moved to Submitted and Paid: {0}"
+
+
+def _is_paid_fee_completion(doc, target_status):
+    """The portal asks for Submitted and Paid on an application that has a fee to pay."""
+    return (
+        (target_status or "").strip() == "Submitted and Paid"
+        and (doc.status or "").strip() in ("Draft", "Submitted")
+        and (doc.application_fee_status or "").strip() != "Waived"
+        and flt(doc.application_fee_amount) > 0
+    )
+
+
+def finalize_paid_application(applicant_name, from_payment=False):
+    """Move a paid application to Submitted and Paid once all its payment records show Paid.
+
+    The Applicant fee status, a submitted SLCM Payment Request and the submitted Application
+    Fee Assignment must all be Paid. When the Payment Request is Paid but another record is not,
+    the others are re-synced from it and checked again. The status does not change while any
+    check fails; the reason goes to the Error Log.
+
+    A Submitted application passed the submit checks already, so they are not run again.
+    A Draft application gets the full portal submit, and only when from_payment is set (called
+    from the payment flow), so a Draft that staff reopened is never submitted by the repair job.
+
+    Runs from the Razorpay webhook (as Guest), reconciliation and the repair job, so it does not
+    check the logged-in user. It commits or rolls back: commit the payment records before calling.
+    Returns a result dict, or None when the application has no fee or is not in a status to move.
+    """
+    movable = ("Draft", "Submitted") if from_payment else ("Submitted",)
+    # Row lock: the webhook and the browser's verify call can finalize the same applicant at once
+    status, fee_amount = frappe.db.get_value(
+        "Applicant", applicant_name, ["status", "application_fee_amount"], for_update=True
+    ) or (None, 0)
+    status = (status or "").strip()
+    if flt(fee_amount) <= 0 or status not in movable:
+        return None
+
+    problems = _application_fee_payment_problems_after_repair(applicant_name)
+    if problems:
+        _log_not_finalized(applicant_name, "\n".join(problems))
+        return {
+            "status": "error",
+            "message": _(
+                "Your application fee payment is not confirmed yet. If you have paid, please check "
+                "again in a few minutes or contact the admissions office."
+            ),
+        }
+
+    doc = frappe.get_doc("Applicant", applicant_name)
+    if (doc.status or "").strip() not in movable:
+        return None  # another worker finalized it while the records were repaired
+    if doc.status == "Draft":
+        result = _submit_applicant(doc, "Submitted and Paid")
+    else:
+        result = _mark_submitted_and_paid(doc)
+    if result.get("status") != "success":
+        _log_not_finalized(applicant_name, frappe.as_json(result))
+    return result
+
+
+def _application_fee_payment_problems_after_repair(applicant_name):
+    from slcm.api.service.application_fee_service import (
+        get_application_fee_payment_problems,
+        repair_application_fee_records,
+    )
+
+    problems = get_application_fee_payment_problems(applicant_name)
+    if not problems:
+        return []
+    repair_application_fee_records(applicant_name)
+    # Keep the repaired records even if the status change after this fails and rolls back
+    frappe.db.commit()  # nosemgrep
+    # The commit released the row lock: take it again before the status is read and changed
+    frappe.db.get_value("Applicant", applicant_name, "name", for_update=True)
+    return get_application_fee_payment_problems(applicant_name)
+
+
+def _mark_submitted_and_paid(doc):
+    """Set a Submitted application to Submitted and Paid without re-running the submit checks.
+    The save still runs the Applicant hooks (entrance test allocation, confirmation email)."""
+    doc.status = "Submitted and Paid"
+    doc.flags.ignore_permissions = True
+    doc.flags.ignore_validate_update_after_submit = True
+    doc.flags.paid_finalize = True
+    try:
+        doc.save()
+        # The webhook and the repair job have no request commit to rely on
+        frappe.db.commit()  # nosemgrep
+    except frappe.ValidationError as e:
+        frappe.db.rollback()
+        return {"status": "error", "message": str(e)}
+    except Exception:
+        frappe.db.rollback()
+        frappe.log_error(frappe.get_traceback(), f"Mark Submitted and Paid failed: {doc.name}")
+        return {"status": "error", "message": _("Could not complete the application. Please contact support.")}
+
+    _enqueue_application_form_pdf(doc.name)
+    return {
+        "status": "success",
+        "name": doc.name,
+        "doc_status": doc.status,
+        "application_fee_status": doc.application_fee_status or "",
+        "message": _("Application submitted successfully."),
+    }
+
+
+def _enqueue_application_form_pdf(applicant_name):
+    try:
+        frappe.enqueue(
+            "slcm.admission.doctype.applicant.applicant.ensure_application_form_pdf_for_applicant",
+            queue="short",
+            applicant_name=applicant_name,
+        )
+    except Exception:
+        frappe.log_error(
+            frappe.get_traceback(),
+            "submit_applicant — ensure_application_form_pdf_for_applicant enqueue failed",
+        )
+
+
+def _log_not_finalized(applicant_name, reason):
+    """Error Log entry, at most one a day per applicant so the repair job does not flood the log."""
+    title = FINALIZE_ERROR_TITLE.format(applicant_name)
+    if frappe.db.exists("Error Log", {"method": title, "creation": [">=", frappe.utils.today()]}):
+        return
+    frappe.log_error(title=title, message=reason)
+
+
+def finalize_stuck_paid_applications():
+    """Scheduled: move Submitted applications to Submitted and Paid when their payment is recorded
+    (Applicant fee status or a submitted SLCM Payment Request is Paid) but the status was not moved on.
+
+    Skips records changed in the last 15 minutes, so it does not race the applicant's own browser.
+    """
+    from frappe.utils import add_to_date, now_datetime
+
+    names = frappe.db.sql_list(
+        """
+        SELECT a.name FROM `tabApplicant` a
+        WHERE a.status = 'Submitted'
+          AND a.application_fee_amount > 0
+          AND a.modified < %(cutoff)s
+          AND (
+            a.application_fee_status = 'Paid'
+            OR EXISTS (
+              SELECT 1 FROM `tabSLCM Payment Request` pr
+              WHERE pr.reference_doctype = 'Applicant' AND pr.reference_name = a.name
+                AND pr.docstatus = 1 AND pr.status = 'Paid'
+            )
+          )
+        ORDER BY a.modified
+        LIMIT 200
+        """,
+        {"cutoff": add_to_date(now_datetime(), minutes=-15)},
+    )
+    for name in names:
+        try:
+            finalize_paid_application(name)
+        except Exception:
+            frappe.db.rollback()
+            _log_not_finalized(name, frappe.get_traceback())
+
+
+def _submit_applicant(doc, target_status=None):
+    """Status change and checks shared by the portal and by server-side payment completion.
+    Callers must check access first."""
     current_status = (doc.status or "").strip()
     _ts = (target_status or "Submitted").strip()
     # The portal may only move an application to Submitted or Submitted and Paid; any other
@@ -899,17 +1071,7 @@ def submit_applicant(applicant_name, target_status=None):
                 frappe.get_traceback(),
                 "submit_applicant — sync_application_fee_assignment_for_applicant",
             )
-        try:
-            frappe.enqueue(
-                "slcm.admission.doctype.applicant.applicant.ensure_application_form_pdf_for_applicant",
-                queue="short",
-                applicant_name=doc.name
-            )
-        except Exception:
-            frappe.log_error(
-                frappe.get_traceback(),
-                "submit_applicant — ensure_application_form_pdf_for_applicant enqueue failed",
-            )
+        _enqueue_application_form_pdf(doc.name)
         return {
             "status": "success",
             "name": doc.name,

@@ -771,7 +771,9 @@ scheduler_events = {
             # Portal payments through Easebuzz whose return / webhook never arrived
             "slcm.api.easebuzz_payment.reconcile_pending",
             # Student / parent Razorpay fee payments whose browser confirm never arrived
-            "slcm.api.razorpay_reconcile.reconcile_pending"
+            "slcm.api.razorpay_reconcile.reconcile_pending",
+            # Paid applications left in Submitted (status change failed after a webhook payment)
+            "slcm.admission.web_form.applicant_form.applicant_form.finalize_stuck_paid_applications"
         ],
 		# Once per day: expire Issued/Accepted offers past payment_deadline (updates Offer + Applicant via OfferLetter hooks)
 		"15 2 * * *": [

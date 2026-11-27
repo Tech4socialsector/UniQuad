@@ -233,20 +233,27 @@ class Applicant(Document):
         set_admission_details(self)
         self._set_class_xii_status()
         self._validate_nationality_matches_foreign_national()
+        # Set by finalize_paid_application for a Submitted applicant whose payment records all
+        # show Paid: it passed the submit checks already, so a later rule change must not block it.
+        recheck_submit = not self.flags.get("paid_finalize")
         self._validate_education_percentage_bounds(
-            on_submit=self.status in ("Submitted", "Submitted and Paid")
+            on_submit=recheck_submit
+            and self.status in ("Submitted", "Submitted and Paid")
             and (self.is_new() or self.has_value_changed("status"))
         )
-        self._validate_single_karnataka_reservation()
+        self._validate_single_karnataka_reservation(recheck_submit)
 
         if self.status in ("Submitted", "Submitted and Paid") and self.has_value_changed("status"):
-            self._validate_application_limit_before_submit()
+            if recheck_submit:
+                self._validate_application_limit_before_submit()
             if self.status == "Submitted and Paid":
                 self._validate_application_fee_before_submit()
 
         # Only on the submit/complete transition — not on every later desk edit or fee sync
         # of an already Submitted/Submitted and Paid record (rules may have changed since).
-        if self.status in ("Submitted", "Submitted and Paid") and (self.is_new() or self.has_value_changed("status")):
+        if recheck_submit and self.status in ("Submitted", "Submitted and Paid") and (
+            self.is_new() or self.has_value_changed("status")
+        ):
             self._validate_admission_open_for_scope()
             self._validate_national_test_percentage()
             self._validate_degree_country_for_foreign_national()
@@ -328,13 +335,13 @@ class Applicant(Document):
         "ka_capf_child",
     )
 
-    def _validate_single_karnataka_reservation(self):
+    def _validate_single_karnataka_reservation(self, recheck_submit=True):
         """Only one "Which of the following applies to you" option may be ticked.
         When "Whether Karnataka" is Yes, one option is required at submission.
         Checked only on submit or when one of these boxes changes, so older records are not blocked."""
         fields = self.KARNATAKA_RESERVATION_FIELDS
         ticked = [f for f in fields if cint(self.get(f))]
-        submitting = self.status in ("Submitted", "Submitted and Paid") and (
+        submitting = recheck_submit and self.status in ("Submitted", "Submitted and Paid") and (
             self.is_new() or self.has_value_changed("status")
         )
         if submitting and self.get("karnataka_category") == "Yes" and not ticked:
